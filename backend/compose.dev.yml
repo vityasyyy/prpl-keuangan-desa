@@ -4,6 +4,7 @@ services:
     env_file:
       - .env
     volumes:
+      - ./src/core/database/migrations:/docker-entrypoint-initdb.d
       - prpl-data:/var/lib/postgresql/data
     networks:
       - prpl-network
@@ -12,25 +13,26 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
   backend-api:
     build:
-      context: ..
-      dockerfile: infra/Dockerfile.prod
+      context: .
+      dockerfile: dockerfiles/Dockerfile.dev
     env_file:
       - .env
     depends_on:
       backend-db:
         condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
     networks:
       - prpl-network
     ports:
       - "${PORT}:${PORT}"
     environment:
-      NODE_ENV: production
-    restart: unless-stopped
-    command: sh -c "./database/scripts/migrate.sh && pnpm run seed && node src/index.js"
+      NODE_ENV: development
+    command: sh -c "pnpm run seed && pnpm dev"
 
 networks:
   prpl-network:

@@ -1,7 +1,7 @@
 # Project constants
 PROJECT_NAME=prpl-keudes-koma
-COMPOSE_DEV_FILE=infra/compose.dev.yml
-COMPOSE_PROD_FILE=infra/compose.prod.yml
+COMPOSE_DEV_FILE=compose.dev.yml
+COMPOSE_PROD_FILE=compose.prod.yml
 DB_USERNAME=prpl_koma
 DB_DATABASE=keuangan_desa
 
