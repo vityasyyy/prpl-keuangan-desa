@@ -13,20 +13,25 @@ services:
       timeout: 5s
       retries: 5
 
-    # API for the auth service
   backend-api:
-    build: .
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.dev
     env_file:
       - .env
     depends_on:
       backend-db:
-        condition: service_healthy # Ensure DB is ready
+        condition: service_healthy
     volumes:
-      - ./backend/var/log/joinmun_backend:/var/log/joinmun_backend
+      - ../backend:/app
+      - /app/node_modules
     networks:
       - prpl-network
     ports:
-      - ${BACKEND_PORT}:${BACKEND_PORT}
+      - "${PORT}:${PORT}"
+    environment:
+      NODE_ENV: development
+    command: sh -c "./database/scripts/migrate.sh && pnpm run seed && pnpm dev"
 
 networks:
   prpl-network:

@@ -1,0 +1,19 @@
+
+FROM node:24-alpine3.21
+
+RUN corepack enable
+
+WORKDIR /app
+
+# Install deps first for caching
+COPY backend/package.json backend/pnpm-lock.yaml ./
+RUN pnpm install
+
+# Copy source code
+COPY src ./src
+
+RUN chmod +x database/scripts/migrate.sh
+
+USER node
+
+CMD ["pnpm", "dev"]
