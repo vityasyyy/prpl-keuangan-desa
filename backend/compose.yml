@@ -1,0 +1,35 @@
+services:
+  backend-db:
+    image: postgres:17.2-alpine
+    env_file:
+      - .env
+    volumes:
+      - prpl-data:/var/lib/postgresql/data
+    networks:
+      - prpl-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prpl_koma -d keuangan_desa"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+    # API for the auth service
+  backend-api:
+    build: .
+    env_file:
+      - .env
+    depends_on:
+      backend-db:
+        condition: service_healthy # Ensure DB is ready
+    volumes:
+      - ./backend/var/log/joinmun_backend:/var/log/joinmun_backend
+    networks:
+      - prpl-network
+    ports:
+      - ${BACKEND_PORT}:${BACKEND_PORT}
+
+networks:
+  prpl-network:
+
+volumes:
+  prpl-data:
