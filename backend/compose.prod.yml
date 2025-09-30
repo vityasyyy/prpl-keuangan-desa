@@ -4,7 +4,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./src/core/database/migrations:/docker-entrypoint-initdb.d
+      - ./db/migrations:/docker-entrypoint-initdb.d
       - prpl-data:/var/lib/postgresql/data
     networks:
       - prpl-network
