@@ -176,3 +176,24 @@ CREATE TABLE buku_bank (
     biaya_admin NUMERIC(18,2) DEFAULT 0,
     saldo_after NUMERIC(18,2) DEFAULT 0
 );
+
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  full_name TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (
+    role IN (
+      'sekretaris_desa',
+      'kaur_keuangan',
+      'kasi_pemerintahan',
+      'kasi_kesejahteraan',
+      'kasi_pelayanan',
+      'kaur_perencanaan',
+      'kaur_tu_umum',
+      'kades'
+    )
+  ),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);

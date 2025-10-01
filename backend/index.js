@@ -3,7 +3,11 @@ const http = require('http');
 const cors = require('cors');
 const { Pool } = require('pg');  // example
 const logger = require('./src/common/logger');
-const { attachLogging, rateLimiter, securityHeaders } = require('./src/api/middleware');
+const {
+  attachLogging,
+  rateLimiter,
+  securityHeaders
+} = require('./src/api/middleware');
 const { initializeRoutes } = require('./src/api/router');
 
 async function main() {
