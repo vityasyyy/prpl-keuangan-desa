@@ -1,9 +1,7 @@
-import Image from "next/image";
-
-export default function Home() {
+export default function Apbd() {
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <p>Welcome!</p>
+      <p>APbd!</p>
     </div>
   );
 }
