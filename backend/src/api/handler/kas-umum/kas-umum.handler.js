@@ -1,4 +1,3 @@
-// src/api/handler/kas-umum/kas-umum.handler.js
 import createRepo from "../../../repository/kas-umum/kas-umum.repo.js";
 
 const normalizeMonth = (m) => (m?.length === 7 ? `${m}-01` : m);

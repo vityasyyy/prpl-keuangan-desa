@@ -1,5 +1,6 @@
 // router/container.router.js
 // This file aggregates all route modules and initializes them
+import createKasUmumRouter from "./kas-umum/kas-umum.router.js";
 
 /**
  * Initialize all routes
@@ -8,14 +9,14 @@
  */
 export function initializeRoutes(app, dependencies) {
   // Health check endpoint
-  app.get('/health', (_, res) => {
-    res.json({ status: 'ok' });
+  app.get("/health", (_, res) => {
+    res.json({ status: "ok" });
   });
 
   // Mount module-specific routers here
   // Example:
   // import kasUmumRouter from './kas-umum/kas-umum.router.js';
-  // app.use('/api/kas-umum', kasUmumRouter(dependencies));
-  
+  app.use("/api/kas-umum", createKasUmumRouter(dependencies));
+
   // Add more routes as needed
 }

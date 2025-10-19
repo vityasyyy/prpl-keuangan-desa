@@ -1,20 +1,14 @@
-// backend/src/api/router/kas-umum/index.js
 import { Router } from "express";
-import {
-  getBku,
-  getBidang,
-  getSubBidang,
-  getKegiatan,
-} from "../../handler/kas-umum/kas-umum.handler.js";
+import createHandlers from "../../handler/kas-umum/kas-umum.handler.js";
 
-const r = Router();
+export default function createKasUmumRouter({ db }) {
+  const r = Router();
+  const h = createHandlers({ db });
 
-// BKU bulan
-r.get("/", getBku);
+  r.get("/", h.getBku);
+  r.get("/bidang", h.getBidang);
+  r.get("/sub-bidang", h.getSubBidang);
+  r.get("/kegiatan", h.getKegiatan);
 
-// dropdown kode fungsi
-r.get("/bidang", getBidang);
-r.get("/sub-bidang", getSubBidang);
-r.get("/kegiatan", getKegiatan);
-
-export default r;
+  return r;
+}
