@@ -1,4 +1,3 @@
-
 FROM node:24-alpine3.21
 
 RUN corepack enable
@@ -6,13 +5,11 @@ RUN corepack enable
 WORKDIR /app
 
 # Install deps first for caching
-COPY backend/package.json backend/pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install
 
 # Copy source code
-COPY src ./src
-
-RUN chmod +x database/scripts/migrate.sh
+COPY . .
 
 USER node
 

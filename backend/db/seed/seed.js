@@ -1,4 +1,5 @@
-const { Pool } = require('pg');
+import pkg from 'pg';
+const { Pool } = pkg;
 
 // Database configuration
 const dbConfig = {
@@ -18,6 +19,34 @@ async function seedDatabase() {
     
     // Begin transaction
     await client.query('BEGIN');
+    
+    // ========================
+    // CLEANUP EXISTING DATA
+    // ========================
+    console.log('Cleaning up existing data...');
+    
+    // Delete in reverse order of dependencies (child tables first)
+    await client.query('DELETE FROM buku_bank');
+    await client.query('DELETE FROM buku_kas_pajak');
+    await client.query('DELETE FROM buku_kas_pembantu');
+    await client.query('DELETE FROM buku_kas_umum');
+    await client.query('DELETE FROM rab_line');
+    await client.query('DELETE FROM rab');
+    await client.query('DELETE FROM rkk');
+    await client.query('DELETE FROM rka_penarikan');
+    await client.query('DELETE FROM rka');
+    await client.query('DELETE FROM apbdes_rincian_penjabaran');
+    await client.query('DELETE FROM apbdes_rincian');
+    await client.query('DELETE FROM kegiatan');
+    await client.query('DELETE FROM apbdes');
+    await client.query('DELETE FROM users');
+    await client.query('DELETE FROM kode_ekonomi');
+    await client.query('DELETE FROM kode_fungsi');
+    
+    console.log('✅ Cleanup completed');
+    
+    // Reset sequences if any (not applicable here since using TEXT ids)
+    // await client.query('ALTER SEQUENCE sequence_name RESTART WITH 1');
     
     // ========================
     // SEED REFERENCE TABLES
@@ -330,9 +359,7 @@ async function main() {
   }
 }
 
-// Only run if this file is executed directly
-if (require.main === module) {
-  main();
-}
+// Run the main function
+main();
 
-module.exports = { seedDatabase };
+export { seedDatabase };

@@ -1,8 +1,8 @@
 
 // middleware/logger.js
 import { pinoHttp } from 'pino-http';
-const { getLogger } = require('../../common/logger');
-const crypto = require('crypto');
+import { getLogger } from '../../common/logger/logger.js';
+import crypto from 'crypto';
 
 /**
  * Middleware to ensure each request has a request_id.
@@ -37,7 +37,7 @@ function requestLoggingMiddleware() {
       }
       return 'info';
     },
-    customSuccessMessage: function (_, _) {
+    customSuccessMessage: function (req, res) {
       return 'Request completed';
     },
     serializers: {
@@ -78,7 +78,7 @@ function attachLogging() {
   };
 }
 
-module.exports = {
+export {
   attachLogging,
   requestIdMiddleware,
   requestLoggingMiddleware
