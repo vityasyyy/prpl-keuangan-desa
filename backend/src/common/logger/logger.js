@@ -24,7 +24,12 @@ function getLogger() {
   return baseLogger;
 }
 
-module.exports = {
+export default {
+  initLogger,
+  getLogger
+};
+
+export {
   initLogger,
   getLogger
 };

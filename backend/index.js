@@ -1,14 +1,13 @@
 import express from 'express';
-const http = require('http');
-const cors = require('cors');
-const { Pool } = require('pg');  // example
-const logger = require('./src/common/logger');
-const {
-  attachLogging,
-  rateLimiter,
-  securityHeaders
-} = require('./src/api/middleware');
-const { initializeRoutes } = require('./src/api/router');
+import http from 'http';
+import cors from 'cors';
+import pkg from 'pg';
+const { Pool } = pkg;
+import logger from './src/common/logger/logger.js';
+import { attachLogging } from './src/api/middleware/logging.middleware.js';
+import { rateLimiter } from './src/api/middleware/rate-limit.middleware.js';
+import { securityHeaders } from './src/api/middleware/security-header.middleware.js';
+import { initializeRoutes } from './src/api/router/container.router.js';
 
 async function main() {
   // Initialize logger
@@ -47,7 +46,7 @@ async function main() {
   app.use(attachLogging());
 
   // Security headers
-  app.use(securityHeaders());
+  app.use(securityHeaders);
 
   // CORS
   const corsUrls = process.env.CORS_URL || '';
@@ -67,7 +66,7 @@ async function main() {
   }
 
   // Rate limiter
-  app.use(rateLimiter());
+  app.use(rateLimiter);
 
   // Mount routers
   // `initializeRoutes` should accept (app, dependencies) or return a router
