@@ -10,5 +10,10 @@ export default function createKasUmumRouter({ db }) {
   r.get("/sub-bidang", h.getSubBidang);
   r.get("/kegiatan", h.getKegiatan);
 
+  r.get("/", h.getBku);
+  r.post("/", h.createBku);
+
+  r.get("/kode-ekonomi", h.getKodeEkonomi);
+
   return r;
 }
