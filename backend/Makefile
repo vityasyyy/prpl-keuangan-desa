@@ -1,5 +1,5 @@
 # Project constants
-PROJECT_NAME=prpl-keudes-koma
+PROJECT_NAME=backend
 COMPOSE_DEV_FILE=compose.dev.yml
 COMPOSE_PROD_FILE=compose.prod.yml
 DB_USERNAME=prpl_koma

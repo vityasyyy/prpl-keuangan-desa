@@ -178,7 +178,7 @@ CREATE TABLE buku_bank (
 );
 
 CREATE TABLE users (
-  id TEXT PRIMARY KEY,
+  user_id SERIAL PRIMARY KEY,
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   full_name TEXT NOT NULL,
@@ -191,9 +191,18 @@ CREATE TABLE users (
       'kasi_pelayanan',
       'kaur_perencanaan',
       'kaur_tu_umum',
-      'kades'
+      'kepala_desa'
     )
-  ),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  )
+);
+
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    refresh_token_id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    refresh_token VARCHAR(255) NOT NULL,
+    expiry TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked BOOLEAN NOT NULL DEFAULT FALSE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );

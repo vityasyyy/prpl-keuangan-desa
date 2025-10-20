@@ -32,7 +32,7 @@ services:
       - "${PORT}:${PORT}"
     environment:
       NODE_ENV: development
-    command: sh -c "pnpm run seed && pnpm dev"
+    command: sh -c "pnpm seed && pnpm dev"
 
 networks:
   prpl-network:

@@ -1,22 +1,18 @@
-// router/container.router.js
-// This file aggregates all route modules and initializes them
-import createKasUmumRouter from "./kas-umum/kas-umum.router.js";
+// import apbdRouter from "./apbd/apbd.router.js";
+// import bankDesaRouter from "./bank-desa/bank-desa.router.js";
+// import kasPembantuRouter from "./kas-pembantu/kas-pembantu.router.js";
+// import createKasUmumRouter from "./kas-umum/kas-umum.router.js";
+// import rabRouter from "./rab/rab.router.js";
+import createAuthRouter from "./auth/auth.router.js";
 
-/**
- * Initialize all routes
- * @param {import('express').Application} app - Express application
- * @param {Object} dependencies - Shared dependencies (e.g., db pool)
- */
-export function initializeRoutes(app, dependencies) {
-  // Health check endpoint
-  app.get("/health", (_, res) => {
-    res.json({ status: "ok" });
-  });
+export function initializeRoutes(app, handlers) {
 
-  // Mount module-specific routers here
-  // Example:
-  // import kasUmumRouter from './kas-umum/kas-umum.router.js';
-  app.use("/api/kas-umum", createKasUmumRouter(dependencies));
+  // auth routes
+  app.use('/api/auth', createAuthRouter(handlers.authHandler));
 
-  // Add more routes as needed
+  // app.use('/api/apbd', apbdRouter(handlers.apbdHandler));
+  // app.use('/api/bank-desa', bankDesaRouter(handlers.bankDesaHandler));
+  // app.use('/api/kas-pembantu', kasPembantuRouter(handlers.kasPembantuHandler));
+  // app.use('/api/kas-umum', createKasUmumRouter(handlers.kasUmumHandler));
+  // app.use('/api/rab', rabRouter(handlers.rabHandler));
 }
