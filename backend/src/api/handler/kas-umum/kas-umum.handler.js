@@ -1,9 +1,9 @@
-import createRepo from "../../../repository/kas-umum/kas-umum.repo.js";
+import createKasUmumRepo from "../../../repository/kas-umum/kas-umum.repo.js";
 
 const normalizeMonth = (m) => (m?.length === 7 ? `${m}-01` : m);
 
-export default function createHandlers({ db }) {
-  const repo = createRepo({ db }); // inject Pool dari server
+export default function createKasUmumHandler({ db }) {
+  const repo = createKasUmumRepo({ db }); // inject Pool dari server
 
   const getBku = async (req, res, next) => {
     try {
@@ -57,11 +57,11 @@ export default function createHandlers({ db }) {
     try {
       const {
         tanggal,
-        rab_id,              
-        kode_ekonomi_id,     
-        bidang_id,           
-        sub_bidang_id,       
-        kegiatan_id,         
+        rab_id,
+        kode_ekonomi_id,
+        bidang_id,
+        sub_bidang_id,
+        kegiatan_id,
         uraian,
         pemasukan,
         pengeluaran,
@@ -140,5 +140,12 @@ export default function createHandlers({ db }) {
     }
   };
 
-  return { getBku, getBidang, getSubBidang, getKegiatan, createBku, getKodeEkonomi };
+  return {
+    getBku,
+    getBidang,
+    getSubBidang,
+    getKegiatan,
+    createBku,
+    getKodeEkonomi,
+  };
 }

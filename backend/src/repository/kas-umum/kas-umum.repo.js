@@ -1,5 +1,5 @@
 // src/repository/kas-umum/kas-umum.repo.js
-export default function createRepo({ db }) {
+export default function createKasUmumRepo({ db }) {
   // db = instance Pool (pg)
   const P = (i) => `$${i}`;
 
@@ -93,7 +93,7 @@ export default function createRepo({ db }) {
     const { rows } = await db.query(`
       SELECT id, full_code, uraian
       FROM kode_fungsi
-      WHERE level = '1'
+      WHERE level = 'bidang'
       ORDER BY full_code
     `);
     return rows;
@@ -104,7 +104,7 @@ export default function createRepo({ db }) {
       `
       SELECT id, full_code, uraian
       FROM kode_fungsi
-      WHERE level = '2' AND parent_id = ${P(1)}
+      WHERE level = 'sub_bidang' AND parent_id = ${P(1)}
       ORDER BY full_code
     `,
       [bidangId]
@@ -117,7 +117,7 @@ export default function createRepo({ db }) {
       `
       SELECT id, full_code, uraian
       FROM kode_fungsi
-      WHERE level = '3' AND parent_id = ${P(1)}
+      WHERE level = 'kegiatan' AND parent_id = ${P(1)}
       ORDER BY full_code
     `,
       [subBidangId]
@@ -132,8 +132,8 @@ export default function createRepo({ db }) {
     const {
       tanggal,
       rab_id,
-      kode_ekonomi_id,    // ID dari tabel Kode_Ekonomi
-      kode_fungsi_id,     // ID dari tabel Kode_Fungsi (kegiatan)
+      kode_ekonomi_id, // ID dari tabel Kode_Ekonomi
+      kode_fungsi_id, // ID dari tabel Kode_Fungsi (kegiatan)
       uraian,
       penerimaan = 0,
       pengeluaran = 0,
@@ -142,7 +142,9 @@ export default function createRepo({ db }) {
 
     // Validasi: tidak boleh penerimaan dan pengeluaran keduanya terisi
     if (penerimaan > 0 && pengeluaran > 0) {
-      throw new Error('Transaksi hanya boleh pemasukan ATAU pengeluaran, tidak keduanya');
+      throw new Error(
+        "Transaksi hanya boleh pemasukan ATAU pengeluaran, tidak keduanya"
+      );
     }
 
     // Hitung saldo_after berdasarkan saldo terakhir dari RAB yang sama
@@ -153,7 +155,9 @@ export default function createRepo({ db }) {
       ORDER BY tanggal DESC, id DESC 
       LIMIT 1
     `;
-    const { rows: [lastRow] } = await db.query(lastSaldoQuery, [rab_id]);
+    const {
+      rows: [lastRow],
+    } = await db.query(lastSaldoQuery, [rab_id]);
     const saldoBefore = lastRow?.saldo_after || 0;
     const saldoAfter = saldoBefore + penerimaan - pengeluaran;
 
@@ -186,7 +190,9 @@ export default function createRepo({ db }) {
       saldoAfter,
     ];
 
-    const { rows: [newRow] } = await db.query(insertQuery, values);
+    const {
+      rows: [newRow],
+    } = await db.query(insertQuery, values);
 
     // Get detail kode ekonomi dan kode fungsi untuk response
     const detailQuery = `
@@ -202,7 +208,9 @@ export default function createRepo({ db }) {
       WHERE bku.id = $1
     `;
 
-    const { rows: [detailRow] } = await db.query(detailQuery, [newRow.id]);
+    const {
+      rows: [detailRow],
+    } = await db.query(detailQuery, [newRow.id]);
     return detailRow;
   };
 
