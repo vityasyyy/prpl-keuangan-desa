@@ -90,10 +90,10 @@ export default function BukuKasUmumPage() {
     <div className="flex min-h-screen bg-white">
       <Sidebar />
 
-      <main className="flex-1 px-[61px] py-[35px] overflow-y-auto">
+      <main className="flex-1 overflow-y-auto" style={{ padding: '2.5vw 4vw' }}>
         <Breadcrumb items={breadcrumbItems} />
 
-        <div className="flex flex-col items-start gap-10 max-w-[984px]">
+        <div className="flex flex-col items-start gap-10 w-full">
           <div className="flex py-5 justify-between items-center self-stretch min-h-[117px]">
             <div className="flex flex-col items-start gap-[7px] max-w-[551px]">
               <h1 className="text-black font-['Plus_Jakarta_Sans'] text-[31px] font-bold leading-[46.5px] m-0">
@@ -249,30 +249,30 @@ export default function BukuKasUmumPage() {
 
               {expandedMonths.bulan1 && (
                 <div className="flex flex-col items-start self-stretch">
-                  <div className="flex h-[47px] px-5 py-2.5 justify-between items-center self-stretch border-b-[0.5px] border-black">
-                    <div className="text-black font-['Poppins'] text-base font-bold leading-6">No</div>
-                    <div className="text-black font-['Poppins'] text-base font-bold leading-6">Tanggal</div>
-                    <div className="text-black font-['Poppins'] text-base font-bold leading-6">Kode Rekening</div>
-                    <div className="text-black font-['Poppins'] text-base font-bold leading-6">Uraian</div>
-                    <div className="text-black font-['Poppins'] text-base font-bold leading-6">Pemasukan</div>
-                    <div className="text-black font-['Poppins'] text-base font-bold leading-6">Pengeluaran</div>
-                    <div className="text-black font-['Poppins'] text-base font-bold leading-6">No. Bukti</div>
-                    <div className="text-black font-['Poppins'] text-base font-bold leading-6">Netto Transaksi</div>
-                    <div className="text-black font-['Poppins'] text-base font-bold leading-6">Saldo</div>
-                    <div className="text-black font-['Poppins'] text-base font-bold leading-6">Edit</div>
+                  <div className="flex h-[47px] px-5 py-2.5 items-center self-stretch border-b-[0.5px] border-black">
+                    <div className="w-[5%] text-left text-black font-['Poppins'] text-base font-bold leading-6">No</div>
+                    <div className="w-[10%] text-left text-black font-['Poppins'] text-base font-bold leading-6">Tanggal</div>
+                    <div className="w-[11%] text-left text-black font-['Poppins'] text-base font-bold leading-6">Kode Rekening</div>
+                    <div className="w-[13%] text-left text-black font-['Poppins'] text-base font-bold leading-6">Uraian</div>
+                    <div className="w-[11%] text-left text-black font-['Poppins'] text-base font-bold leading-6">Pemasukan</div>
+                    <div className="w-[11%] text-left text-black font-['Poppins'] text-base font-bold leading-6">Pengeluaran</div>
+                    <div className="w-[9%] text-left text-black font-['Poppins'] text-base font-bold leading-6">No. Bukti</div>
+                    <div className="w-[13%] text-left text-black font-['Poppins'] text-base font-bold leading-6">Netto Transaksi</div>
+                    <div className="w-[11%] text-left text-black font-['Poppins'] text-base font-bold leading-6">Saldo</div>
+                    <div className="w-[6%] text-center text-black font-['Poppins'] text-base font-bold leading-6">Edit</div>
                   </div>
                   {tableData.map((row, index) => (
-                    <div key={index} className="flex h-[47px] px-7 py-2.5 items-center gap-[30px] self-stretch border-b-[0.5px] border-black">
-                      <div className="text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.no}</div>
-                      <div className="text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.tanggal}</div>
-                      <div className="text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.kodeRekening}</div>
-                      <div className="text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.uraian}</div>
-                      <div className="text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.pemasukan}</div>
-                      <div className="text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.pengeluaran}</div>
-                      <div className="text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.noBukti}</div>
-                      <div className="text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.nettoTransaksi}</div>
-                      <div className="text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.saldo}</div>
-                      <div className="cursor-pointer">
+                    <div key={index} className="flex h-[47px] px-5 py-2.5 items-center self-stretch border-b-[0.5px] border-black">
+                      <div className="w-[5%] text-left text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.no}</div>
+                      <div className="w-[10%] text-left text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.tanggal}</div>
+                      <div className="w-[11%] text-left text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.kodeRekening}</div>
+                      <div className="w-[13%] text-left text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.uraian}</div>
+                      <div className="w-[11%] text-left text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.pemasukan}</div>
+                      <div className="w-[11%] text-left text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.pengeluaran}</div>
+                      <div className="w-[9%] text-left text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.noBukti}</div>
+                      <div className="w-[13%] text-left text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.nettoTransaksi}</div>
+                      <div className="w-[11%] text-left text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">{row.saldo}</div>
+                      <div className="w-[6%] flex justify-center cursor-pointer">
                         <svg width="16" height="17" viewBox="0 0 16 17" fill="none">
                           <path
                             d="M8 13.8332H14M11 2.83316C11.2652 2.56794 11.6249 2.41895 12 2.41895C12.1857 2.41895 12.3696 2.45553 12.5412 2.5266C12.7128 2.59767 12.8687 2.70184 13 2.83316C13.1313 2.96448 13.2355 3.12038 13.3066 3.29196C13.3776 3.46354 13.4142 3.64744 13.4142 3.83316C13.4142 4.01888 13.3776 4.20277 13.3066 4.37436C13.2355 4.54594 13.1313 4.70184 13 4.83316L4.66667 13.1665L2 13.8332L2.66667 11.1665L11 2.83316Z"

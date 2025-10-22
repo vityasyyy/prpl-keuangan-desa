@@ -90,7 +90,7 @@ export default function Sidebar() {
                 </div>
               </div>
               <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 pl-[25px]">
-                Buku Kas Umum
+                <a href="/Kas-umum">Buku Kas Umum</a>
               </div>
               <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 pl-[25px]">
                 Buku Pembantu Pajak
