@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
 export default function Breadcrumb({ items = [] }) {
   return (
-    <div className="inline-flex items-center gap-1.5 mb-[55px]">
+    <div className="mb-[55px] inline-flex items-center gap-1.5">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
         <g clipPath="url(#clip0_7759_2480)">
           <path
@@ -24,10 +24,12 @@ export default function Breadcrumb({ items = [] }) {
           </clipPath>
         </defs>
       </svg>
-      
+
       {items.map((item, index) => (
         <div key={index} className="inline-flex items-center gap-1.5">
-          <div className={`flex items-center gap-1.5 ${item.active ? 'border-b-[0.5px] border-[#0040c1]' : ''}`}>
+          <div
+            className={`flex items-center gap-1.5 ${item.active ? "border-b-[0.5px] border-[#0040c1]" : ""}`}
+          >
             {item.icon && (
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path
@@ -38,14 +40,21 @@ export default function Breadcrumb({ items = [] }) {
                 />
               </svg>
             )}
-            <span className={`font-['Plus_Jakarta_Sans'] text-sm font-normal leading-[19.5px] ${item.active ? 'text-[#0040c1]' : 'text-black'}`}>
+            <span
+              className={`font-['Plus_Jakarta_Sans'] text-sm leading-[19.5px] font-normal ${item.active ? "text-[#0040c1]" : "text-black"}`}
+            >
               {item.label}
             </span>
           </div>
-          
+
           {index < items.length - 1 && (
             <svg width="29" height="18" viewBox="0 0 29 18" fill="none">
-              <path d="M10.875 13.25L18.125 9L10.875 4.75" stroke="#121926" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M10.875 13.25L18.125 9L10.875 4.75"
+                stroke="#121926"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           )}
         </div>

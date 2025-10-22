@@ -1,88 +1,90 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Sidebar from '@/components/Sidebar';
-import Breadcrumb from '@/components/Breadcrumb';
-import Button from '@/components/Button';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Sidebar from "@/components/Sidebar";
+import Breadcrumb from "@/components/Breadcrumb";
+import Button from "@/components/Button";
 
 export default function BukuKasUmumPage() {
   const [expandedMonths, setExpandedMonths] = useState({ bulan1: true });
+  const router = useRouter();
 
   const toggleMonth = (month) => {
     setExpandedMonths((prev) => ({ ...prev, [month]: !prev[month] }));
   };
 
   const breadcrumbItems = [
-    { label: 'Penatausahaan', icon: true, active: false },
-    { label: 'Buku Kas Umum', active: true },
+    { label: "Penatausahaan", icon: true, active: false },
+    { label: "Buku Kas Umum", active: true },
   ];
 
   const tableData = [
     {
-      no: '1',
-      tanggal: '22/4/09',
-      kodeRekening: '1.1.2',
-      uraian: 'Saldo Masuk',
-      pemasukan: '4.000,00',
-      pengeluaran: '5.000,00',
-      noBukti: '12',
-      nettoTransaksi: '9.000,00',
-      saldo: '10,000',
+      no: "1",
+      tanggal: "22/4/09",
+      kodeRekening: "1.1.2",
+      uraian: "Saldo Masuk",
+      pemasukan: "4.000,00",
+      pengeluaran: "5.000,00",
+      noBukti: "12",
+      nettoTransaksi: "9.000,00",
+      saldo: "10,000",
     },
     {
-      no: '1',
-      tanggal: '22/4/09',
-      kodeRekening: '1.1.2',
-      uraian: 'Saldo Masuk',
-      pemasukan: '4.000,00',
-      pengeluaran: '5.000,00',
-      noBukti: '12',
-      nettoTransaksi: '9.000,00',
-      saldo: '10,000',
+      no: "1",
+      tanggal: "22/4/09",
+      kodeRekening: "1.1.2",
+      uraian: "Saldo Masuk",
+      pemasukan: "4.000,00",
+      pengeluaran: "5.000,00",
+      noBukti: "12",
+      nettoTransaksi: "9.000,00",
+      saldo: "10,000",
     },
     {
-      no: '1',
-      tanggal: '22/4/09',
-      kodeRekening: '1.1.2',
-      uraian: 'Saldo Masuk',
-      pemasukan: '4.000,00',
-      pengeluaran: '5.000,00',
-      noBukti: '12',
-      nettoTransaksi: '9.000,00',
-      saldo: '10,000',
+      no: "1",
+      tanggal: "22/4/09",
+      kodeRekening: "1.1.2",
+      uraian: "Saldo Masuk",
+      pemasukan: "4.000,00",
+      pengeluaran: "5.000,00",
+      noBukti: "12",
+      nettoTransaksi: "9.000,00",
+      saldo: "10,000",
     },
     {
-      no: '1',
-      tanggal: '22/4/09',
-      kodeRekening: '1.1.2',
-      uraian: 'Saldo Masuk',
-      pemasukan: '4.000,00',
-      pengeluaran: '5.000,00',
-      noBukti: '12',
-      nettoTransaksi: '9.000,00',
-      saldo: '10,000',
+      no: "1",
+      tanggal: "22/4/09",
+      kodeRekening: "1.1.2",
+      uraian: "Saldo Masuk",
+      pemasukan: "4.000,00",
+      pengeluaran: "5.000,00",
+      noBukti: "12",
+      nettoTransaksi: "9.000,00",
+      saldo: "10,000",
     },
     {
-      no: '1',
-      tanggal: '22/4/09',
-      kodeRekening: '1.1.2',
-      uraian: 'Saldo Masuk',
-      pemasukan: '4.000,00',
-      pengeluaran: '5.000,00',
-      noBukti: '12',
-      nettoTransaksi: '9.000,00',
-      saldo: '10,000',
+      no: "1",
+      tanggal: "22/4/09",
+      kodeRekening: "1.1.2",
+      uraian: "Saldo Masuk",
+      pemasukan: "4.000,00",
+      pengeluaran: "5.000,00",
+      noBukti: "12",
+      nettoTransaksi: "9.000,00",
+      saldo: "10,000",
     },
     {
-      no: '1',
-      tanggal: '22/4/09',
-      kodeRekening: '1.1.2',
-      uraian: 'Saldo Masuk',
-      pemasukan: '4.000,00',
-      pengeluaran: '5.000,00',
-      noBukti: '12',
-      nettoTransaksi: '9.000,00',
-      saldo: '10,000',
+      no: "1",
+      tanggal: "22/4/09",
+      kodeRekening: "1.1.2",
+      uraian: "Saldo Masuk",
+      pemasukan: "4.000,00",
+      pengeluaran: "5.000,00",
+      noBukti: "12",
+      nettoTransaksi: "9.000,00",
+      saldo: "10,000",
     },
   ];
 
@@ -99,12 +101,12 @@ export default function BukuKasUmumPage() {
               <h1 className="text-black font-['Plus_Jakarta_Sans'] text-[31px] font-bold leading-[46.5px] m-0">
                 Buku Kas Umum
               </h1>
-              <p className="text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 m-0">
+              <p className="m-0 font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
                 Buku Kas Umum Pemerintah Desa BANGUNTAPAN Tahun Anggaran 2025
               </p>
             </div>
-            <div className="flex flex-col justify-center items-start gap-0.5">
-              <Button 
+            <div className="flex flex-col items-start justify-center gap-0.5">
+              <Button
                 variant="orange"
                 icon={
                   <svg width="20" height="21" viewBox="0 0 20 21" fill="none">
@@ -120,7 +122,7 @@ export default function BukuKasUmumPage() {
               >
                 Unduh File
               </Button>
-              <Button 
+              <Button
                 variant="green"
                 icon={
                   <svg width="20" height="21" viewBox="0 0 20 21" fill="none">
@@ -133,6 +135,7 @@ export default function BukuKasUmumPage() {
                     />
                   </svg>
                 }
+                onClick={() => router.push("/Kas-umum/Form")}
               >
                 Input Data
               </Button>
@@ -140,10 +143,10 @@ export default function BukuKasUmumPage() {
           </div>
 
           <div className="flex flex-col items-start gap-1.5 self-stretch">
-            <label className="text-[#011829] font-['Inter'] text-sm font-medium leading-5">
+            <label className="font-['Inter'] text-sm leading-5 font-medium text-[#011829]">
               Tanggal
             </label>
-            <div className="flex px-[14px] py-2.5 items-center gap-2 self-stretch rounded-lg border border-[#d4d4d8] bg-white shadow-[0_1px_2px_0_rgba(16,24,40,0.05)]">
+            <div className="flex items-center gap-2 self-stretch rounded-lg border border-[#d4d4d8] bg-white px-[14px] py-2.5 shadow-[0_1px_2px_0_rgba(16,24,40,0.05)]">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path
                   d="M13.3333 1.6665V4.99984M6.66667 1.6665V4.99984M2.5 8.33317H17.5M4.16667 3.33317H15.8333C16.7538 3.33317 17.5 4.07936 17.5 4.99984V16.6665C17.5 17.587 16.7538 18.3332 15.8333 18.3332H4.16667C3.24619 18.3332 2.5 17.587 2.5 16.6665V4.99984C2.5 4.07936 3.24619 3.33317 4.16667 3.33317Z"
@@ -153,10 +156,10 @@ export default function BukuKasUmumPage() {
                   strokeLinejoin="round"
                 />
               </svg>
-              <input 
-                type="text" 
-                placeholder="DD/MM/YYYY" 
-                className="flex-1 text-[#a1a1aa] font-['Inter'] text-base font-normal leading-6 border-none outline-none" 
+              <input
+                type="text"
+                placeholder="DD/MM/YYYY"
+                className="flex-1 border-none font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] outline-none"
               />
             </div>
           </div>
@@ -164,21 +167,36 @@ export default function BukuKasUmumPage() {
           <div className="flex flex-col items-start gap-[14px] self-stretch">
             {/* Month Section - Collapsed */}
             <div className="flex flex-col items-start self-stretch">
-              <div className="flex h-[66px] px-[25px] py-[17px] justify-between items-center self-stretch rounded-[30px] border-[0.5px] border-[#4b5565]">
+              <div className="flex h-[66px] items-center justify-between self-stretch rounded-[30px] border-[0.5px] border-[#4b5565] px-[25px] py-[17px]">
                 <div className="flex items-center gap-2.5">
-                  <button onClick={() => toggleMonth('bulan2')} className="bg-transparent border-none p-0 cursor-pointer flex items-center justify-center w-6 h-6">
+                  <button
+                    onClick={() => toggleMonth("bulan2")}
+                    className="flex h-6 w-6 cursor-pointer items-center justify-center border-none bg-transparent p-0"
+                  >
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path d="M9 18L15 12L9 6" stroke="#121926" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path
+                        d="M9 18L15 12L9 6"
+                        stroke="#121926"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </button>
-                  <span className="text-black font-['Plus_Jakarta_Sans'] text-xl font-bold leading-[30px]">Bulan 2</span>
+                  <span className="font-['Plus_Jakarta_Sans'] text-xl leading-[30px] font-bold text-black">
+                    Bulan 2
+                  </span>
                 </div>
                 <div className="flex items-center gap-2.5">
-                  <span className="text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">Saldo Total</span>
-                  <span className="text-black font-['Poppins'] text-base font-bold leading-6">Rp1.500.000.000,00</span>
+                  <span className="font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
+                    Saldo Total
+                  </span>
+                  <span className="font-['Poppins'] text-base leading-6 font-bold text-black">
+                    Rp1.500.000.000,00
+                  </span>
                 </div>
-                <div className="flex justify-end items-center gap-1">
-                  <button className="flex p-2 justify-center items-center gap-2 rounded-lg border border-[#4b5565] bg-transparent cursor-pointer">
+                <div className="flex items-center justify-end gap-1">
+                  <button className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#4b5565] bg-transparent p-2">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <path
                         d="M14 10V12.6667C14 13.0203 13.8595 13.3594 13.6095 13.6095C13.3594 13.8595 13.0203 14 12.6667 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V10M4.66667 6.66667L8 10M8 10L11.3333 6.66667M8 10V2"
@@ -188,7 +206,10 @@ export default function BukuKasUmumPage() {
                       />
                     </svg>
                   </button>
-                  <button className="flex p-2 justify-center items-center gap-2 rounded-lg border border-[#4b5565] bg-transparent cursor-pointer">
+                  <button
+                    className="black flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#4b5565] bg-transparent p-2"
+                    onClick={() => router.push("/Kas-umum/Form")}
+                  >
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <path
                         d="M7.99998 3.3335V12.6668M3.33331 8.00016H12.6666"
@@ -204,27 +225,48 @@ export default function BukuKasUmumPage() {
 
             {/* Month Section - Expanded */}
             <div className="flex flex-col items-start self-stretch">
-              <div className="flex h-[66px] px-[25px] py-[17px] justify-between items-center self-stretch rounded-[30px] border-[0.5px] border-[#4b5565]">
+              <div className="flex h-[66px] items-center justify-between self-stretch rounded-[30px] border-[0.5px] border-[#4b5565] px-[25px] py-[17px]">
                 <div className="flex items-center gap-2.5">
-                  <button onClick={() => toggleMonth('bulan1')} className="bg-transparent border-none p-0 cursor-pointer flex items-center justify-center w-6 h-6">
+                  <button
+                    onClick={() => toggleMonth("bulan1")}
+                    className="flex h-6 w-6 cursor-pointer items-center justify-center border-none bg-transparent p-0"
+                  >
                     {expandedMonths.bulan1 ? (
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M6 9L12 15L18 9" stroke="#121926" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path
+                          d="M6 9L12 15L18 9"
+                          stroke="#121926"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
                     ) : (
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M9 18L15 12L9 6" stroke="#121926" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path
+                          d="M9 18L15 12L9 6"
+                          stroke="#121926"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
                     )}
                   </button>
-                  <span className="text-black font-['Plus_Jakarta_Sans'] text-xl font-bold leading-[30px]">Bulan 1</span>
+                  <span className="font-['Plus_Jakarta_Sans'] text-xl leading-[30px] font-bold text-black">
+                    Bulan 1
+                  </span>
                 </div>
                 <div className="flex items-center gap-2.5">
-                  <span className="text-black font-['Plus_Jakarta_Sans'] text-base font-normal leading-6">Total</span>
-                  <span className="text-black font-['Poppins'] text-base font-bold leading-6">Rp1.500.000.000,00</span>
+                  <span className="font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
+                    Saldo Total
+                  </span>
+                  <span className="font-['Poppins'] text-base leading-6 font-bold text-black">
+                    Rp1.500.000.000,00
+                  </span>
                 </div>
-                <div className="flex justify-end items-center gap-1">
-                  <button className="flex p-2 justify-center items-center gap-2 rounded-lg border border-[#4b5565] bg-transparent cursor-pointer">
+                <div className="flex items-center justify-end gap-1">
+                  <button className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#4b5565] bg-transparent p-2">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <path
                         d="M14 10V12.6667C14 13.0203 13.8595 13.3594 13.6095 13.6095C13.3594 13.8595 13.0203 14 12.6667 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V10M4.66667 6.66667L8 10M8 10L11.3333 6.66667M8 10V2"
@@ -234,7 +276,10 @@ export default function BukuKasUmumPage() {
                       />
                     </svg>
                   </button>
-                  <button className="flex p-2 justify-center items-center gap-2 rounded-lg border border-[#4b5565] bg-transparent cursor-pointer">
+                  <button
+                    className="black flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#4b5565] bg-transparent p-2"
+                    onClick={() => router.push("/Kas-umum/Form")}
+                  >
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <path
                         d="M7.99998 3.3335V12.6668M3.33331 8.00016H12.6666"

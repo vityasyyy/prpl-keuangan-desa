@@ -1,5 +1,5 @@
 // src/repository/kas-umum/kas-umum.repo.js
-export default function createRepo({ db }) {
+export default function createKasUmumRepo({ db }) {
   // db = instance Pool (pg)
   const P = (i) => `$${i}`;
 
@@ -93,7 +93,7 @@ export default function createRepo({ db }) {
     const { rows } = await db.query(`
       SELECT id, full_code, uraian
       FROM kode_fungsi
-      WHERE level = '1'
+      WHERE level = 'bidang'
       ORDER BY full_code
     `);
     return rows;
@@ -104,7 +104,7 @@ export default function createRepo({ db }) {
       `
       SELECT id, full_code, uraian
       FROM kode_fungsi
-      WHERE level = '2' AND parent_id = ${P(1)}
+      WHERE level = 'sub_bidang' AND parent_id = ${P(1)}
       ORDER BY full_code
     `,
       [bidangId]
@@ -117,11 +117,112 @@ export default function createRepo({ db }) {
       `
       SELECT id, full_code, uraian
       FROM kode_fungsi
-      WHERE level = '3' AND parent_id = ${P(1)}
+      WHERE level = 'kegiatan' AND parent_id = ${P(1)}
       ORDER BY full_code
     `,
       [subBidangId]
     );
+    return rows;
+  };
+
+  /**
+   * Insert data baru ke tabel Buku_Kas_Umum
+   */
+  const insertBku = async (data) => {
+    const {
+      tanggal,
+      rab_id,
+      kode_ekonomi_id, // ID dari tabel Kode_Ekonomi
+      kode_fungsi_id, // ID dari tabel Kode_Fungsi (kegiatan)
+      uraian,
+      penerimaan = 0,
+      pengeluaran = 0,
+      no_bukti,
+    } = data;
+
+    // Validasi: tidak boleh penerimaan dan pengeluaran keduanya terisi
+    if (penerimaan > 0 && pengeluaran > 0) {
+      throw new Error(
+        "Transaksi hanya boleh pemasukan ATAU pengeluaran, tidak keduanya"
+      );
+    }
+
+    // Hitung saldo_after berdasarkan saldo terakhir dari RAB yang sama
+    const lastSaldoQuery = `
+      SELECT saldo_after 
+      FROM Buku_Kas_Umum 
+      WHERE rab_id = $1 
+      ORDER BY tanggal DESC, id DESC 
+      LIMIT 1
+    `;
+    const {
+      rows: [lastRow],
+    } = await db.query(lastSaldoQuery, [rab_id]);
+    const saldoBefore = lastRow?.saldo_after || 0;
+    const saldoAfter = saldoBefore + penerimaan - pengeluaran;
+
+    // Insert data baru ke tabel Buku_Kas_Umum
+    const insertQuery = `
+      INSERT INTO Buku_Kas_Umum (
+        tanggal, 
+        rab_id, 
+        kode_ekonomi_id,
+        kode_fungsi_id,
+        uraian, 
+        penerimaan, 
+        pengeluaran, 
+        no_bukti,
+        saldo_after
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING id, tanggal, rab_id, kode_ekonomi_id, kode_fungsi_id, 
+                uraian, penerimaan, pengeluaran, no_bukti, saldo_after
+    `;
+
+    const values = [
+      tanggal,
+      rab_id,
+      kode_ekonomi_id,
+      kode_fungsi_id,
+      uraian,
+      penerimaan,
+      pengeluaran,
+      no_bukti,
+      saldoAfter,
+    ];
+
+    const {
+      rows: [newRow],
+    } = await db.query(insertQuery, values);
+
+    // Get detail kode ekonomi dan kode fungsi untuk response
+    const detailQuery = `
+      SELECT 
+        bku.*,
+        ke.full_code AS kode_ekonomi_full,
+        ke.uraian AS kode_ekonomi_uraian,
+        kf.full_code AS kode_fungsi_full,
+        kf.uraian AS kode_fungsi_uraian
+      FROM Buku_Kas_Umum bku
+      LEFT JOIN Kode_Ekonomi ke ON ke.id = bku.kode_ekonomi_id
+      LEFT JOIN Kode_Fungsi kf ON kf.id = bku.kode_fungsi_id
+      WHERE bku.id = $1
+    `;
+
+    const {
+      rows: [detailRow],
+    } = await db.query(detailQuery, [newRow.id]);
+    return detailRow;
+  };
+
+  /**
+   * Dropdown Kode Ekonomi
+   */
+  const listKodeEkonomi = async () => {
+    const { rows } = await db.query(`
+      SELECT id, full_code, uraian 
+      FROM kode_ekonomi 
+      ORDER BY full_code
+    `);
     return rows;
   };
 
@@ -131,5 +232,7 @@ export default function createRepo({ db }) {
     listBidang,
     listSubBidang,
     listKegiatan,
+    insertBku,
+    listKodeEkonomi,
   };
 }
