@@ -1,19 +1,15 @@
+// src/api/routes/kas-umum.route.js
 import { Router } from "express";
-import createHandlers from "../../handler/kas-umum/kas-umum.handler.js";
 
-export default function createKasUmumRouter({ db }) {
+export default function createKasUmumRouter(kasUmumHandler) {
   const r = Router();
-  const h = createHandlers({ db });
 
-  r.get("/", h.getBku);
-  r.get("/bidang", h.getBidang);
-  r.get("/sub-bidang", h.getSubBidang);
-  r.get("/kegiatan", h.getKegiatan);
-
-  r.get("/", h.getBku);
-  r.post("/", h.createBku);
-
-  r.get("/kode-ekonomi", h.getKodeEkonomi);
+  r.get("/", kasUmumHandler.getBku);
+  r.post("/", kasUmumHandler.createBku);
+  r.get("/bidang", kasUmumHandler.getBidang);
+  r.get("/sub-bidang", kasUmumHandler.getSubBidang);
+  r.get("/kegiatan", kasUmumHandler.getKegiatan);
+  r.get("/kode-ekonomi", kasUmumHandler.getKodeEkonomi);
 
   return r;
 }

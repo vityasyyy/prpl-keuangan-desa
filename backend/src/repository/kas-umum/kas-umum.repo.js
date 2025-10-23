@@ -1,8 +1,19 @@
 // src/repository/kas-umum/kas-umum.repo.js
-export default function createKasUmumRepo({ db }) {
-  // db = instance Pool (pg)
-  const P = (i) => `$${i}`;
+export default function createKasUmumRepo(arg) {
+  // Deteksi instance Pool / BoundPool / Client dari pg
+  const db =
+    arg?.query || arg?.connect || arg?.db?.query
+      ? arg.query
+        ? arg
+        : arg.db
+      : undefined;
 
+  if (!db || typeof db.query !== "function") {
+    console.error("[kas-umum.repo] Invalid db instance received:", arg);
+    throw new Error("Invalid database instance passed to createKasUmumRepo");
+  }
+
+  const P = (i) => `$${i}`;
   // Helper untuk pencocokan bulan
   const monthBku = () =>
     `DATE_TRUNC('month', bku.tanggal) = DATE_TRUNC('month', ${P(1)}::date)`;
