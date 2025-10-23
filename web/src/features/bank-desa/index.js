@@ -1,9 +1,7 @@
-import Image from "next/image";
-
-export default function Home() {
+export default function BankDesa() {
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <p>Welcome!</p>
+      <p>Bank Desa!</p>
     </div>
   );
 }
