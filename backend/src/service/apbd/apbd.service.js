@@ -18,6 +18,8 @@ export default function createApbdService(ApbdRepo) {
     };
   };
 
+  const getKodeFungsi = async () => ApbdRepo.listKodeFungsi();
+
   const getBidang = async () => ApbdRepo.listBidang();
 
   const getSubBidang = async (bidangId) => {
@@ -98,6 +100,7 @@ export default function createApbdService(ApbdRepo) {
   return {
     getBapbd,
     getBidang,
+    getKodeFungsi,
     getSubBidang,
     getKegiatan,
     createBapbd,
