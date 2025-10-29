@@ -91,6 +91,8 @@ export default function createApbdService(ApbdRepo) {
 
   const getKodeEkonomi = async () => ApbdRepo.listKodeEkonomi();
 
+  const getAkun = async () => ApbdRepo.listAkun();
+
   const getUraian = async () =>
     ApbdRepo.listUraian ? ApbdRepo.listUraian() : [];
 
@@ -105,6 +107,7 @@ export default function createApbdService(ApbdRepo) {
     getKegiatan,
     createBapbd,
     getKodeEkonomi,
+    getAkun,
     getUraian,
     getSumberDana,
   };

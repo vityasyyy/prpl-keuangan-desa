@@ -11,6 +11,7 @@ export default function createApbdRouter(apbdHandler) {
   r.get("/sub-bidang", apbdHandler.getSubBidang);
   r.get("/kegiatan", apbdHandler.getKegiatan);
   r.get("/kode-ekonomi", apbdHandler.getKodeEkonomi);
+  r.get("/akun", apbdHandler.getAkun);
   r.get("/uraian", apbdHandler.getUraian);
   r.get("/sumber-dana", apbdHandler.getSumberDana);
   

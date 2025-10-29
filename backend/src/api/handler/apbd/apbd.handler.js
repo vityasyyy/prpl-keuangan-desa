@@ -67,6 +67,15 @@ export default function createApbdHandler(ApbdService) {
     }
   }
 
+  const getAkun = async (_req, res, next) => {
+    try {
+      const data = await ApbdService.getAkun();
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  }
+
   const getUraian = async (_req, res, next) => {
     try {
       const data = await ApbdService.getUraian();
@@ -93,6 +102,7 @@ export default function createApbdHandler(ApbdService) {
     getSubBidang, //form input sub-bidang
     getKegiatan, //form input kegiatan
     getKodeEkonomi, //form input kode ekonomi
+    getAkun,
     getUraian, //form input uraian
     getSumberDana, //form input sumber dana
   };

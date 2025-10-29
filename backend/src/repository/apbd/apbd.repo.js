@@ -143,13 +143,18 @@ export default function createApbdRepo(arg) {
     return rows;
   };
 
+  const listAkun = async () => {
+    const { rows } = await db.query(`SELECT id, full_code, uraian FROM kode_ekonomi WHERE level = 'akun' ORDER BY full_code`);
+    return rows;
+  }
+
   const listKodeFungsi = async () => {
     const { rows } = await db.query(`SELECT id, full_code, uraian, level, parent_id FROM kode_fungsi ORDER BY full_code`);
     return rows;
   };
 
   const listUraian = async () => {
-    const { rows } = await db.query(`SELECT DISTINCT uraian FROM apbdes_rincian ORDER BY uraian`);
+    const { rows } = await db.query(`SELECT DISTINCT uraian FROM kode_ekonomi ORDER BY uraian`);
     return rows.map((r) => r.uraian);
   };
 
@@ -165,6 +170,7 @@ export default function createApbdRepo(arg) {
     listSubBidang,
     listKegiatan,
     listKodeEkonomi,
+    listAkun,
     listUraian,
     listSumberDana,
     insertBApbd,
