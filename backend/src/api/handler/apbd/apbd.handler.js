@@ -1,0 +1,99 @@
+// src/api/handler/apbd/apbd.handler.js
+export default function createApbdHandler(ApbdService) {
+  //create
+  const createBapbd = async (req, res, next) => {
+    try {
+      const result = await ApbdService.createBapbd(req.body);
+      res.status(201).json(result);
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  //get
+  const getBapbd = async (req, res, next) => {
+    try {
+      const { id, tahun, status } = req.query;
+      const result = await ApbdService.getBapbd({ id, tahun, status });
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  };
+  const getKodeFungsi = async (_req, res, next) => {
+    try {
+      const data = await ApbdService.getKodeFungsi();
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  const getBidang = async (_req, res, next) => {
+    try {
+      const data = await ApbdService.getBidang();
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  const getSubBidang = async (req, res, next) => {
+    try {
+      const { bidangId } = req.query;
+      const data = await ApbdService.getSubBidang(bidangId);
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  const getKegiatan = async (req, res, next) => {
+    try {
+      const { subBidangId } = req.query;
+      const data = await ApbdService.getKegiatan(subBidangId);
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  const getKodeEkonomi = async (_req, res, next) => {
+    try {
+      const data = await ApbdService.getKodeEkonomi();
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  const getUraian = async (_req, res, next) => {
+    try {
+      const data = await ApbdService.getUraian();
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  const getSumberDana = async (_req, res, next) => {
+    try {
+      const data = await ApbdService.getSumberDana();
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  return {
+    createBapbd, //create buku apbdes
+    getBapbd, //buku apbdes
+    getKodeFungsi, //form input kode fungsi
+    getBidang, //form input bidang
+    getSubBidang, //form input sub-bidang
+    getKegiatan, //form input kegiatan
+    getKodeEkonomi, //form input kode ekonomi
+    getUraian, //form input uraian
+    getSumberDana, //form input sumber dana
+  };
+}
