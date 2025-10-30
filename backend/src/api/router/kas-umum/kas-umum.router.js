@@ -9,6 +9,7 @@ export default function createKasUmumRouter(kasUmumHandler) {
   r.get("/bidang", kasUmumHandler.getBidang);
   r.get("/sub-bidang", kasUmumHandler.getSubBidang);
   r.get("/kegiatan", kasUmumHandler.getKegiatan);
+  r.get("/saldo", kasUmumHandler.getSaldo);
   r.get("/kode-ekonomi", kasUmumHandler.getKodeEkonomi);
 
   return r;

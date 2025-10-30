@@ -119,6 +119,12 @@ export default function createKasUmumService(kasUmumRepo) {
 
   const getKodeEkonomi = async () => kasUmumRepo.listKodeEkonomi();
 
+  const getLastSaldo = async (rabId) => {
+    // rabId optional
+    const saldo = await kasUmumRepo.getLastSaldo(rabId);
+    return { saldo };
+  };
+
   return {
     getBku,
     getBidang,
@@ -126,5 +132,6 @@ export default function createKasUmumService(kasUmumRepo) {
     getKegiatan,
     createBku,
     getKodeEkonomi,
+    getLastSaldo,
   };
 }

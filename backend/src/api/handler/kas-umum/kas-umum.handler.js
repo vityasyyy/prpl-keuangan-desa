@@ -48,6 +48,16 @@ export default function createKasUmumHandler(kasUmumService) {
     }
   };
 
+  const getSaldo = async (req, res, next) => {
+    try {
+      const { rabId } = req.query;
+      const result = await kasUmumService.getLastSaldo(rabId);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  };
+
   const getKodeEkonomi = async (_req, res, next) => {
     try {
       const data = await kasUmumService.getKodeEkonomi();
@@ -64,5 +74,6 @@ export default function createKasUmumHandler(kasUmumService) {
     getKegiatan,
     createBku,
     getKodeEkonomi,
+    getSaldo,
   };
 }

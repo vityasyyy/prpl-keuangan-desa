@@ -237,6 +237,36 @@ export default function createKasUmumRepo(arg) {
     return rows;
   };
 
+  /**
+   * Ambil saldo terakhir. Jika rabId diberikan, ambil saldo terakhir untuk RAB tersebut,
+   * jika tidak, ambil saldo terakhir secara global.
+   */
+  const getLastSaldo = async (rabId) => {
+    let sql;
+    let params = [];
+    if (rabId) {
+      sql = `
+        SELECT saldo_after
+        FROM buku_kas_umum
+        WHERE rab_id = ${P(1)}
+        ORDER BY tanggal DESC, id DESC
+        LIMIT 1
+      `;
+      params = [rabId];
+    } else {
+      sql = `
+        SELECT saldo_after
+        FROM buku_kas_umum
+        ORDER BY tanggal DESC, id DESC
+        LIMIT 1
+      `;
+    }
+
+    const { rows } = await db.query(sql, params);
+    const row = rows[0];
+    return row?.saldo_after ?? 0;
+  };
+
   return {
     listBkuRows,
     getBkuSummary,
@@ -245,5 +275,6 @@ export default function createKasUmumRepo(arg) {
     listKegiatan,
     insertBku,
     listKodeEkonomi,
+    getLastSaldo,
   };
 }

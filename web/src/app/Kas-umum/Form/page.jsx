@@ -5,7 +5,7 @@ import Sidebar from "@/components/Sidebar";
 import Breadcrumb from "@/components/Breadcrumb";
 import Button from "@/components/Button";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
 
 export default function FormInputKasUmum() {
   const [formData, setFormData] = useState({
@@ -22,9 +22,185 @@ export default function FormInputKasUmum() {
     buatLagi: false,
   });
 
+  const [kodeRekError, setKodeRekError] = useState("");
+
+  // Fungsi validasi format kode rekening
+  const validateKodeRek = (kode) => {
+    if (!kode) return "";
+
+    // Bersihkan input - terima baik titik maupun spasi sebagai pemisah
+    const cleanKode = kode.replace(/\./g, " ").trim();
+    const pattern = /^\d+(\s+\d+(\s+\d+)?)?$/;
+
+    if (!pattern.test(cleanKode)) {
+      return "Format kode harus 'x x xx' (contoh: 1 2 03)";
+    }
+
+    const parts = cleanKode.split(/\s+/);
+
+    // Validasi: bidang dan sub-bidang harus 1 digit, kegiatan maks 2 digit
+    if (parts[0] && parts[0].length > 1) return "Kode bidang harus 1 digit";
+    if (parts[1] && parts[1].length > 1) return "Kode sub-bidang harus 1 digit";
+    if (parts[2] && parts[2].length > 2) return "Kode kegiatan maksimal 2 digit";
+
+    return "";
+  };
+
+  // Format kode rekening ke format yang benar (x x xx)
+  const formatKodeRek = (kode) => {
+    // Bersihkan input (ubah titik jadi spasi)
+    const cleanKode = kode.replace(/\./g, " ");
+    const parts = cleanKode.split(/\s+/);
+
+    // Format: bidang dan sub-bidang single digit, kegiatan 2 digit
+    const formattedParts = parts.map((part, index) => {
+      if (index === 2) {
+        // kegiatan
+        return part.padStart(2, "0");
+      }
+      return parseInt(part); // hilangkan leading zero untuk bidang dan sub-bidang
+    });
+
+    return formattedParts.join(" ");
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "kodeRek") {
+      // Hanya proses jika ada perubahan
+      if (value === formData.kodeRek) return;
+
+      const error = validateKodeRek(value);
+      setKodeRekError(error);
+
+      // Update form dengan kode yang diinput
+      setFormData((prev) => ({ ...prev, [name]: value }));
+
+      if (!error) {
+        // Format: ubah titik jadi spasi dan trim
+        const cleanKode = value.replace(/\./g, " ").trim();
+        const parts = cleanKode.split(/\s+/);
+
+        if (parts[0]) {
+          // Find matching bidang (sekarang menggunakan parseInt untuk menghilangkan leading zero)
+          const matchingBidang = bidangList.find((b) => {
+            const bidangParts = b.full_code.replace(/\./g, " ").trim().split(/\s+/);
+            return parseInt(bidangParts[0]) === parseInt(parts[0]);
+          });
+
+          if (matchingBidang) {
+            // Format ulang kode untuk menghilangkan leading zero di bidang
+            const formattedCode = `${parseInt(parts[0])}${parts[1] ? ` ${parts[1]}` : ""}${parts[2] ? ` ${parts[2].padStart(2, "0")}` : ""}`;
+
+            // Set bidang id but keep the user's raw input in kodeRek so they can type spaces
+            setFormData((prev) => ({
+              ...prev,
+              bidang: matchingBidang.id,
+            }));
+
+            // Reset sub-bidang dan kegiatan
+            setFormData((prev) => ({
+              ...prev,
+              subBidang: "",
+              kegiatan: "",
+            }));
+
+            // Cek sub-bidang jika ada
+            if (parts[1] && subBidangList.length > 0) {
+              const matchingSubBidang = subBidangList.find((s) => {
+                const subParts = s.full_code.replace(/\./g, " ").trim().split(/\s+/);
+                return (
+                  parseInt(subParts[0]) === parseInt(parts[0]) &&
+                  parseInt(subParts[1]) === parseInt(parts[1])
+                );
+              });
+
+              if (matchingSubBidang) {
+                // Set subBidang id but keep user's raw input in kodeRek while typing
+                setFormData((prev) => ({
+                  ...prev,
+                  subBidang: matchingSubBidang.id,
+                }));
+
+                // Reset kegiatan
+                setFormData((prev) => ({
+                  ...prev,
+                  kegiatan: "",
+                }));
+
+                // Cek kegiatan jika ada
+                if (parts[2] && kegiatanList.length > 0) {
+                  const matchingKegiatan = kegiatanList.find((k) => {
+                    const kegParts = k.full_code.replace(/\./g, " ").trim().split(/\s+/);
+                    const targetKode = `${parseInt(parts[0])} ${parseInt(parts[1])} ${parts[2].padStart(2, "0")}`;
+                    return k.full_code.replace(/\./g, " ").trim() === targetKode;
+                  });
+
+                  if (matchingKegiatan) {
+                    // Set kegiatan id but keep the raw input; dropdown selection will format kodeRek
+                    setFormData((prev) => ({
+                      ...prev,
+                      kegiatan: matchingKegiatan.id,
+                    }));
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } else {
+      // Dropdown handling logic
+      if (name === "kegiatan" && value) {
+        const selectedKegiatan = kegiatanList.find((k) => k.id === value);
+        if (selectedKegiatan) {
+          // Format ulang kode dari kegiatan yang dipilih
+          const parts = selectedKegiatan.full_code.replace(/\./g, " ").trim().split(/\s+/);
+          const formattedCode = `${parseInt(parts[0])} ${parseInt(parts[1])} ${parts[2].padStart(2, "0")}`;
+
+          setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+            kodeRek: formattedCode,
+          }));
+          setKodeRekError("");
+        }
+      } else if (name === "subBidang" && value) {
+        const selectedSubBidang = subBidangList.find((s) => s.id === value);
+        if (selectedSubBidang) {
+          // Format ulang kode dari sub-bidang yang dipilih
+          const parts = selectedSubBidang.full_code.replace(/\./g, " ").trim().split(/\s+/);
+          const formattedCode = `${parseInt(parts[0])} ${parseInt(parts[1])}`;
+
+          setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+            kegiatan: "", // Reset kegiatan when sub-bidang changes
+            kodeRek: formattedCode,
+          }));
+          setKodeRekError("");
+        }
+      } else if (name === "bidang" && value) {
+        const selectedBidang = bidangList.find((b) => b.id === value);
+        if (selectedBidang) {
+          // Format ulang kode dari bidang yang dipilih (hilangkan leading zero)
+          const parts = selectedBidang.full_code.replace(/\./g, " ").trim().split(/\s+/);
+          const formattedCode = `${parseInt(parts[0])}`;
+
+          setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+            subBidang: "", // Reset sub-bidang when bidang changes
+            kegiatan: "", // Reset kegiatan when bidang changes
+            kodeRek: formattedCode,
+          }));
+          setKodeRekError("");
+        }
+      } else {
+        setFormData((prev) => ({ ...prev, [name]: value }));
+      }
+    }
   };
 
   const handleToggle = () => {
@@ -39,6 +215,33 @@ export default function FormInputKasUmum() {
   const [bidangList, setBidangList] = useState([]);
   const [subBidangList, setSubBidangList] = useState([]);
   const [kegiatanList, setKegiatanList] = useState([]);
+  const [saldoAutomated, setSaldoAutomated] = useState(null);
+
+  const formatNumber = (num) => {
+    if (num === null || num === undefined) return "";
+    try {
+      return new Intl.NumberFormat("id-ID", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(Number(num));
+    } catch (e) {
+      return String(num);
+    }
+  };
+
+  const fetchSaldo = async (rabId) => {
+    try {
+      const q = rabId ? `?rabId=${encodeURIComponent(rabId)}` : "";
+      const res = await fetch(`${API_BASE_URL}/kas-umum/saldo${q}`);
+      if (!res.ok) throw new Error("Gagal ambil saldo");
+      const data = await res.json();
+      // backend returns { saldo: number }
+      setSaldoAutomated(data?.saldo ?? 0);
+    } catch (err) {
+      console.error("[fetchSaldo]", err);
+      setSaldoAutomated(0);
+    }
+  };
 
   // Ambil daftar bidang
   useEffect(() => {
@@ -99,6 +302,12 @@ export default function FormInputKasUmum() {
     fetchKegiatan();
   }, [formData.subBidang]);
 
+  // Ambil saldo otomatis saat komponen mount (atau bila ingin, saat tanggal berubah)
+  useEffect(() => {
+    // If in future rabId is available, pass it here. For now fetch global latest saldo.
+    fetchSaldo();
+  }, []);
+
   return (
     <div className="flex min-h-screen bg-white">
       <Sidebar />
@@ -148,14 +357,19 @@ export default function FormInputKasUmum() {
                   Klasifikasi Bidang Kegiatan
                 </label>
                 <div className="flex items-start gap-1.5 self-stretch">
-                  <input
-                    type="text"
-                    name="kodeRek"
-                    value={formData.kodeRek}
-                    onChange={handleInputChange}
-                    placeholder="Kode Rek"
-                    className="w-[159px] rounded-lg border border-[#d4d4d8] bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]"
-                  />
+                  <div className="flex flex-col gap-1">
+                    <input
+                      type="text"
+                      name="kodeRek"
+                      value={formData.kodeRek}
+                      onChange={handleInputChange}
+                      placeholder="Kode Rek"
+                      className={`w-[159px] rounded-lg border ${
+                        kodeRekError ? "border-red-500" : "border-[#d4d4d8]"
+                      } bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]`}
+                    />
+                    {kodeRekError && <span className="text-xs text-red-500">{kodeRekError}</span>}
+                  </div>
                   <div className="relative flex flex-1 items-center gap-2 rounded-lg border border-[#d4d4d8] bg-white px-2.5 py-2.5 shadow-[0_1px_2px_0_rgba(16,24,40,0.05)]">
                     <select
                       name="bidang"
@@ -360,7 +574,7 @@ export default function FormInputKasUmum() {
               </div>
               <input
                 type="text"
-                value="100.000.000,00"
+                value={saldoAutomated !== null ? formatNumber(saldoAutomated) : ""}
                 readOnly
                 className="flex flex-1 items-center gap-2 border-none px-0 py-2.5 pr-[14px] font-['Inter'] text-base leading-6 font-normal text-[#011829] outline-none"
               />
