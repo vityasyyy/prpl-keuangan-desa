@@ -206,6 +206,39 @@ export default function FormInputKasUmum() {
   const handleToggle = () => {
     setFormData((prev) => ({ ...prev, buatLagi: !prev.buatLagi }));
   };
+  const handleSubmit = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/kas-umum`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      // Log status dan response mentah
+      console.log("🛰️ Status:", res.status);
+      const text = await res.text();
+      console.log("📩 Raw response:", text);
+
+      // Coba parse JSON kalau bisa
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Respon bukan JSON: ${text.slice(0, 100)}...`);
+      }
+
+      if (!res.ok) {
+        console.error("❌ Backend error:", data);
+        throw data;
+      }
+
+      console.log("✅ Success:", data);
+      alert(data.message || "Data berhasil disimpan!");
+    } catch (error) {
+      console.error("🚨 Caught error:", error);
+      alert(`Terjadi kesalahan: ${error.message || JSON.stringify(error)}`);
+    }
+  };
 
   const breadcrumbItems = [
     { label: "Penatausahaan", icon: true, active: false },
@@ -301,6 +334,18 @@ export default function FormInputKasUmum() {
     };
     fetchKegiatan();
   }, [formData.subBidang]);
+  useEffect(() => {
+    const pemasukan = parseFloat(formData.pemasukan) || 0;
+    const pengeluaran = parseFloat(formData.pengeluaran) || 0;
+
+    // Hitung netto (positif = pemasukan, negatif = pengeluaran)
+    const netto = pemasukan > 0 ? pemasukan : pengeluaran > 0 ? -pengeluaran : 0;
+
+    // Kalau negatif, tampilkan dalam tanda kurung
+    const displayValue = netto < 0 ? `(${Math.abs(netto)})` : netto.toString();
+
+    setFormData((prev) => ({ ...prev, nettoTransaksi: displayValue }));
+  }, [formData.pemasukan, formData.pengeluaran]);
 
   // Ambil saldo otomatis saat komponen mount (atau bila ingin, saat tanggal berubah)
   useEffect(() => {
@@ -342,7 +387,7 @@ export default function FormInputKasUmum() {
                     />
                   </svg>
                   <input
-                    type="text"
+                    type="date"
                     name="tanggal"
                     value={formData.tanggal}
                     onChange={handleInputChange}
@@ -554,9 +599,9 @@ export default function FormInputKasUmum() {
                     type="text"
                     name="nettoTransaksi"
                     value={formData.nettoTransaksi}
-                    onChange={handleInputChange}
-                    placeholder="0.000.000,00"
-                    className="flex flex-1 items-center gap-2 border-none px-0 py-2.5 pr-[14px] font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] outline-none placeholder:text-[#a1a1aa]"
+                    readOnly
+                    placeholder="0,00"
+                    className="flex flex-1 items-center gap-2 border-none bg-transparent px-0 py-2.5 pr-[14px] font-['Inter'] text-base leading-6 font-normal text-[#011829] outline-none placeholder:text-[#a1a1aa]"
                   />
                 </div>
               </div>
@@ -642,6 +687,7 @@ export default function FormInputKasUmum() {
                     />
                   </svg>
                 }
+                onClick={handleSubmit}
               >
                 Simpan
               </Button>
