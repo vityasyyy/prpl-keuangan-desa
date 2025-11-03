@@ -88,12 +88,12 @@ export default function createApbdRepo(arg) {
   /**
    * Insert data baru ke tabel apbdes_rincian
    */
-  const insertBApbd = async (data) => {
+  const createApbdesRincian = async (data) => {
     const {
       id,
       kegiatan_id,
-      kode_fungsi_id, 
-      kode_ekonomi_id, 
+      kode_fungsi_id,
+      kode_ekonomi_id,
       uraian,
       jumlah_anggaran,
       sumber_dana,
@@ -116,7 +116,9 @@ export default function createApbdRepo(arg) {
       sumber_dana,
     ];
 
-    const { rows: [newRow] } = await db.query(insertQuery, values);
+    const {
+      rows: [newRow],
+    } = await db.query(insertQuery, values);
 
     const detailQuery = `
       SELECT r.*, kf.full_code AS kode_fungsi_full, kf.uraian AS kode_fungsi_uraian,
@@ -127,7 +129,9 @@ export default function createApbdRepo(arg) {
       WHERE r.id = $1
     `;
 
-    const { rows: [detailRow] } = await db.query(detailQuery, [newRow.id]);
+    const {
+      rows: [detailRow],
+    } = await db.query(detailQuery, [newRow.id]);
     return detailRow;
   };
 
@@ -144,23 +148,181 @@ export default function createApbdRepo(arg) {
   };
 
   const listAkun = async () => {
-    const { rows } = await db.query(`SELECT id, full_code, uraian FROM kode_ekonomi WHERE level = 'akun' ORDER BY full_code`);
+    const { rows } = await db.query(
+      `SELECT id, full_code, uraian FROM kode_ekonomi WHERE level = 'akun' ORDER BY full_code`
+    );
     return rows;
-  }
+  };
 
   const listKodeFungsi = async () => {
-    const { rows } = await db.query(`SELECT id, full_code, uraian, level, parent_id FROM kode_fungsi ORDER BY full_code`);
+    const { rows } = await db.query(
+      `SELECT id, full_code, uraian, level, parent_id FROM kode_fungsi ORDER BY full_code`
+    );
     return rows;
   };
 
   const listUraian = async () => {
-    const { rows } = await db.query(`SELECT DISTINCT uraian FROM kode_ekonomi ORDER BY uraian`);
+    const { rows } = await db.query(
+      `SELECT DISTINCT uraian FROM kode_ekonomi ORDER BY uraian`
+    );
     return rows.map((r) => r.uraian);
   };
 
   const listSumberDana = async () => {
-    const { rows } = await db.query(`SELECT DISTINCT sumber_dana FROM apbdes_rincian WHERE sumber_dana IS NOT NULL ORDER BY sumber_dana`);
+    const { rows } = await db.query(
+      `SELECT DISTINCT sumber_dana FROM apbdes_rincian WHERE sumber_dana IS NOT NULL ORDER BY sumber_dana`
+    );
     return rows.map((r) => r.sumber_dana);
+  };
+
+  const getDraftApbdesList = async () => {
+    const q = `
+      SELECT id, tahun, status
+      FROM apbdes
+      WHERE status = $1
+      ORDER BY tahun DESC
+    `;
+    const { rows } = await db.query(q, ["draft"]);
+    return rows;
+  };
+
+  const getDraftApbdesById = async (id) => {
+    const qMain = `
+      SELECT id, tahun, status
+      FROM apbdes
+      WHERE id = $1
+    `;
+    const {
+      rows: [mainRow],
+    } = await db.query(qMain, [id]);
+
+    if (!mainRow) return null;
+
+    return {
+      ...mainRow,
+    };
+  };
+
+  const getApbdesSummary = async () => {
+    const q = `
+      SELECT e.uraian, SUM(r.jumlah_anggaran) AS total_anggaran
+      FROM apbdes_rincian r
+      JOIN kode_ekonomi e ON e.id = r.kode_ekonomi_id
+      JOIN apbdes a ON a.id = (SELECT k.apbdes_id FROM kegiatan k WHERE k.id = r.kegiatan_id)
+      WHERE e.level = 'akun' AND a.status = $1
+      GROUP BY e.uraian
+    `;
+    const { rows } = await db.query(q, ["draft"]);
+    const result = rows.reduce((acc, cur) => {
+      acc[cur.uraian] = parseFloat(cur.total_anggaran) || 0;
+      return acc;
+    }, {});
+    return result;
+  };
+
+  const updateApbdesItem = async (id, data) => {
+    const { uraian, jumlah_anggaran, sumber_dana } = data;
+    const q = `
+      UPDATE apbdes_rincian
+      SET uraian = $1, jumlah_anggaran = $2, sumber_dana = $3
+      WHERE id = $4
+      RETURNING *;
+    `;
+    const { rows } = await db.query(q, [
+      uraian,
+      jumlah_anggaran,
+      sumber_dana,
+      id,
+    ]);
+    return rows[0];
+  };
+
+  const deleteApbdesItem = async (id) => {
+    const q = `
+      DELETE FROM apbd_rincian
+      WHERE id = $1
+      RETURNING *;
+    `;
+    const { rows } = await db.query(q, [id]);
+    return rows[0];
+  };
+
+  const validateApbdesData = (data) => {
+    const {
+      uraian,
+      jumlah_anggaran,
+      sumber_dana,
+      kode_fungsi_id,
+      kode_ekonomi_id,
+      kegiatan_id,
+    } = data;
+
+    if (!uraian) {
+      throw {
+        status: 400,
+        error: "uraian_required",
+        message: "Uraian tidak boleh kosong",
+      };
+    }
+    if (
+      jumlah_anggaran === undefined ||
+      jumlah_anggaran === null ||
+      parseFloat(jumlah_anggaran) <= 0
+    ) {
+      throw {
+        status: 400,
+        error: "jumlah_anggaran_invalid",
+        message: "Jumlah anggaran harus lebih dari 0",
+      };
+    }
+    if (!sumber_dana) {
+      throw {
+        status: 400,
+        error: "sumber_dana_required",
+        message: "Sumber dana tidak boleh kosong",
+      };
+    }
+    if (!kegiatan_id) {
+      throw {
+        status: 400,
+        error: "kegiatan_required",
+        hint: "Kegiatan harus dipilih dari dropdown",
+      };
+    }
+    if (!kode_fungsi_id) {
+      throw {
+        status: 400,
+        error: "kode_fungsi_required",
+        hint: "Kode fungsi harus dipilih",
+      };
+    }
+    if (!kode_ekonomi_id) {
+      throw {
+        status: 400,
+        error: "kode_ekonomi_required",
+        hint: "Kode ekonomi harus dipilih",
+      };
+    }
+  };
+
+  const recalculateApbdesTotals = async (apbdesId) => {
+    const q = `
+    SELECT e.uraian, SUM(r.jumlah_anggaran) AS total_anggaran
+    FROM apbdes_rincian r
+    JOIN kode_ekonomi e ON e.id = r.kode_ekonomi_id
+    JOIN apbdes a ON a.id = (SELECT k.apbdes_id FROM kegiatan k WHERE k.id = r.kegiatan_id)
+    WHERE e.level = 'akun'
+      AND a.status = $1
+      ${apbdesId ? "AND a.id = $2" : ""}
+    GROUP BY e.uraian
+  `;
+    const params = apbdesId ? ["draft", apbdesId] : ["draft"];
+    const { rows } = await db.query(q, params);
+    const result = rows.reduce((acc, cur) => {
+      acc[cur.uraian] = parseFloat(cur.total_anggaran) || 0;
+      return acc;
+    }, {});
+    return result;
   };
 
   return {
@@ -173,6 +335,13 @@ export default function createApbdRepo(arg) {
     listAkun,
     listUraian,
     listSumberDana,
-    insertBApbd,
+    createApbdesRincian,
+    getDraftApbdesList,
+    getDraftApbdesById,
+    getApbdesSummary,
+    updateApbdesItem,
+    deleteApbdesItem,
+    validateApbdesData,
+    recalculateApbdesTotals,
   };
 }

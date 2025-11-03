@@ -14,9 +14,16 @@ export default function createApbdRouter(apbdHandler) {
   r.get("/akun", apbdHandler.getAkun);
   r.get("/uraian", apbdHandler.getUraian);
   r.get("/sumber-dana", apbdHandler.getSumberDana);
-  
+  r.get("/drafts", apbdHandler.getDraftApbdesList); // GET /api/apbd/drafts
+  r.get("/drafts/:id", apbdHandler.getDraftApbdesById); // GET /api/apbd/drafts/:id
+  r.get("/summary", apbdHandler.getApbdesSummary); // GET /api/apbd/summary
+
   //post
-  r.post("/", apbdHandler.createBapbd);
+  r.post("/drafts", apbdHandler.createApbdesRincian);
+
+  // Update dan delete
+  r.put("/drafts/:id", apbdHandler.updateApbdesItem); // PUT /api/apbd/drafts/:id
+  r.delete("/drafts/:id", apbdHandler.deleteApbdesItem); // DELETE /api/apbd/drafts/:id
 
   return r;
 }

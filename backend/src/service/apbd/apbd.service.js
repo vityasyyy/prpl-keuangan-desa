@@ -36,6 +36,7 @@ export default function createApbdService(ApbdRepo) {
     return ApbdRepo.listKegiatan(subBidangId);
   };
 
+  /*
   const createBapbd = async (payload) => {
     const {
       kegiatan_id,
@@ -87,6 +88,26 @@ export default function createApbdService(ApbdRepo) {
       message: "Data APBD berhasil ditambahkan",
       data: newRow,
     };
+  }; */
+
+  const createApbdesRincian = async (payload) => {
+    ApbdRepo.validateApbdesData(payload);
+    const newItem = await ApbdRepo.createApbdesRincian(payload);
+    // Dapatkan apbdes_id dari kegiatan untuk hitung ulang total
+    const apbdesIdQuery = `
+      SELECT apbdes_id FROM kegiatan WHERE id = $1
+    `;
+    const { rows } = await ApbdRepo.db.query(apbdesIdQuery, [
+      payload.kegiatan_id,
+    ]); // Pastikan menggunakan repo untuk query
+    const apbdesId = rows?.[0]?.apbdes_id;
+    // Hitung ulang total setelah insert
+    const total = await ApbdRepo.recalculateApbdesTotals(apbdesId);
+    return {
+      message: "Data APBDes berhasil ditambahkan",
+      data: newItem,
+      total,
+    };
   };
 
   const getKodeEkonomi = async () => ApbdRepo.listKodeEkonomi();
@@ -99,16 +120,53 @@ export default function createApbdService(ApbdRepo) {
   const getSumberDana = async () =>
     ApbdRepo.listSumberDana ? ApbdRepo.listSumberDana() : [];
 
+  const getDraftApbdesList = async () => ApbdRepo.getDraftApbdesList();
+
+  const getDraftApbdesById = async (id) => {
+    if (!id) throw { status: 400, error: "id_required" };
+    const draft = await ApbdRepo.getDraftApbdesById(id);
+    if (!draft) throw { status: 404, error: "draft_not_found" };
+    return draft;
+  };
+
+  const getApbdesSummary = async () => {
+    const summary = await ApbdRepo.getApbdesSummary();
+    return {
+      pendapatan: summary.pendapatan || 0,
+      belanja: summary.belanja || 0,
+      pembiayaan: summary.pembiayaan || 0,
+      raw: summary,
+    };
+  };
+
+  const updateApbdesItem = async (id, data) => {
+    ApbdRepo.validateApbdesData(data);
+    const updatedItem = await ApbdRepo.updateApbdesItem(id, data);
+    const total = await ApbdRepo.recalculateApbdesTotals(updatedItem.apbd_id); // Hitung ulang total
+    return { updatedItem, total };
+  };
+
+  const deleteApbdesItem = async (id) => {
+    const deletedItem = await ApbdRepo.deleteApbdesItem(id);
+    const total = await ApbdRepo.recalculateApbdesTotals(deletedItem.apbd_id); // Hitung ulang total
+    return { deletedItem, total };
+  };
+
   return {
     getBapbd,
     getBidang,
     getKodeFungsi,
     getSubBidang,
     getKegiatan,
-    createBapbd,
+    createApbdesRincian,
     getKodeEkonomi,
     getAkun,
     getUraian,
     getSumberDana,
+    getDraftApbdesList,
+    getDraftApbdesById,
+    getApbdesSummary,
+    updateApbdesItem,
+    deleteApbdesItem,
   };
 }
