@@ -5,7 +5,7 @@ export default function createApbdRouter(apbdHandler) {
   const r = Router();
 
   //get
-  r.get("/", apbdHandler.getBapbd);
+  r.get("/", apbdHandler.getApbdes);
   r.get("/kode-fungsi", apbdHandler.getKodeFungsi);
   r.get("/bidang", apbdHandler.getBidang);
   r.get("/sub-bidang", apbdHandler.getSubBidang);
@@ -17,9 +17,11 @@ export default function createApbdRouter(apbdHandler) {
   r.get("/drafts", apbdHandler.getDraftApbdesList); // GET /api/apbd/drafts
   r.get("/drafts/:id", apbdHandler.getDraftApbdesById); // GET /api/apbd/drafts/:id
   r.get("/summary", apbdHandler.getApbdesSummary); // GET /api/apbd/summary
+  r.get("/status/:id", apbdHandler.getApbdesStatus); // GET /api/apbd/status/:id
 
   //post
   r.post("/drafts", apbdHandler.createApbdesRincian);
+  r.post("/drafts/:id/post", apbdHandler.postApbdesDraft); // POST /api/apbd/drafts/:id/post
 
   // Update dan delete
   r.put("/drafts/:id", apbdHandler.updateApbdesItem); // PUT /api/apbd/drafts/:id

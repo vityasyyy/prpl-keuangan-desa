@@ -11,10 +11,10 @@ export default function createApbdHandler(ApbdService) {
   };
 
   //get
-  const getBapbd = async (req, res, next) => {
+  const getApbdes = async (req, res, next) => {
     try {
       const { id, tahun, status } = req.query;
-      const result = await ApbdService.getBapbd({ id, tahun, status });
+      const result = await ApbdService.getApbdes({ id, tahun, status });
       res.json(result);
     } catch (e) {
       next(e);
@@ -94,6 +94,16 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
+  const getApbdesStatus = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const data = await ApbdService.getApbdesStatus(id);
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  };
+
   const getDraftApbdesList = async (_req, res, next) => {
     try {
       const data = await ApbdService.getDraftApbdesList();
@@ -155,21 +165,33 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
+  const postApbdesDraft = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const result = await ApbdService.postApbdesDraft(id);
+      res.status(200).json(result);
+    } catch (e) {
+      next(e);
+    }
+  };
+
   return {
-    createApbdesRincian, //create buku apbdes
-    getBapbd, //buku apbdes
-    getKodeFungsi, //form input kode fungsi
-    getBidang, //form input bidang
-    getSubBidang, //form input sub-bidang
-    getKegiatan, //form input kegiatan
-    getKodeEkonomi, //form input kode ekonomi
+    createApbdesRincian, 
+    getApbdes, 
+    getKodeFungsi, 
+    getBidang, 
+    getSubBidang, 
+    getKegiatan, 
+    getKodeEkonomi, 
     getAkun,
-    getUraian, //form input uraian
-    getSumberDana, //form input sumber dana
+    getUraian, 
+    getSumberDana, 
+    getApbdesStatus,
     getDraftApbdesList,
     getDraftApbdesById,
     getApbdesSummary,
     updateApbdesItem,
     deleteApbdesItem,
+    postApbdesDraft,
   };
 }

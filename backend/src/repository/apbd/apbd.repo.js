@@ -12,7 +12,7 @@ export default function createApbdRepo(arg) {
     throw new Error("Invalid database instance passed to createApbdRepo");
   }
 
-  async function listBApbdRows({ id, tahun, status }) {
+  async function listApbdesRows({ id, tahun, status }) {
     const conditions = [];
     const values = [];
     let idx = 1;
@@ -175,6 +175,16 @@ export default function createApbdRepo(arg) {
     return rows.map((r) => r.sumber_dana);
   };
 
+  const getApbdesStatus = async (id) => {
+    const q = `
+      SELECT status
+      FROM apbdes
+      WHERE id = $1
+    `;
+    const { rows } = await db.query(q, [id]);
+    return rows[0]?.status || null;
+  };
+
   const getDraftApbdesList = async () => {
     const q = `
       SELECT id, tahun, status
@@ -244,6 +254,17 @@ export default function createApbdRepo(arg) {
       RETURNING *;
     `;
     const { rows } = await db.query(q, [id]);
+    return rows[0];
+  };
+
+  const postApbdesDraft = async (id) => {
+    const q = `
+      UPDATE apbdes
+      SET status = $1, posted_at = NOW()
+      WHERE id = $2
+      RETURNING *;
+    `;
+    const { rows } = await db.query(q, ["posted", id]);
     return rows[0];
   };
 
@@ -325,8 +346,18 @@ export default function createApbdRepo(arg) {
     return result;
   };
 
+  const generateDraftApbdes = async (apbdesId) => {
+    // Implementasi pembuatan laporan APBDes berdasarkan apbdesId
+    // Misalnya, mengumpulkan data terkait dan menyusunnya dalam format tertentu
+  }
+
+  const downloadDraftApbdes = async (apbdesId) => {
+    const report = await generateDraftApbdes(apbdesId);
+    // Implementasi pengunduhan laporan, misalnya mengirimkan file sebagai respons
+  }
+
   return {
-    listBApbdRows,
+    listApbdesRows,
     listKodeFungsi,
     listBidang,
     listSubBidang,
@@ -336,6 +367,7 @@ export default function createApbdRepo(arg) {
     listUraian,
     listSumberDana,
     createApbdesRincian,
+    getApbdesStatus,
     getDraftApbdesList,
     getDraftApbdesById,
     getApbdesSummary,
@@ -343,5 +375,7 @@ export default function createApbdRepo(arg) {
     deleteApbdesItem,
     validateApbdesData,
     recalculateApbdesTotals,
+    downloadDraftApbdes,
+    postApbdesDraft,
   };
 }

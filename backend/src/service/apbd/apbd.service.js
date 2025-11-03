@@ -1,7 +1,7 @@
 // src/service/apbd/apbd.service.js
 
 export default function createApbdService(ApbdRepo) {
-  const getBapbd = async ({ id, tahun, status }) => {
+  const getApbdes = async ({ id, tahun, status }) => {
     if (!tahun) {
       throw {
         status: 400,
@@ -10,7 +10,7 @@ export default function createApbdService(ApbdRepo) {
       };
     }
 
-    const rows = await ApbdRepo.listBApbdRows({ id, tahun, status });
+    const rows = await ApbdRepo.listApbdesRows({ id, tahun, status });
 
     return {
       meta: { tahun },
@@ -120,6 +120,12 @@ export default function createApbdService(ApbdRepo) {
   const getSumberDana = async () =>
     ApbdRepo.listSumberDana ? ApbdRepo.listSumberDana() : [];
 
+  const getApbdesStatus = async (id) => {
+    if (!id) throw { status: 400, error: "id_required" };
+    const status = await ApbdRepo.getApbdesStatus(id);
+    return status;
+  }
+
   const getDraftApbdesList = async () => ApbdRepo.getDraftApbdesList();
 
   const getDraftApbdesById = async (id) => {
@@ -152,8 +158,26 @@ export default function createApbdService(ApbdRepo) {
     return { deletedItem, total };
   };
 
+  const postApbdesDraft = async (id) => {
+    if (!id) throw { status: 400, error: "id_required" };
+    const currentStatus = await ApbdRepo.getApbdesStatus(id);
+    if (currentStatus === "posted") {
+      throw {
+        status: 409,
+        error: "apbdes_already_posted",
+        message: "APBDes ini sudah diposting dan tidak dapat diubah lagi.",
+      };
+    }
+
+    const postedApbdes = await ApbdRepo.postApbdesDraft(id);
+    return {
+      message: "APBDes berhasil diposting.",
+      data: postedApbdes,
+    };
+  };
+
   return {
-    getBapbd,
+    getApbdes,
     getBidang,
     getKodeFungsi,
     getSubBidang,
@@ -163,10 +187,12 @@ export default function createApbdService(ApbdRepo) {
     getAkun,
     getUraian,
     getSumberDana,
+    getApbdesStatus,
     getDraftApbdesList,
     getDraftApbdesById,
     getApbdesSummary,
     updateApbdesItem,
     deleteApbdesItem,
+    postApbdesDraft,
   };
 }
