@@ -8,7 +8,7 @@ const pool = new Pool({
 });
 
 const users = [
-  { username: "kades", full_name: "Kepala Desa", role: "kepala_desa" },
+  { username: "kades", full_name: "Kepala Desa", role: "kades" },
   { username: "sekdes", full_name: "Sekretaris Desa", role: "sekretaris_desa" },
   { username: "kaur_keuangan", full_name: "Kaur Keuangan", role: "kaur_keuangan" },
   { username: "kaur_perencanaan", full_name: "Kaur Perencanaan", role: "kaur_perencanaan" },
@@ -28,15 +28,18 @@ async function seed() {
       const plainPassword = `${u.role}_desa_6769`;
       const hashed = await bcrypt.hash(plainPassword, 10);
 
+      // Generate a unique ID based on username
+      const userId = u.username;
+
       const result = await client.query(
-        `INSERT INTO users (username, password_hash, full_name, role)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO users (id, username, password_hash, full_name, role)
+         VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (username) DO UPDATE
          SET password_hash = EXCLUDED.password_hash,
              full_name = EXCLUDED.full_name,
              role = EXCLUDED.role
-         RETURNING user_id, username, role;`,
-        [u.username, hashed, u.full_name, u.role]
+         RETURNING id, username, role;`,
+        [userId, u.username, hashed, u.full_name, u.role]
       );
 
       const row = result.rows[0];
