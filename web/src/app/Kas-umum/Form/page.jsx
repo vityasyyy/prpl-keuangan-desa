@@ -67,6 +67,13 @@ export default function FormInputKasUmum() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
+    if (name === "pemasukan" || name === "pengeluaran") {
+      // Ensure only numeric input
+      const numericValue = value.replace(/[^0-9]/g, "");
+      setFormData((prev) => ({ ...prev, [name]: numericValue }));
+      return;
+    }
+
     if (name === "kodeRek") {
       // Hanya proses jika ada perubahan
       if (value === formData.kodeRek) return;
@@ -339,7 +346,7 @@ export default function FormInputKasUmum() {
     const pengeluaran = parseFloat(formData.pengeluaran) || 0;
 
     // Hitung netto (positif = pemasukan, negatif = pengeluaran)
-    const netto = pemasukan > 0 ? pemasukan : pengeluaran > 0 ? -pengeluaran : 0;
+    const netto = pemasukan - pengeluaran;
 
     // Kalau negatif, tampilkan dalam tanda kurung
     const displayValue = netto < 0 ? `(${Math.abs(netto)})` : netto.toString();
