@@ -20,6 +20,7 @@ export default function FormInputKasUmum() {
     nomorBukti: "",
     nettoTransaksi: "",
     buatLagi: false,
+    kodeRAB: "",
   });
 
   const [kodeRekError, setKodeRekError] = useState("");
@@ -223,8 +224,9 @@ export default function FormInputKasUmum() {
         // 1. Add a dropdown to select RAB
         // 2. Get it from route params/context
         // 3. Have a default RAB for the current period
-        rab_id: "RAB001", // TEMPORARY PLACEHOLDER
-        
+        // rab_id: "RAB001", // TEMPORARY PLACEHOLDER
+        rab_id: formData.kodeRAB,
+
         // TODO: Add kode_ekonomi_id field to the form - this is required by backend
         // You can fetch the list from: GET /api/kas-umum/kode-ekonomi
         // Add a dropdown similar to bidang/sub-bidang/kegiatan
@@ -449,7 +451,7 @@ export default function FormInputKasUmum() {
                       name="bidang"
                       value={formData.bidang}
                       onChange={handleInputChange}
-                      className="w-[250] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
+                      className="w-[170] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
                     >
                       <option value="">Bidang</option>
                       {bidangList.map((b) => (
@@ -479,7 +481,7 @@ export default function FormInputKasUmum() {
                       name="subBidang"
                       value={formData.subBidang}
                       onChange={handleInputChange}
-                      className="w-[220] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
+                      className="w-[170] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
                     >
                       <option value="">Sub-bidang</option>
                       {subBidangList.map((b) => (
@@ -509,7 +511,7 @@ export default function FormInputKasUmum() {
                       name="kegiatan"
                       value={formData.kegiatan}
                       onChange={handleInputChange}
-                      className="w-[215] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
+                      className="w-[170] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
                     >
                       <option value="">Kegiatan</option>
                       {kegiatanList.map((k) => (
@@ -533,6 +535,18 @@ export default function FormInputKasUmum() {
                         strokeLinejoin="round"
                       />
                     </svg>
+                  </div>
+                  <div className="flex w-[159px] flex-col items-start gap-1.5">
+                    <div className="flex items-center gap-2 self-stretch rounded-lg border border-[#d4d4d8] bg-white px-[14px] py-2.5 shadow-[0_1px_2px_0_rgba(16,24,40,0.05)]">
+                      <input 
+                        type="text"
+                        name="kodeRAB"
+                        value={formData.kodeRAB}
+                        onChange={handleInputChange}
+                        placeholder="Kode RAB"
+                        className="flex-1 border-none bg-transparent font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] outline-none placeholder::text-[@a1a1aa]"
+                      />
+                    </div>
                   </div>
                 </div>
                 <input
