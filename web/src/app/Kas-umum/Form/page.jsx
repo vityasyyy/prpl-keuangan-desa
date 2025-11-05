@@ -5,7 +5,7 @@ import Sidebar from "@/components/Sidebar";
 import Breadcrumb from "@/components/Breadcrumb";
 import Button from "@/components/Button";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 export default function FormInputKasUmum() {
   const [formData, setFormData] = useState({
@@ -215,10 +215,32 @@ export default function FormInputKasUmum() {
   };
   const handleSubmit = async () => {
     try {
+      // Map frontend field names to backend field names
+      const payload = {
+        tanggal: formData.tanggal,
+        // TODO: Add rab_id field to the form - this is required by backend
+        // You need to either:
+        // 1. Add a dropdown to select RAB
+        // 2. Get it from route params/context
+        // 3. Have a default RAB for the current period
+        rab_id: "RAB001", // TEMPORARY PLACEHOLDER
+        
+        // TODO: Add kode_ekonomi_id field to the form - this is required by backend
+        // You can fetch the list from: GET /api/kas-umum/kode-ekonomi
+        // Add a dropdown similar to bidang/sub-bidang/kegiatan
+        kode_ekonomi_id: "KE001", // TEMPORARY PLACEHOLDER
+        
+        kegiatan_id: formData.kegiatan,
+        uraian: formData.uraian,
+        pemasukan: formData.pemasukan,
+        pengeluaran: formData.pengeluaran,
+        nomor_bukti: formData.nomorBukti,
+      };
+
       const res = await fetch(`${API_BASE_URL}/kas-umum`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       // Log status dan response mentah

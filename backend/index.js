@@ -60,7 +60,11 @@ async function main() {
 
   app.use((_, res) => res.status(404).json({ message: 'Not Found' }));
   app.use((err, req, res, next) => {
-    (req.log || logger).logError({ err }, 'Unhandled error');
+    if (req.log) {
+      req.log.error({ err }, 'Unhandled error');
+    } else {
+      logger.logError(err, 'Unhandled error');
+    }
     res.status(500).json({ error: err.message || 'Internal Server Error' });
   });
 
