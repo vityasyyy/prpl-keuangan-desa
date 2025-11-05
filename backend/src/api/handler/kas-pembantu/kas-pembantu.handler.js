@@ -4,7 +4,6 @@ export default function createKasPembantuHandler(service) {
   };
 
   const kegiatan = async (req, res, next) => {
-    console.log("type of req:", typeof req, "req.query:", req && req.query);
     try {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
@@ -12,7 +11,6 @@ export default function createKasPembantuHandler(service) {
       const tahun = req.query.tahun ? parseInt(req.query.tahun) : 2024;
       const type_enum = req.query.type_enum || "";
       const search = req.query.search || "";
-      console.log(page, limit, bulan, tahun, type_enum, search);
       const result = await service.getKegiatan({ bulan, tahun, type_enum, search, page, limit });
       res.json(result);
     } catch (err) {
@@ -20,5 +18,19 @@ export default function createKasPembantuHandler(service) {
     }
   };
 
-  return { health, kegiatan };
+  const deleteKegiatan = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const success = await service.deleteKegiatanById(id);
+      if (success) {
+        res.json({ message: `Entry dengan id ${id} berhasil dihapus.` });
+      } else {
+        res.status(404).json({ message: `Entry dengan id ${id} tidak ditemukan.` });
+      }
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  return { health, kegiatan, deleteKegiatan };
 }

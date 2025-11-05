@@ -3,7 +3,6 @@
 export default function createKasPembantuService(repo) {
   return {
     async getKegiatan({ bulan, tahun, type_enum, search, page = 1, limit = 10 }) {
-      console.log('getKegiatan DIPANGGIL, repo:', typeof repo, Object.keys(repo));
       // Ambil data dari repo
       let data = await repo.listKegiatanTransaksi({ bulan, tahun, type_enum, search, page, limit });
       let ringkasan = await repo.getRingkasan({ bulan, tahun, type_enum, search });
@@ -11,9 +10,8 @@ export default function createKasPembantuService(repo) {
       // Debug: log semua data yang ada di tabel buku_kas_pembantu
       try {
         const allData = await repo.getAllData();
-        console.log('BUKU_KAS_PEMBANTU ALL DATA FROM DB:', allData);
       } catch (error) {
-        console.error('Gagal mengambil semua data buku kas pembantu:', error.message);
+        logger.logError(error.message, 'error getting all buku_kas_pembantu data');
       }
 
       if (!data || data.length === 0) {
@@ -50,6 +48,10 @@ export default function createKasPembantuService(repo) {
         data: mappedData,
         ringkasan
       };
+    },
+
+    async deleteKegiatanById(id) {
+      return await repo.deleteById(id);
     },
   };
 }

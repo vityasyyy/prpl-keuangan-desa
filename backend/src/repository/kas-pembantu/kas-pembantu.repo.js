@@ -5,7 +5,6 @@ export default function createRepo(db) {
    * Ambil daftar transaksi kas pembantu dengan filter dan pagination
    */
   async function listKegiatanTransaksi({ bulan, tahun, type_enum, search, page = 1, limit = 10 }) {
-    console.log("params di repo:", { bulan, tahun, type_enum, search, page, limit });
     const where = [];
     const params = [];
     let idx = 1;
@@ -90,14 +89,12 @@ export default function createRepo(db) {
    * Ambil semua data dari tabel buku_kas_pembantu tanpa filter
    */
   async function getAllData() {
-    console.log('getAllData DIPANGGIL, db:', typeof db);
     try {
       const query = `
         SELECT * FROM buku_kas_pembantu 
         ORDER BY tanggal ASC, id ASC
       `;
       const result = await db.query(query);
-      console.log('QUERY RESULT getAllData:', result);
       return result.rows;
     } catch (err) {
       console.error('ERROR getAllData:', err);
@@ -105,9 +102,27 @@ export default function createRepo(db) {
     }
   }
 
+  /**
+   * Hapus entry buku_kas_pembantu berdasarkan id
+   */
+  async function deleteById(id) {
+    try {
+      const sql = 'DELETE FROM buku_kas_pembantu WHERE id = $1';
+      const result = await db.query(sql, [id]);
+      if (result.rowCount > 0) {
+        return { success: true, message: `Entry dengan id ${id} berhasil dihapus.` };
+      } else {
+        return { success: false, message: `Entry dengan id ${id} tidak ditemukan.` };
+      }
+    } catch (err) {
+      return { success: false, message: `Terjadi error saat menghapus: ${err.message}` };
+    }
+  }
+
   return {
     listKegiatanTransaksi,
     getRingkasan,
-    getAllData,  // expose fungsi baru
+    getAllData,
+    deleteById,
   };
 }
