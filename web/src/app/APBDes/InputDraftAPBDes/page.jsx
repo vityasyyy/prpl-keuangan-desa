@@ -74,7 +74,7 @@ export default function InputDraftAPBDes() {
 
   return (
     <main className="min-h-screen bg-white px-16 py-8">
-      <BreadCrumb category="APBDes" title="Draft APBDes" />
+      <BreadCrumb category="APBDes" title="Input Draft APBDes" />
 
       <h1 className="mb-6 text-base font-semibold text-black">Input Data APBDes</h1>
 

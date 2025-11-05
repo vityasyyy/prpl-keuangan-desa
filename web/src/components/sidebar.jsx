@@ -1,12 +1,33 @@
 "use client";
+
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Button from "./button";
 import { Chevron, Logout } from "./icons";
 
 export default function Sidebar() {
   const [openMenu, setOpenMenu] = useState(null);
+  const pathname = usePathname();
+
   const toggleMenu = (menu) => {
     setOpenMenu(openMenu === menu ? null : menu);
+  };
+
+  // pastikan route sesuai struktur project
+  const navRoutes = {
+    "Draft APBDes": "/APBDes/OutputDraftAPBDes",
+    "Draft Penjabaran APBDes": "/APBDes/DraftPenjabaran",
+    "Buku APBDes": "/APBDes/BukuAPBDes",
+    "Rencana Kegiatan dan Anggaran": "/Rencana/RKA",
+    "Rencana Kerja Kegiatan": "/Rencana/RKK",
+    "Rencana Anggaran Biaya": "/Rencana/RAB",
+    "Buku Kas Umum": "/Penatausahaan/BKU",
+    "Buku Pembantu Pajak": "/Penatausahaan/Pajak",
+    "Buku Pembantu Panjar": "/Penatausahaan/Panjar",
+    "Buku Pembantu Kegiatan": "/Penatausahaan/Kegiatan",
+    "Buku Bank Desa": "/Penatausahaan/Bank",
+    "Laporan Realisasi Akhir Tahun": "/Laporan/AkhirTahun",
   };
 
   const listNav = [
@@ -52,28 +73,46 @@ export default function Sidebar() {
           <div>
             <h3 className="font-semibold text-white">Beranda</h3>
           </div>
+
           {listNav.map((item) => (
             <div key={item.title}>
-              <button
+              <div
                 onClick={() => toggleMenu(item.title)}
-                className="flex items-center justify-between text-left font-semibold"
+                className="w-full cursor-pointer px-2 py-1 rounded-md hover:bg-gray-700 transition-colors"
               >
-                <Chevron open={openMenu === item.title} />
-                <span className="ml-2">{item.title}</span>
-              </button>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">{item.title}</span>
+                  <Chevron open={openMenu === item.title} />
+                </div>
+              </div>
+
               {openMenu === item.title && (
-                <ul className="mt-2 ml-3 space-y-1 pl-3 text-sm text-gray-300">
-                  {item.subItems.map((subItem) => (
-                    <li className="hover:underline" key={subItem}>
-                      {subItem}
-                    </li>
-                  ))}
+                <ul className="mt-2 space-y-1 font-medium">
+                  {item.subItems.map((subItem) => {
+                    const route = navRoutes[subItem] || "#";
+                    const active = pathname === route;
+                    return (
+                      <li key={subItem}>
+                        <Link
+                          href={route}
+                          className={`block w-full py-1 px-3 rounded-md ${
+                            active
+                              ? "text-white font-light"
+                              : "text-gray-300 hover:text-white"
+                          }`}
+                        >
+                          {subItem}
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
           ))}
         </nav>
       </div>
+
       <div>
         <Button variant="neutral">
           <Logout />
