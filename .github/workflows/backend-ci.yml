@@ -29,7 +29,7 @@ jobs:
         with:
           node-version: "24"
           cache: "pnpm"
-          cache-dependency-path: andhiki/prpl-keuangan-desa/prpl-keuangan-desa-dev/backend/pnpm-lock.yaml
+          cache-dependency-path: andhiki/prpl-keuangan-desa/backend/pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -70,8 +70,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./andhiki/prpl-keuangan-desa/prpl-keuangan-desa-dev/backend
-          file: ./andhiki/prpl-keuangan-desa/prpl-keuangan-desa-dev/backend/dockerfiles/Dockerfile.prod
+          context: ./andhiki/prpl-keuangan-desa/backend
+          file: ./andhiki/prpl-keuangan-desa/backend/dockerfiles/Dockerfile.prod
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
