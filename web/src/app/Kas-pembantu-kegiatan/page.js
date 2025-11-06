@@ -1,11 +1,11 @@
 "use client";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import Sidebar from "@/components/kas-pembantu/Sidebar";
-import Header from "@/components/kas-pembantu/Header";
-import BreadcrumbHeader from "@/components/kas-pembantu/BreadcrumbHeader";
+import Sidebar from "@/features/kas-pembantu/Sidebar";
+import Header from "@/features/kas-pembantu/Header";
+import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { ChevronDown, ChevronRight, Download, Plus } from "lucide-react";
-import MonthCard from "@/components/kas-pembantu/MonthCard";
+import MonthCard from "@/features/kas-pembantu/MonthCard";
 
 export default function KasPembantuKegiatan() {
   const [open, setOpen] = useState(null);

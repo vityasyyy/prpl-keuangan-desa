@@ -1,9 +1,9 @@
 "use client";
 import { useRef, useState } from "react";
-import Sidebar from "@/components/kas-pembantu/Sidebar";
-import BreadcrumbHeader from "@/components/kas-pembantu/BreadcrumbHeader";
+import Sidebar from "@/features/kas-pembantu/Sidebar";
+import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { Calendar } from "lucide-react";
-import Footer from "@/components/kas-pembantu/Footer";
+import Footer from "@/features/kas-pembantu/Footer";
 
 export default function Page() {
   const dateInputRef = useRef(null);
