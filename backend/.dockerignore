@@ -1,0 +1,32 @@
+# Dependencies and package managers
+node_modules
+.pnpm
+.pnpm-store
+**/.pnpm
+**/.pnpm-store
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# VCS
+.git
+.gitignore
+
+# IDE/editor
+.vscode
+*.swp
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Builds and caches
+coverage
+build
+dist
+.tmp
+
+# Docker
+Dockerfile
+Dockerfile.*

@@ -1,45 +1,39 @@
-"use client"; // REQUIRED for components with state and event handlers
+"use client"; // REQUIRED for client-side interactivity
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // For redirecting after success
+import { useRouter } from 'next/navigation';
 
 /**
- * Reusable Input Field Component for the form
+ * Reusable Input Field Component
  */
 const InputField = ({ label, id, type, value, onChange, placeholder = '', required = false, disabled = false, min }) => (
-  <div className="mb-4"> {/* Added margin bottom for spacing */}
+  <div className="mb-4">
     <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
       {label} {required && <span className="text-red-500">*</span>}
     </label>
     <input
-      type={type}
-      id={id}
-      name={id}
-      value={value}
+      type={type} id={id} name={id} value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      required={required}
-      disabled={disabled}
+      placeholder={placeholder} required={required} disabled={disabled}
       className={`block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white ${disabled ? 'bg-gray-100 dark:bg-gray-600 cursor-not-allowed' : ''}`}
-      min={min} // Pass min attribute for number inputs
+      min={min}
     />
   </div>
 );
 
-
 /**
- * The main form component for inputting Buku Bank transactions.
- * [cite_start]Corresponds to lo-fi image_e050d3.jpg and Sprint 2 Report fields [cite: 41-54].
+ * Form for inputting Buku Bank transactions.
  */
 export default function BukuBankForm() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [makeAgain, setMakeAgain] = useState(false);
 
-  // State for each form field (matches image_e050d3.jpg)
+  // Form state
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
-  const [nomorRekening] = useState('1234-56-789012-3'); // Placeholder - make dynamic later
-  const [cabangBank] = useState('Cabang Sleman');   // Placeholder - make dynamic later
+  const [nomorRekening] = useState('1234-56-789012-3'); // Placeholder
+  const [cabangBank] = useState('Cabang Sleman');   // Placeholder
   const [uraian, setUraian] = useState('');
   const [setoran, setSetoran] = useState('');
   const [penerimaanBunga, setPenerimaanBunga] = useState('');
@@ -47,60 +41,65 @@ export default function BukuBankForm() {
   const [pajak, setPajak] = useState('');
   const [biayaAdmin, setBiayaAdmin] = useState('');
   const [buktiTransaksi, setBuktiTransaksi] = useState('');
-  const [saldo] = useState('100.000.000,00'); // Placeholder - make dynamic later
+  const [saldo] = useState('Auto-calculated'); // Placeholder
 
-  /**
-   * Handles the form submission.
-   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     const formData = {
-      tanggal,
-      uraian,
-      bukti_transaksi: buktiTransaksi,
-      setoran: Number(setoran) || 0,
-      penerimaan_bunga: Number(penerimaanBunga) || 0,
-      penarikan: Number(penarikan) || 0,
-      pajak: Number(pajak) || 0,
+      tanggal, uraian, bukti_transaksi: buktiTransaksi,
+      setoran: Number(setoran) || 0, penerimaan_bunga: Number(penerimaanBunga) || 0,
+      penarikan: Number(penarikan) || 0, pajak: Number(pajak) || 0,
       biaya_admin: Number(biayaAdmin) || 0,
     };
-
-    console.log('Submitting form data to /api/bank-desa:', formData);
+    console.log('(Client-side) Submitting to /api/bank-desa:', formData);
 
     try {
-      // Use relative URL for client-side fetch
-      const response = await fetch('/api/bank-desa', { // Correct API path
+      // Client-side fetch automatically includes cookies (usually).
+      // Use relative path '/api/bank-desa'
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8081';
+      const response = await fetch(`${backendUrl}/api/bank-desa`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
+        // credentials: 'include', // Uncomment if needed for CORS/cookie issues
       });
 
+      if (response.status === 401) { throw new Error('Unauthorized. Sesi Anda mungkin telah berakhir.'); }
       if (!response.ok) {
-        let errorMsg = `HTTP error! status: ${response.status}`;
-        try {
-          const errData = await response.json();
-          errorMsg = errData.message || errData.error || JSON.stringify(errData);
-        } catch { /* Ignore if response not JSON */ }
+        // Read body ONCE, then try JSON parse from text to avoid double-read errors
+        const raw = await response.text();
+        let errorMsg = `HTTP error ${response.status}`;
+        try { const errData = JSON.parse(raw); errorMsg = errData.message || JSON.stringify(errData); }
+        catch { errorMsg = raw || errorMsg; }
         throw new Error(errorMsg);
       }
 
       console.log('Form submitted successfully!');
-      router.push('/buku-bank'); // Go back to the list page on success
+      if (makeAgain) {
+        // Stay on page and clear numeric fields for fast next entry
+        setSetoran('');
+        setPenerimaanBunga('');
+        setPenarikan('');
+        setPajak('');
+        setBiayaAdmin('');
+        setBuktiTransaksi('');
+        setIsLoading(false);
+        return; // do not navigate
+      }
+      router.push('/buku-bank'); // Redirect back to list
 
     } catch (err) {
       console.error('Form submission error:', err);
-      setError(err.message || 'Terjadi kesalahan saat menyimpan data.');
+      setError(err.message || 'Gagal menyimpan data.');
       setIsLoading(false);
     }
   };
 
   return (
-    // Form container styled to somewhat match the image
     <form onSubmit={handleSubmit} className="space-y-6 bg-background dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md border dark:border-gray-700">
-
       {/* Section 1: Detail & Bank Detail */}
       <fieldset className="space-y-4 p-4 border dark:border-gray-600 rounded-lg">
         <legend className="text-base font-semibold px-2 text-gray-700 dark:text-gray-300">Detail Transaksi</legend>
@@ -140,28 +139,23 @@ export default function BukuBankForm() {
         </div>
       </fieldset>
 
-      {/* Error Display Area */}
+      {/* Error Display */}
       {error && (
         <div className="my-4 text-center text-red-600 dark:text-red-400 text-sm p-3 bg-red-100 dark:bg-red-900 border border-red-300 dark:border-red-700 rounded-lg">
           <strong>Gagal menyimpan:</strong> {error}
         </div>
       )}
 
-      {/* Action Buttons (Matches image_e050d3.jpg) */}
+      {/* Action Buttons */}
       <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-600">
-        <button
-          type="button" // Important: Prevents accidental submission
-          // No delete functionality specified yet, so maybe just Cancel/Back
-          className="bg-red-500 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-red-600 transition-colors"
-          onClick={() => router.back()} // Go back to previous page
-        >
-          {/* Hapus */} Cancel
+        <label className="flex items-center gap-2 mr-auto text-sm">
+          <input type="checkbox" checked={makeAgain} onChange={(e) => setMakeAgain(e.target.checked)} />
+          <span>Tetap di form (Make again)</span>
+        </label>
+        <button type="button" onClick={() => router.back()} className="bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200 px-4 py-2 rounded-lg font-medium text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">
+          Cancel
         </button>
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={isLoading}
-        >
+        <button type="submit" disabled={isLoading} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           {isLoading ? 'Menyimpan...' : 'Simpan'}
         </button>
       </div>

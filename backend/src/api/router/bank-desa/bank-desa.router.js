@@ -3,6 +3,7 @@ import { Router } from 'express';
 import {
   createBukuBankEntry,
   getBukuBankEntries,
+  reverseBukuBankEntry,
 } from '../../handler/bank-desa/bank-desa.handler.js'; // Correct path to handler
 // import { requireAuth } from '../../middleware/auth.middleware.js'; // Keep commented for now
 
@@ -27,6 +28,13 @@ export default function bankDesaRouter(dependencies) { // Renamed function for c
     '/',
     // requireAuth,
     getBukuBankEntries.bind(null, db) // Inject db into getBukuBankEntries handler
+  );
+
+  // Reversal (DELETE semantics): create an opposite entry
+  router.delete(
+    '/:id',
+    // requireAuth,
+    reverseBukuBankEntry.bind(null, db)
   );
 
   // Add other routes for bank-desa here if needed (e.g., GET /:id, PUT /:id, DELETE /:id)

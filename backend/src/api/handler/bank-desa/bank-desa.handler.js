@@ -1,5 +1,6 @@
 import * as repo from '../../../repository/bank-desa/bank-desa.repo.js'; // Import repository functions
 import logger from '../../../common/logger/logger.js'; // Adjust path if needed
+import crypto from 'crypto';
 
 const log = logger.getLogger();
 
@@ -120,5 +121,62 @@ export async function getBukuBankEntries(db, req, res, next) {
   } catch (error) {
     log.error({ err: error }, 'Error during getBukuBankEntries handling');
     next(error); // Pass error to the central error handler
+  }
+}
+
+/**
+ * Handler for creating a reversal entry for an existing transaction (DELETE semantics).
+ * It inserts a new opposite entry to neutralize the original and recomputes saldo.
+ * @param {object} db - pool
+ */
+export async function reverseBukuBankEntry(db, req, res, next) {
+  const id = req.params?.id;
+  const tanggalOverride = req.query?.tanggal; // optional YYYY-MM-DD
+  log.info({ id, tanggalOverride }, 'Handling request to reverse bank entry');
+
+  let client;
+  try {
+    const original = await repo.findById(db, id);
+    if (!original) {
+      return res.status(404).json({ message: 'Entry not found' });
+    }
+
+    // Build reversed payload
+    const tanggal = tanggalOverride || original.tanggal;
+    const toNum = (v) => (v == null ? 0 : Number(v));
+    const neg = (v) => (v == null ? 0 : -Math.abs(Number(v)));
+
+    const reversalBody = {
+      tanggal,
+      uraian: `[REVERSAL] ${original.uraian || original.bukti_transaksi || original.id}`,
+      bukti_transaksi: original.bukti_transaksi ? `${String(original.bukti_transaksi).slice(0, 45)}-REV` : 'REV',
+      setoran: neg(toNum(original.setoran)),
+      penerimaan_bunga: neg(toNum(original.penerimaan_bunga)),
+      penarikan: neg(toNum(original.penarikan)),
+      pajak: neg(toNum(original.pajak)),
+      biaya_admin: neg(toNum(original.biaya_admin)),
+    };
+
+    client = await db.connect();
+    await client.query('BEGIN');
+
+    // Get latest saldo
+    const latestEntry = await repo.findLatestEntry(client);
+    const latestSaldo = latestEntry ? latestEntry.saldo_after : 0;
+    const newSaldo = _calculateNewBalance(latestSaldo, reversalBody);
+
+    const dataToInsert = { ...reversalBody, saldo_after: newSaldo };
+    const newEntry = await repo.insertEntry(client, dataToInsert);
+
+    await client.query('COMMIT');
+    return res.status(201).json({ reversed: id, reversal: newEntry });
+  } catch (error) {
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch {}
+    }
+    log.error({ err: error }, 'Error during reverseBukuBankEntry handling');
+    next(error);
+  } finally {
+    if (client) client.release();
   }
 }

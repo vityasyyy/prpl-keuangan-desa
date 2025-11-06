@@ -56,12 +56,19 @@ async function main() {
     process.exit(1);
   }
 
-  initializeRoutes(app, allHandlers);
+  // Pass the DB pool into initializeRoutes so routers that need it can use it
+  initializeRoutes(app, allHandlers, { db: pool });
 
   app.use((_, res) => res.status(404).json({ message: 'Not Found' }));
   app.use((err, req, res, next) => {
-    (req.log || logger).logError({ err }, 'Unhandled error');
-    res.status(500).json({ error: err.message || 'Internal Server Error' });
+    // Use our logger utility to log errors; if a request logger exists, pass it in
+    try {
+      logger.logError(err, 'Unhandled error', {}, req.log);
+    } catch (_) {
+      // Fallback to console if logger misbehaves for any reason
+      console.error('Unhandled error (fallback):', err);
+    }
+    res.status(500).json({ error: err?.message || 'Internal Server Error' });
   });
 
   const port = parseInt(process.env.PORT, 10) || 3000;

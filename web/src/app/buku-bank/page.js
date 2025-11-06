@@ -1,32 +1,50 @@
 // This page fetches data on the server and renders the list view.
 import Link from 'next/link';
+import ReverseButton from '@/features/bank-desa/components/ReverseButton.jsx';
 
 /**
  * Fetches transaction data directly from our Backend API endpoint.
  * This runs on the server when the page is requested.
  */
+// Tiny fetch helper with retries to smooth out transient dev restarts
+async function fetchWithRetry(url, options = {}, attempts = 3, backoffMs = 250) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fetch(url, options);
+    } catch (err) {
+      lastErr = err;
+      // brief backoff before retrying
+      await new Promise((r) => setTimeout(r, backoffMs * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 async function getTransactions() {
   // Use environment variable for backend URL or default
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'; // Default to 3001 if not set
+  // Prefer env var; default to backend dev port 8081
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8081';
   // Ensure the API path matches the backend router definition
   const apiUrl = `${backendUrl}/api/bank-desa`; // Use '/api/bank-desa'
 
   console.log(`Fetching transactions from: ${apiUrl}`);
 
   try {
-    const res = await fetch(apiUrl, {
+    const res = await fetchWithRetry(apiUrl, {
       cache: 'no-store', // Always get fresh data
       // headers: { 'Authorization': 'Bearer <token>' } // Add auth later
     });
 
     if (!res.ok) {
-      // Improved error handling to show backend message if possible
+      // Read body ONCE, then attempt to parse JSON from text
+      const raw = await res.text();
       let errorBody = `HTTP error! status: ${res.status}`;
       try {
-        const errData = await res.json();
+        const errData = JSON.parse(raw);
         errorBody = errData.message || errData.error || JSON.stringify(errData);
-      } catch (e) {
-        errorBody = await res.text(); // Fallback to text if not JSON
+      } catch (_) {
+        errorBody = raw || errorBody;
       }
       throw new Error(`Failed to fetch transactions: ${errorBody}`);
     }
@@ -35,7 +53,10 @@ async function getTransactions() {
     console.log(`Successfully fetched ${data.length} transactions.`);
     return data;
   } catch (error) {
-    console.error('Error in getTransactions:', error);
+    // Quieter in dev to avoid noisy overlay; keep a concise warning
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('getTransactions: backend fetch failed, showing cached/empty data');
+    }
     // Return empty array on error so the page can still render
     return [];
   }
@@ -52,9 +73,26 @@ const formatRupiah = (amount) => {
   }).format(Number(amount));
 };
 
+// Simple heuristic to detect reversal entries
+function isReversal(tx) {
+  const keterangan = (tx.uraian || '').toUpperCase();
+  const bukti = (tx.bukti_transaksi || '').toUpperCase();
+  return keterangan.startsWith('[REVERSAL]') || bukti.endsWith('-REV');
+}
+
 // --- Main Page Component ---
-export default async function BukuBankPage() {
-  const transactions = await getTransactions();
+export default async function BukuBankPage({ searchParams }) {
+  // Next.js 15: searchParams is async
+  const sp = await searchParams;
+  const hideReversals = (
+    sp?.hideReversals === '1' ||
+    sp?.hideReversals === 'true'
+  );
+
+  const transactionsRaw = await getTransactions();
+  const transactions = hideReversals
+    ? transactionsRaw.filter((tx) => !isReversal(tx))
+    : transactionsRaw;
 
   // --- Grouping Logic ---
   const groupedByMonth = transactions.reduce((acc, tx) => {
@@ -79,7 +117,7 @@ export default async function BukuBankPage() {
   return (
     // Main container
     <div className="p-4 md:p-8 max-w-full lg:max-w-7xl mx-auto text-foreground dark:text-gray-200">
-      {/* Page Header */}
+      {/* Page Header (reverted to Tailwind utilities) */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Buku Bank Desa</h1>
@@ -87,11 +125,17 @@ export default async function BukuBankPage() {
         </div>
         {/* Action Buttons */}
         <div className="flex gap-2 flex-shrink-0">
+          <Link
+            href={hideReversals ? '/buku-bank' : '/buku-bank?hideReversals=1'}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors"
+          >
+            {hideReversals ? 'Tampilkan Reversal' : 'Sembunyikan Reversal'}
+          </Link>
           <button className="bg-yellow-500 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-yellow-600 transition-colors">
             Unduh File
           </button>
           <Link
-            href="/buku-bank/input" // Link to the input page
+            href="/buku-bank/input"
             className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-green-700 transition-colors"
           >
             + Input Data
@@ -108,7 +152,19 @@ export default async function BukuBankPage() {
         ) : (
           sortedMonthKeys.map((monthKey) => {
             const group = groupedByMonth[monthKey];
-            const txs = group.transactions;
+            // Sort transactions within a month by date asc, then created_at asc if available, as a stable chronological order
+            const txs = [...group.transactions].sort((a, b) => {
+              const da = new Date(a.tanggal).getTime();
+              const db = new Date(b.tanggal).getTime();
+              if (da !== db) return da - db;
+              // tie-breaker using created_at if present (from backend), else leave stable
+              if (a.created_at && b.created_at) {
+                const ca = new Date(a.created_at).getTime();
+                const cb = new Date(b.created_at).getTime();
+                if (ca !== cb) return ca - cb;
+              }
+              return 0;
+            });
             const totalMasuk = txs.reduce((sum, tx) => sum + (Number(tx.setoran) || 0) + (Number(tx.penerimaan_bunga) || 0), 0);
             const totalKeluar = txs.reduce((sum, tx) => sum + (Number(tx.penarikan) || 0) + (Number(tx.pajak) || 0) + (Number(tx.biaya_admin) || 0), 0);
             const saldoKumulatif = txs.length > 0 ? txs[txs.length - 1]?.saldo_after : 0;
@@ -132,7 +188,6 @@ export default async function BukuBankPage() {
                 <div className="overflow-x-auto border-t dark:border-gray-700">
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-gray-50 dark:bg-gray-700">
-                      [cite_start]{/* Table Headers matching Form C.6 [cite: 16] [cite_start]and Figma [cite: 27-40] */}
                       <tr>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tanggal</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Uraian</th>
@@ -143,6 +198,7 @@ export default async function BukuBankPage() {
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pajak</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Biaya Adm</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Saldo</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Aksi</th>
                       </tr>
                     </thead>
                     <tbody className="bg-background dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -157,6 +213,10 @@ export default async function BukuBankPage() {
                           <td className="px-3 py-2 whitespace-nowrap text-xs text-right text-red-600">{Number(tx.pajak) > 0 ? formatRupiah(tx.pajak) : '-'}</td>
                           <td className="px-3 py-2 whitespace-nowrap text-xs text-right text-red-600">{Number(tx.biaya_admin) > 0 ? formatRupiah(tx.biaya_admin) : '-'}</td>
                           <td className="px-3 py-2 whitespace-nowrap text-xs text-right font-medium">{formatRupiah(tx.saldo_after)}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-xs text-right">
+                            {/* Reversal button */}
+                            <ReverseButton id={tx.id} tanggal={tx.tanggal} />
+                          </td>
                         </tr>
                       ))}
                     </tbody>
