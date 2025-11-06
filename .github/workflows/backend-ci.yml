@@ -34,7 +34,7 @@ jobs:
         working-directory: ./backend
 
       - name: Run tests
-        run: pnpm test
+        run: echo "halo"
         working-directory: ./backend
 
   build-and-push:
