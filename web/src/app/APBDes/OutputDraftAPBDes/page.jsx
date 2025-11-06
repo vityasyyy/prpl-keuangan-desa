@@ -38,8 +38,8 @@ export default function OutputAPBDes() {
     }
 
     localStorage.setItem("apbdesPosted", JSON.stringify(data));
-    alert("✅ APBDes berhasil diposting ke Buku APBDes.");
-    router.push("/APBDes/BukuAPBDes"); // langsung arahkan ke Buku APBDes
+    alert("APBDes berhasil diposting ke Buku APBDes.");
+    router.push("/APBDes/BukuAPBDes");
   };
 
   const renderBox = (title, kategori) => {
