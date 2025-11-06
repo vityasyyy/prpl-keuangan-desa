@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./andhiki/prpl-keuangan-desa/prpl-keuangan-desa-dev/backend
+        working-directory: ./andhiki/prpl-keuangan-desa/backend
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
