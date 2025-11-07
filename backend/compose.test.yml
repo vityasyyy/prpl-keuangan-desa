@@ -1,0 +1,20 @@
+services:
+  backend-db-test:
+    image: postgres:17.2-alpine
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: keuangan_desa_test # A separate database name
+      POSTGRES_USER: ${POSTGRES_USER_TEST}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_TEST}
+    volumes:
+      # This builds your schema (1_init_schema.sql, etc.) on startup
+      - ./db/migrations:/docker-entrypoint-initdb.d
+    ports:
+      # Map to a different port (5433) to avoid conflict with dev DB (5432)
+      - "5433:5432"
+    networks:
+      - prpl-test-network
+
+networks:
+  prpl-test-network:

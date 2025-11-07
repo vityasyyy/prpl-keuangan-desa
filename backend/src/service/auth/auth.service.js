@@ -1,4 +1,4 @@
-import { logError, logDebug, logInfo } from "../../common/logger/logger.js";
+import { logError } from "../../common/logger/logger.js";
 import { comparePasswords } from "../../../utils/auth.js";
 export class AuthService {
   constructor(authRepo, tokenService) {
