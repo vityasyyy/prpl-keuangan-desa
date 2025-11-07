@@ -3,7 +3,8 @@ import { RefreshTokenRepository } from "./token.repo.js";
 import { AuthRepository } from "./auth.repo.js";
 import { RefreshToken } from "../../model/auth/auth.model.js";
 import { hashPassword } from "../../../utils/auth.js";
-
+import { configDotenv } from "dotenv";
+configDotenv({ path: ".env.test" });
 const TEST_DB_URL = process.env.DB_URL_TEST;
 
 if (!TEST_DB_URL) {

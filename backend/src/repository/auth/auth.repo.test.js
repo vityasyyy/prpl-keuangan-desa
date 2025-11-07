@@ -1,7 +1,8 @@
 import { Pool } from "pg";
 import { AuthRepository } from "./auth.repo.js";
 import { hashPassword } from "../../../utils/auth.js";
-
+import { configDotenv } from "dotenv";
+configDotenv({ path: ".env.test" });
 // This URL is loaded from .env.test by the `dotenv-cli` command in package.json
 const TEST_DB_URL = process.env.DB_URL_TEST;
 
