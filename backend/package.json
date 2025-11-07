@@ -5,9 +5,14 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
-    "seed": "node db/seed/seed.js"
+    "seed": "node db/seed/seed.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:unit": "pnpm test -- --testPathPattern=service",
+    "test:integration:handler": "pnpm test -- --testPathPattern=handler",
+    "test:integration:repo": "dotenv -e .env -- pnpm test -- --testPathPattern=repository",
+    "test:db:up": "docker compose -f compose.test.yml up -d",
+    "test:db:down": "docker compose -f compose.test.yml down"
   },
   "keywords": [
     "monolithic",
@@ -29,5 +34,12 @@
     "pg": "^8.12.0",
     "pino": "^9.12.0",
     "pino-http": "^10.5.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "dotenv-cli": "^11.0.0",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4",
+    "wait-on": "^9.0.1"
   }
 }
