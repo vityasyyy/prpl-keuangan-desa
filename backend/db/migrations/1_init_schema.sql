@@ -107,24 +107,14 @@ CREATE TABLE rkk (
     selesai DATE,
     pelaksana TEXT
 );
-CREATE TYPE status_rab AS ENUM(
-    'belum diajukan',
-    'diajukan',
-    'terverifikasi',
-    'tidak terverifikasi',
-    'disetujui',
-    'tidak disetujui'
-);
 
 CREATE TABLE rab (
     id TEXT PRIMARY KEY,
+    rkk_id TEXT NOT NULL REFERENCES rkk(id) ON DELETE CASCADE,
     rincian_id TEXT REFERENCES apbdes_rincian(id),
     kode_fungsi_id TEXT REFERENCES kode_fungsi(id),
     kode_ekonomi_id TEXT REFERENCES kode_ekonomi(id),
-    mulai DATE,
-    selesai DATE,
-    total_amount NUMERIC(18,2) NOT NULL DEFAULT 0,
-    status status_rab NOT NULL DEFAULT 'belum diajukan'   
+    total_amount NUMERIC(18,2) NOT NULL
 );
 
 CREATE TABLE rab_line (
@@ -133,9 +123,8 @@ CREATE TABLE rab_line (
     uraian TEXT NOT NULL,
     volume NUMERIC(18,2),
     harga_satuan NUMERIC(18,2),
-    satuan TEXT NOT NULL,
     jumlah NUMERIC(18,2),
-    kode_ekonomi_id TEXT REFERENCES kode_ekonomi(id)--mungkin g perlu
+    kode_ekonomi_id TEXT REFERENCES kode_ekonomi(id)
 );
 
 -- =========================
