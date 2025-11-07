@@ -236,6 +236,43 @@ export default function createKasUmumRepo(arg) {
     `);
     return rows;
   };
+  const listAkun = async () => {
+    const { rows } = await db.query(`
+      SELECT id, full_code, uraian
+      FROM kode_ekonomi
+      WHERE level = 'akun'
+      ORDER BY full_code
+    `);
+    return rows;
+  };
+
+  const listJenis = async (akunID) => {
+    const { rows } = await db.query(
+      `
+    SELECT j.id, j.full_code, j.uraian
+    FROM kode_ekonomi j
+    JOIN kode_ekonomi k ON j.parent_id = k.id
+    JOIN kode_ekonomi a ON k.parent_id = a.id
+    WHERE j.level = 'jenis' AND a.id = ${P(1)}
+    ORDER BY j.full_code
+    `,
+      [akunID]
+    );
+    return rows;
+  };
+
+  const listObjek = async (jenisID) => {
+    const { rows } = await db.query(
+      `
+      SELECT id, full_code, uraian
+      FROM kode_ekonomi
+      WHERE level = 'objek' AND parent_id = ${P(1)}
+      ORDER BY full_code
+    `,
+      [jenisID]
+    );
+    return rows;
+  };
 
   /**
    * Ambil saldo terakhir. Jika rabId diberikan, ambil saldo terakhir untuk RAB tersebut,
@@ -275,6 +312,9 @@ export default function createKasUmumRepo(arg) {
     listKegiatan,
     insertBku,
     listKodeEkonomi,
+    listAkun,
+    listJenis,
+    listObjek,
     getLastSaldo,
   };
 }

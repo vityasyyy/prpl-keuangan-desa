@@ -66,6 +66,34 @@ export default function createKasUmumHandler(kasUmumService) {
       next(e);
     }
   };
+  const getAkun = async (_req, res, next) => {
+    try {
+      const data = await kasUmumService.getAkun();
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  const getJenis = async (req, res, next) => {
+    try {
+      const { akunId } = req.query;
+      const data = await kasUmumService.getJenis(akunId);
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  const getObjek = async (req, res, next) => {
+    try {
+      const { jenisId } = req.query;
+      const data = await kasUmumService.getObjek(jenisId);
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  };
 
   return {
     getBku,
@@ -74,6 +102,9 @@ export default function createKasUmumHandler(kasUmumService) {
     getKegiatan,
     createBku,
     getKodeEkonomi,
+    getAkun,
+    getJenis,
+    getObjek,
     getSaldo,
   };
 }

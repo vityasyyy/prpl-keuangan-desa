@@ -10,10 +10,15 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/a
 export default function FormInputKasUmum() {
   const [formData, setFormData] = useState({
     tanggal: "",
+    kodeEko: "",
     kodeRek: "",
     bidang: "",
     subBidang: "",
     kegiatan: "",
+    akun: "",
+    kelompok: "",
+    jenis: "",
+    objek: "",
     uraian: "",
     pemasukan: "",
     pengeluaran: "",
@@ -231,7 +236,7 @@ export default function FormInputKasUmum() {
         // You can fetch the list from: GET /api/kas-umum/kode-ekonomi
         // Add a dropdown similar to bidang/sub-bidang/kegiatan
         kode_ekonomi_id: "KE001", // TEMPORARY PLACEHOLDER
-        
+
         kegiatan_id: formData.kegiatan,
         uraian: formData.uraian,
         pemasukan: formData.pemasukan,
@@ -279,6 +284,9 @@ export default function FormInputKasUmum() {
   const [bidangList, setBidangList] = useState([]);
   const [subBidangList, setSubBidangList] = useState([]);
   const [kegiatanList, setKegiatanList] = useState([]);
+  const [akunList, setAkunList] = useState([]);
+  const [jenisList, setJenisList] = useState([]);
+  const [objekList, setObjekList] = useState([]);
   const [saldoAutomated, setSaldoAutomated] = useState(null);
 
   const formatNumber = (num) => {
@@ -306,6 +314,65 @@ export default function FormInputKasUmum() {
       setSaldoAutomated(0);
     }
   };
+  // Ambil akun (level tertinggi)
+  useEffect(() => {
+    async function fetchAkun() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/kas-umum/akun`);
+        if (!res.ok) throw new Error("Gagal ambil data akun");
+        const data = await res.json();
+        setAkunList(data);
+      } catch (err) {
+        console.error("[fetchAkun]", err);
+      }
+    }
+    fetchAkun();
+  }, [API_BASE_URL]);
+
+  // Ambil jenis kalau akun berubah
+  useEffect(() => {
+    if (!formData.akun) return;
+    async function fetchJenis() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/kas-umum/jenis?akunId=${formData.akun}`);
+        if (!res.ok) throw new Error("Gagal ambil data jenis");
+        const data = await res.json();
+        setJenisList(data);
+      } catch (err) {
+        console.error("[fetchJenis]", err);
+      }
+    }
+    fetchJenis();
+  }, [formData.akun, API_BASE_URL]);
+
+  // Reset jenis & objek kalau akun berubah
+  useEffect(() => {
+    setJenisList([]);
+    setObjekList([]);
+    setFormData((prev) => ({ ...prev, jenis: "", objek: "" }));
+  }, [formData.akun]);
+
+  // Ambil objek kalau jenis berubah
+  useEffect(() => {
+    if (!formData.jenis) {
+      setObjekList([]);
+      setFormData((prev) => ({ ...prev, objek: "" }));
+      return;
+    }
+
+    async function fetchObjek() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/kas-umum/objek?jenisId=${formData.jenis}`);
+        if (!res.ok) throw new Error("Gagal ambil data objek");
+        const data = await res.json();
+        setObjekList(data);
+      } catch (err) {
+        console.error("[fetchObjek]", err);
+      }
+    }
+
+    fetchObjek();
+  }, [formData.jenis, API_BASE_URL]);
 
   // Ambil daftar bidang
   useEffect(() => {
@@ -427,6 +494,116 @@ export default function FormInputKasUmum() {
                   />
                 </div>
               </div>
+              <div className="flex flex-col items-start gap-1.5 self-stretch">
+                <label className="font-['Inter'] text-sm leading-5 font-medium text-[#011829]">
+                  Klasifikasi Ekonomi
+                </label>
+                <div className="flex items-start gap-1.5 self-stretch">
+                  <div className="flex flex-col gap-1">
+                    <input
+                      type="text"
+                      name="kodeEko"
+                      value={formData.kodeEko}
+                      onChange={handleInputChange}
+                      placeholder="Kode Rek"
+                      className={`w-[159px] rounded-lg border ${
+                        kodeRekError ? "border-red-500" : "border-[#d4d4d8]"
+                      } bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]`}
+                    />
+                    {kodeRekError && <span className="text-xs text-red-500">{kodeRekError}</span>}
+                  </div>
+                  <div className="relative flex flex-1 items-center gap-2 rounded-lg border border-[#d4d4d8] bg-white px-2.5 py-2.5 shadow-[0_1px_2px_0_rgba(16,24,40,0.05)]">
+                    <select
+                      name="akun"
+                      value={formData.akun}
+                      onChange={handleInputChange}
+                      className="w-[250] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
+                    >
+                      <option value="">Pendapatan/Belanja/Pembiayaan</option>
+                      {akunList.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.full_code} — {b.uraian}
+                        </option>
+                      ))}
+                    </select>
+                    <svg
+                      className="pointer-events-none absolute right-3 h-4 w-4 flex-shrink-0"
+                      width="17"
+                      height="16"
+                      viewBox="0 0 17 16"
+                      fill="none"
+                    >
+                      <path
+                        d="M4.33333 6L8.33333 10L12.3333 6"
+                        stroke="#A1A1AA"
+                        strokeWidth="1.33"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <div className="relative flex flex-1 items-center gap-2 rounded-lg border border-[#d4d4d8] bg-white px-2.5 py-2.5 shadow-[0_1px_2px_0_rgba(16,24,40,0.05)]">
+                    <select
+                      name="jenis"
+                      value={formData.jenis}
+                      onChange={handleInputChange}
+                      className="w-[220] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
+                    >
+                      <option value="">Uraian 1</option>
+                      {jenisList.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.full_code} — {b.uraian}
+                        </option>
+                      ))}
+                    </select>
+                    <svg
+                      className="pointer-events-none absolute right-3 h-4 w-4 flex-shrink-0"
+                      width="17"
+                      height="16"
+                      viewBox="0 0 17 16"
+                      fill="none"
+                    >
+                      <path
+                        d="M4.66666 6L8.66666 10L12.6667 6"
+                        stroke="#A1A1AA"
+                        strokeWidth="1.33"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <div className="relative flex flex-1 items-center gap-2 rounded-lg border border-[#d4d4d8] bg-white px-2.5 py-2.5 shadow-[0_1px_2px_0_rgba(16,24,40,0.05)]">
+                    <select
+                      name="objek"
+                      value={formData.objek}
+                      onChange={handleInputChange}
+                      className="w-[220] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
+                    >
+                      <option value="">Uraian 2</option>
+                      {objekList.map((k) => (
+                        <option key={k.id} value={k.id}>
+                          {k.full_code} — {k.uraian}
+                        </option>
+                      ))}
+                    </select>
+                    <svg
+                      className="pointer-events-none absolute right-3 h-4 w-4 flex-shrink-0"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                    >
+                      <path
+                        d="M4 6L8 10L12 6"
+                        stroke="#A1A1AA"
+                        strokeWidth="1.33"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
 
               <div className="flex flex-col items-start gap-1.5 self-stretch">
                 <label className="font-['Inter'] text-sm leading-5 font-medium text-[#011829]">
@@ -538,13 +715,13 @@ export default function FormInputKasUmum() {
                   </div>
                   <div className="flex w-[159px] flex-col items-start gap-1.5">
                     <div className="flex items-center gap-2 self-stretch rounded-lg border border-[#d4d4d8] bg-white px-[14px] py-2.5 shadow-[0_1px_2px_0_rgba(16,24,40,0.05)]">
-                      <input 
+                      <input
                         type="text"
                         name="kodeRAB"
                         value={formData.kodeRAB}
                         onChange={handleInputChange}
                         placeholder="Kode RAB"
-                        className="flex-1 border-none bg-transparent font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] outline-none placeholder::text-[@a1a1aa]"
+                        className="placeholder::text-[@a1a1aa] flex-1 border-none bg-transparent font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] outline-none"
                       />
                     </div>
                   </div>

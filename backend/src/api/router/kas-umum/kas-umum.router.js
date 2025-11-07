@@ -11,6 +11,9 @@ export default function createKasUmumRouter(kasUmumHandler) {
   r.get("/kegiatan", kasUmumHandler.getKegiatan);
   r.get("/saldo", kasUmumHandler.getSaldo);
   r.get("/kode-ekonomi", kasUmumHandler.getKodeEkonomi);
+  r.get("/akun", kasUmumHandler.getAkun);
+  r.get("/jenis", kasUmumHandler.getJenis);
+  r.get("/objek", kasUmumHandler.getObjek);
 
   return r;
 }

@@ -119,6 +119,22 @@ export default function createKasUmumService(kasUmumRepo) {
 
   const getKodeEkonomi = async () => kasUmumRepo.listKodeEkonomi();
 
+  const getAkun = async () => kasUmumRepo.listAkun();
+
+  const getJenis = async (akunID) => {
+    if (!akunID) {
+      throw { status: 400, error: "akunId_required" };
+    }
+    return kasUmumRepo.listJenis(akunID);
+  };
+
+  const getObjek = async (jenisID) => {
+    if (!jenisID) {
+      throw { status: 400, error: "jenisId_required" };
+    }
+    return kasUmumRepo.listObjek(jenisID);
+  };
+
   const getLastSaldo = async (rabId) => {
     // rabId optional
     const saldo = await kasUmumRepo.getLastSaldo(rabId);
@@ -132,6 +148,9 @@ export default function createKasUmumService(kasUmumRepo) {
     getKegiatan,
     createBku,
     getKodeEkonomi,
+    getAkun,
+    getJenis,
+    getObjek,
     getLastSaldo,
   };
 }
