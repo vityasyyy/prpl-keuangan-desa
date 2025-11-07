@@ -15,6 +15,8 @@ const Button = ({
     primary: "bg-[#0479CE] text-white hover:bg-sky-700",
     danger: "bg-[#DC2626] text-white hover:bg-red-700",
     neutral: "bg-white text-black hover:bg-gray-200",
+    peace: "bg-green-600 text-white hover:bg-green-700",
+    warm: "bg-[#FF9500] text-white hover:bg-yellow-700",
   };
 
   const sizes = {
