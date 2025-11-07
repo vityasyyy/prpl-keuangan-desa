@@ -78,8 +78,7 @@ jobs:
 
       - name: Run ALL Tests (Unit, Handler, Repo)
         env:
-          # This URL must match your backend/.env.test file
-          DB_URL: postgresql://prpl_koma:password@localhost:5433/keuangan_desa_test
+          DB_URL: postgresql://prpl_koma:testpassword123@localhost:5433/keuangan_desa_test
         run: pnpm test:unit && pnpm test:integration:handler && pnpm test:integration:repo
         working-directory: ./backend
 

@@ -2,7 +2,7 @@ services:
   backend-db-test:
     image: postgres:17.2-alpine
     env_file:
-      - .env
+      - .env.test
     environment:
       POSTGRES_DB: keuangan_desa_test # A separate database name
       POSTGRES_USER: prpl_koma
