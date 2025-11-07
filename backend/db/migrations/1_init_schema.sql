@@ -146,7 +146,7 @@ CREATE TABLE buku_kas_umum (
 
 CREATE TABLE buku_kas_pembantu (
     id TEXT PRIMARY KEY,
-    bku_id TEXT NOT NULL REFERENCES buku_kas_umum(id) ON DELETE CASCADE,
+    bku_id TEXT REFERENCES buku_kas_umum(id) ON DELETE CASCADE,
     type_enum TEXT,
     tanggal DATE NOT NULL,
     uraian TEXT,
@@ -157,6 +157,7 @@ CREATE TABLE buku_kas_pembantu (
 
 CREATE TABLE buku_kas_pajak (
     id TEXT PRIMARY KEY,
+    bku_id TEXT REFERENCES buku_kas_umum(id) ON DELETE CASCADE,
     tanggal DATE NOT NULL,
     uraian TEXT,
     pemotongan NUMERIC(18,2) DEFAULT 0,
@@ -166,6 +167,7 @@ CREATE TABLE buku_kas_pajak (
 
 CREATE TABLE buku_bank (
     id TEXT PRIMARY KEY,
+    bku_id TEXT REFERENCES buku_kas_umum(id) ON DELETE CASCADE,
     tanggal DATE NOT NULL,
     uraian TEXT,
     bukti_transaksi TEXT,
@@ -174,6 +176,16 @@ CREATE TABLE buku_bank (
     penarikan NUMERIC(18,2) DEFAULT 0,
     pajak NUMERIC(18,2) DEFAULT 0,
     biaya_admin NUMERIC(18,2) DEFAULT 0,
+    saldo_after NUMERIC(18,2) DEFAULT 0
+);
+
+CREATE TABLE buku_pembantu_panjar (
+    id TEXT PRIMARY KEY,
+    bku_id TEXT REFERENCES buku_kas_umum(id) ON DELETE CASCADE,
+    tanggal DATE NOT NULL,
+    uraian TEXT,
+    pemberian NUMERIC(18,2) DEFAULT 0,
+    pertanggungjawaban NUMERIC(18,2) DEFAULT 0,
     saldo_after NUMERIC(18,2) DEFAULT 0
 );
 
