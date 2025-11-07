@@ -14,7 +14,7 @@
     "test:integration:repo": "dotenv -e .env -- pnpm jest --testPathPatterns=repository",
     "test:db:up": "docker compose -f compose.test.yml up -d",
     "test:db:down": "docker compose -f compose.test.yml down",
-    "test:ci": "pnpm test:integration:handler && pnpm test:db:up && wait-on tcp:5433 && pnpm test:integration:repo ; pnpm test:db:down"
+    "test:ci": "pnpm test:unit && pnpm test:integration:handler && pnpm test:db:up && wait-on tcp:5433 && pnpm test:integration:repo ; pnpm test:db:down"
   },
   "keywords": [
     "monolithic",
