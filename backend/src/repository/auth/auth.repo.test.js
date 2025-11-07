@@ -3,7 +3,7 @@ import { AuthRepository } from "./auth.repo.js";
 import { hashPassword } from "../../../utils/auth.js";
 
 // This URL is loaded from .env.test by the `dotenv-cli` command in package.json
-const TEST_DB_URL = process.env.DB_URL;
+const TEST_DB_URL = process.env.DB_URL_TEST;
 
 if (!TEST_DB_URL) {
   throw new Error("Missing DB_URL environment variable. Did you run with `pnpm test:integration:repo`?");

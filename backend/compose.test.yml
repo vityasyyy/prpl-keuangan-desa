@@ -4,7 +4,6 @@ services:
     env_file:
       - .env
     environment:
-      DB_URL: ${DB_URL_TEST}
       POSTGRES_DB: keuangan_desa_test # A separate database name
       POSTGRES_USER: ${POSTGRES_USER_TEST}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_TEST}

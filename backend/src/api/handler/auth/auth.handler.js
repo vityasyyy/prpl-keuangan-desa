@@ -1,4 +1,4 @@
-import { logError, logDebug, logInfo } from "../../../common/logger/logger.js";
+import { logError, logInfo } from "../../../common/logger/logger.js";
 
 export class AuthHandler {
   constructor(authService) {

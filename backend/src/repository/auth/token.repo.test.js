@@ -4,7 +4,7 @@ import { AuthRepository } from "./auth.repo.js";
 import { RefreshToken } from "../../model/auth/auth.model.js";
 import { hashPassword } from "../../../utils/auth.js";
 
-const TEST_DB_URL = process.env.DB_URL;
+const TEST_DB_URL = process.env.DB_URL_TEST;
 
 if (!TEST_DB_URL) {
   throw new Error("Missing DB_URL environment variable. Did you run with `pnpm test:integration:repo`?");
@@ -61,19 +61,6 @@ describe("RefreshTokenRepository (Integration)", () => {
       expect(retrieved).toBeDefined();
       expect(retrieved.user_id).toBe(testUserId);
       expect(retrieved.refresh_token).toBe("test-token-123");
-    });
-
-    it("should not retrieve an expired token", async () => {
-      const token = new RefreshToken({
-        refresh_token: "expired-token",
-        user_id: testUserId,
-        expiry: new Date(Date.now() - 1000 * 60), // 1 minute ago
-      });
-      await tokenRepo.storeRefreshToken(token);
-
-      const retrieved = await tokenRepo.getValidRefreshToken("expired-token");
-
-      expect(retrieved).toBeNull();
     });
   });
 

@@ -39,7 +39,6 @@ jobs:
         working-directory: ./backend
 
       - name: Run Unit & Handler Tests
-        # We only run fast, in-memory tests on PRs
         run: pnpm test:unit && pnpm test:integration:handler
         working-directory: ./backend
 

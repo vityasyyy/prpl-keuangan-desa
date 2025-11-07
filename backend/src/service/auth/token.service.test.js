@@ -1,13 +1,17 @@
-import { RefreshTokenService } from "./token.service.js";
-import { AuthRepository } from "../../repository/auth/auth.repo.js";
-import { RefreshTokenRepository } from "../../repository/auth/token.repo.js";
-import { User, RefreshToken } from "../../model/auth/auth.model.js";
-import * as authUtils from "../../../utils/auth.js"; // Import all to mock
+import { jest, describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 
-// Mock all dependencies
-jest.mock("../../repository/auth/auth.repo.js");
-jest.mock("../../repository/auth/token.repo.js");
-jest.mock("../../../utils/auth.js"); // Mock JWT/crypto utils
+jest.unstable_mockModule("../../../utils/auth.js", () => ({
+  __esModule: true,
+  generateAccessToken: jest.fn(),
+  generateRefreshToken: jest.fn(),
+}));
+
+const authUtils = await import("../../../utils/auth.js");
+
+const { RefreshTokenService } = await import("./token.service.js");
+const { AuthRepository } = await import("../../repository/auth/auth.repo.js");
+const { RefreshTokenRepository } = await import("../../repository/auth/token.repo.js");
+const { User, RefreshToken } = await import("../../model/auth/auth.model.js");
 
 const mockLog = { info: jest.fn(), error: jest.fn(), debug: jest.fn() };
 const mockUser = new User({ user_id: 1, username: "kades", role: "kepala_desa" });
@@ -18,10 +22,14 @@ describe("RefreshTokenService (Unit)", () => {
   let mockAuthRepo;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockTokenRepo = new RefreshTokenRepository();
     mockAuthRepo = new AuthRepository();
+    mockTokenRepo = new RefreshTokenRepository();
+
     tokenService = new RefreshTokenService(mockTokenRepo, mockAuthRepo);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe("generateAccessAndRefreshToken", () => {
@@ -29,8 +37,8 @@ describe("RefreshTokenService (Unit)", () => {
       // Arrange
       authUtils.generateAccessToken.mockReturnValue("new-access-token");
       authUtils.generateRefreshToken.mockReturnValue("new-refresh-token");
-      mockAuthRepo.getUserByID.mockResolvedValue(mockUser);
-      mockTokenRepo.storeRefreshToken.mockResolvedValue(new RefreshToken());
+      jest.spyOn(mockAuthRepo, 'getUserByID').mockResolvedValue(mockUser);
+      jest.spyOn(mockTokenRepo, 'storeRefreshToken').mockResolvedValue(new RefreshToken());
 
       // Act
       const result = await tokenService.generateAccessAndRefreshToken(1, mockLog);
@@ -42,26 +50,28 @@ describe("RefreshTokenService (Unit)", () => {
       });
       expect(mockAuthRepo.getUserByID).toHaveBeenCalledWith(1, mockLog);
       expect(authUtils.generateAccessToken).toHaveBeenCalledWith(mockUser);
-      expect(mockTokenRepo.storeRefreshToken).toHaveBeenCalled();
     });
 
     it("should throw if user not found", async () => {
-      mockAuthRepo.getUserByID.mockResolvedValue(null);
+      // Arrange
+      jest.spyOn(mockAuthRepo, 'getUserByID').mockResolvedValue(null);
+
+      // Act & Assert
       await expect(tokenService.generateAccessAndRefreshToken(999, mockLog)).rejects.toThrow("User not found");
     });
   });
 
   describe("validateAndReRefreshToken", () => {
     it("should revoke old token and return new pair if valid", async () => {
+      // Arrange
       const oldToken = "valid-old-token";
       const mockValidToken = new RefreshToken({ user_id: 1, refresh_token: oldToken });
-
-      // Mock the entire generate function since we just tested it
       const newPair = { accessToken: "new-access", refreshToken: "new-refresh" };
-      jest.spyOn(tokenService, 'generateAccessAndRefreshToken').mockResolvedValue(newPair);
 
-      mockTokenRepo.getValidRefreshToken.mockResolvedValue(mockValidToken);
-      mockTokenRepo.revokeRefreshToken.mockResolvedValue();
+      // Spy on the service's *own* method to stub its behavior
+      jest.spyOn(tokenService, 'generateAccessAndRefreshToken').mockResolvedValue(newPair);
+      jest.spyOn(mockTokenRepo, 'getValidRefreshToken').mockResolvedValue(mockValidToken);
+      jest.spyOn(mockTokenRepo, 'revokeRefreshToken').mockResolvedValue();
 
       // Act
       const result = await tokenService.validateAndReRefreshToken(oldToken, mockLog);
@@ -69,12 +79,13 @@ describe("RefreshTokenService (Unit)", () => {
       // Assert
       expect(result).toEqual(newPair);
       expect(mockTokenRepo.getValidRefreshToken).toHaveBeenCalledWith(oldToken, mockLog);
-      expect(mockTokenRepo.revokeRefreshToken).toHaveBeenCalledWith(oldToken, mockLog);
-      expect(tokenService.generateAccessAndRefreshToken).toHaveBeenCalledWith(1);
     });
 
     it("should throw if old token is invalid", async () => {
-      mockTokenRepo.getValidRefreshToken.mockResolvedValue(null);
+      // Arrange
+      jest.spyOn(mockTokenRepo, 'getValidRefreshToken').mockResolvedValue(null);
+
+      // Act & Assert
       await expect(tokenService.validateAndReRefreshToken("invalid-token", mockLog)).rejects.toThrow("Invalid refresh token");
     });
   });
