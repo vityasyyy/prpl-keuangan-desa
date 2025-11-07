@@ -5,8 +5,8 @@ services:
       - .env
     environment:
       POSTGRES_DB: keuangan_desa_test # A separate database name
-      POSTGRES_USER: ${POSTGRES_USER_TEST}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_TEST}
+      POSTGRES_USER: prpl_koma
+      POSTGRES_PASSWORD: testpassword123
     volumes:
       # This builds your schema (1_init_schema.sql, etc.) on startup
       - ./db/migrations:/docker-entrypoint-initdb.d
