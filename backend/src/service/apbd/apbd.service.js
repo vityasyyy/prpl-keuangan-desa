@@ -75,7 +75,7 @@ export default function createApbdService(ApbdRepo) {
     if (!id) throw { status: 400, error: "id_required" };
     const status = await ApbdRepo.getApbdesStatus(id);
     return status;
-  }
+  };
 
   const getDraftApbdesList = async () => ApbdRepo.getDraftApbdesList();
 
@@ -99,13 +99,17 @@ export default function createApbdService(ApbdRepo) {
   const updateDraftApbdesItem = async (id, data) => {
     ApbdRepo.validateApbdesRincian(data);
     const updatedItem = await ApbdRepo.updateDraftApbdesItem(id, data);
-    const total = await ApbdRepo.recalculateDraftApbdesTotals(updatedItem.apbd_id); // Hitung ulang total
+    const total = await ApbdRepo.recalculateDraftApbdesTotals(
+      updatedItem.apbd_id
+    ); // Hitung ulang total
     return { updatedItem, total };
   };
 
   const deleteDraftApbdesItem = async (id) => {
     const deletedItem = await ApbdRepo.deleteDraftApbdesItem(id);
-    const total = await ApbdRepo.recalculateDraftApbdesTotals(deletedItem.apbd_id); // Hitung ulang total
+    const total = await ApbdRepo.recalculateDraftApbdesTotals(
+      deletedItem.apbd_id
+    ); // Hitung ulang total
     return { deletedItem, total };
   };
 
@@ -135,9 +139,10 @@ export default function createApbdService(ApbdRepo) {
   const createApbdesRincianPenjabaran = async (payload) => {
     ApbdRepo.createApbdesRincianPenjabaran(payload);
     return { message: "APBDes rincian penjabaran berhasil dibuat" };
-  };  
+  };
 
-  const getDraftPenjabaranApbdesList = async () => ApbdRepo.getDraftPenjabaranApbdesList();
+  const getDraftPenjabaranApbdesList = async () =>
+    ApbdRepo.getDraftPenjabaranApbdesList();
 
   const getDraftPenjabaranApbdesById = async (id) => {
     if (!id) throw { status: 400, error: "id_required" };
@@ -174,6 +179,23 @@ export default function createApbdService(ApbdRepo) {
     };
   };
 
+  const updatePenjabaranApbdesItem = async (id, data) => {
+    ApbdRepo.validateApbdesRincianPenjabaran(data);
+    const updatedItem = await ApbdRepo.updatePenjabaranApbdesItem(id, data);
+    const total = await ApbdRepo.recalculatePenjabaranApbdesTotals(
+      updatedItem.penjabaran_id
+    ); // Hitung ulang total
+    return { updatedItem, total };
+  };
+
+  const deletePenjabaranApbdesItem = async (id) => {
+    const deletedItem = await ApbdRepo.deletePenjabaranApbdesItem(id);
+    const total = await ApbdRepo.recalculatePenjabaranApbdesTotals(
+      deletedItem.penjabaran_id
+    ); // Hitung ulang total
+    return { deletedItem, total };
+  };
+
   return {
     //input form apbdes rincian
     getBidang,
@@ -203,6 +225,8 @@ export default function createApbdService(ApbdRepo) {
     getDraftPenjabaranApbdesList,
     getDraftPenjabaranApbdesById,
     getDraftPenjabaranApbdesSummary,
+    updatePenjabaranApbdesItem,
+    deletePenjabaranApbdesItem,
     postDraftPenjabaranApbdes,
 
     //buku apbdes

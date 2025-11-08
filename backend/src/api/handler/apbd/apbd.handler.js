@@ -104,7 +104,7 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
-  const validateApbdesRincian = async (req, res, next) => { 
+  const validateApbdesRincian = async (req, res, next) => {
     try {
       await ApbdService.validateApbdesRincian(req.body);
       res.json({ message: "Validasi berhasil" });
@@ -240,6 +240,27 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
+  const updatePenjabaranApbdesItem = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const data = req.body;
+      const result = await ApbdService.updatePenjabaranApbdesItem(id, data);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  const deletePenjabaranApbdesItem = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const result = await ApbdService.deletePenjabaranApbdesItem(id);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  };
+
   return {
     //input form apbdes rincian
     getBidang,
@@ -269,6 +290,8 @@ export default function createApbdHandler(ApbdService) {
     getDraftPenjabaranApbdesList,
     getDraftPenjabaranApbdesById,
     getDraftPenjabaranApbdesSummary,
+    updatePenjabaranApbdesItem,
+    deletePenjabaranApbdesItem,
     postDraftPenjabaranApbdes,
 
     //buku apbdes

@@ -117,7 +117,7 @@ export default function createApbdRepo(arg) {
     );
     return rows.map((r) => r.sumber_dana);
   };
-  
+
   const validateApbdesRincian = (data) => {
     const {
       uraian,
@@ -304,14 +304,14 @@ export default function createApbdRepo(arg) {
 
   const recalculateDraftApbdesTotals = async (apbdesId) => {
     const q = `
-    SELECT e.uraian, SUM(r.jumlah_anggaran) AS total_anggaran
-    FROM apbdes_rincian r
-    JOIN kode_ekonomi e ON e.id = r.kode_ekonomi_id
-    JOIN apbdes a ON a.id = (SELECT k.apbdes_id FROM kegiatan k WHERE k.id = r.kegiatan_id)
-    WHERE e.level = 'akun'
-      AND a.status = $1
-      ${apbdesId ? "AND a.id = $2" : ""}
-    GROUP BY e.uraian
+      SELECT e.uraian, SUM(r.jumlah_anggaran) AS total_anggaran
+      FROM apbdes_rincian r
+      JOIN kode_ekonomi e ON e.id = r.kode_ekonomi_id
+      JOIN apbdes a ON a.id = (SELECT k.apbdes_id FROM kegiatan k WHERE k.id = r.kegiatan_id)
+      WHERE e.level = 'akun'
+        AND a.status = $1
+        ${apbdesId ? "AND a.id = $2" : ""}
+      GROUP BY e.uraian
   `;
     const params = apbdesId ? ["draft", apbdesId] : ["draft"];
     const { rows } = await db.query(q, params);
@@ -405,14 +405,8 @@ export default function createApbdRepo(arg) {
   };
 
   const createApbdesRincianPenjabaran = async (data) => {
-    const {
-      rincian_id,
-      uraian,
-      volume,
-      satuan,
-      jumlah_anggaran,
-      sumber_dana,
-    } = data;
+    const { rincian_id, uraian, volume, satuan, jumlah_anggaran, sumber_dana } =
+      data;
     const insertQuery = `
       INSERT INTO apbdes_rincian_penjabaran (
         rincian_id, uraian, volume, satuan, jumlah_anggaran, sumber_dana
@@ -457,7 +451,7 @@ export default function createApbdRepo(arg) {
   };
 
   const getDraftPenjabaranApbdesSummary = async () => {
-   const q = `
+    const q = `
       SELECT e.uraian, SUM(p.jumlah_anggaran) AS total_anggaran
       FROM apbdes_rincian_penjabaran p
       JOIN kode_ekonomi e ON e.id = p.kode_ekonomi_id
@@ -485,12 +479,12 @@ export default function createApbdRepo(arg) {
   const generateDraftApbdes = async (apbdesId) => {
     // Implementasi pembuatan laporan APBDes berdasarkan apbdesId
     // Misalnya, mengumpulkan data terkait dan menyusunnya dalam format tertentu
-  }
+  };
 
   const downloadDraftApbdes = async (apbdesId) => {
     const report = await generateDraftApbdes(apbdesId);
     // Implementasi pengunduhan laporan, misalnya mengirimkan file sebagai respons
-  }
+  };
 
   const getApbdesStatus = async (id) => {
     const q = `
@@ -500,6 +494,56 @@ export default function createApbdRepo(arg) {
     `;
     const { rows } = await db.query(q, [id]);
     return rows[0]?.status || null;
+  };
+
+  const updatePenjabaranApbdesItem = async (id, data) => {
+    const { uraian, volume, satuan, jumlah_anggaran, sumber_dana } = data;
+    const q = `
+      UPDATE apbdes_rincian_penjabaran
+      SET uraian = $1, volume = $2, satuan = $3, jumlah_anggaran = $4, sumber_dana = $5
+      WHERE id = $6
+      RETURNING *;
+    `;
+    const { rows } = await db.query(q, [
+      uraian,
+      volume,
+      satuan,
+      jumlah_anggaran,
+      sumber_dana,
+      id,
+    ]);
+    return rows[0];
+  };
+
+  const deletePenjabaranApbdesItem = async (id) => {
+    const q = `
+      DELETE FROM apbdes_rincian_penjabaran
+      WHERE id = $1
+      RETURNING *;
+    `;
+    const { rows } = await db.query(q, [id]);
+    return rows[0];
+  };
+
+  const recalculatePenjabaranApbdesTotals = async (id) => {
+    const q = `
+      SELECT e.uraian, SUM(p.jumlah_anggaran) AS total_anggaran
+      FROM apbdes_rincian_penjabaran p
+      JOIN apbdes_rincian r ON p.rincian_id = r.id
+      JOIN kode_ekonomi e ON e.id = r.kode_ekonomi_id
+      JOIN apbdes a ON a.id = (SELECT k.apbdes_id FROM kegiatan k WHERE k.id = r.kegiatan_id)
+      WHERE e.level = 'akun'
+        AND a.status = $1
+        ${id ? "AND a.id = $2" : ""}
+      GROUP BY e.uraian
+  `;
+    const params = id ? ["draft", id] : ["draft"];
+    const { rows } = await db.query(q, params);
+    const result = rows.reduce((acc, cur) => {
+      acc[cur.uraian] = parseFloat(cur.total_anggaran) || 0;
+      return acc;
+    }, {});
+    return result;
   };
 
   return {
@@ -533,6 +577,9 @@ export default function createApbdRepo(arg) {
     getDraftPenjabaranApbdesList,
     getDraftPenjabaranApbdesById,
     getDraftPenjabaranApbdesSummary,
+    updatePenjabaranApbdesItem,
+    deletePenjabaranApbdesItem,
+    recalculatePenjabaranApbdesTotals,
     postDraftPenjabaranApbdes,
 
     //buku apbdes
