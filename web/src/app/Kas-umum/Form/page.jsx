@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Sidebar from "@/components/Sidebar";
 import Breadcrumb from "@/components/Breadcrumb";
 import Button from "@/components/Button";
@@ -27,6 +27,8 @@ export default function FormInputKasUmum() {
     buatLagi: false,
     kodeRAB: "",
   });
+
+  const [rabList, setRabList] = useState([]);
 
   const [kodeRekError, setKodeRekError] = useState("");
 
@@ -301,7 +303,7 @@ export default function FormInputKasUmum() {
     }
   };
 
-  const fetchSaldo = async (rabId) => {
+  const fetchSaldo = useCallback(async (rabId) => {
     try {
       const q = rabId ? `?rabId=${encodeURIComponent(rabId)}` : "";
       const res = await fetch(`${API_BASE_URL}/kas-umum/saldo${q}`);
@@ -313,7 +315,7 @@ export default function FormInputKasUmum() {
       console.error("[fetchSaldo]", err);
       setSaldoAutomated(0);
     }
-  };
+  }, [API_BASE_URL]);
   // Ambil akun (level tertinggi)
   useEffect(() => {
     async function fetchAkun() {
@@ -445,11 +447,26 @@ export default function FormInputKasUmum() {
     setFormData((prev) => ({ ...prev, nettoTransaksi: displayValue }));
   }, [formData.pemasukan, formData.pengeluaran]);
 
-  // Ambil saldo otomatis saat komponen mount (atau bila ingin, saat tanggal berubah)
+  // Mengambil data RAB
   useEffect(() => {
-    // If in future rabId is available, pass it here. For now fetch global latest saldo.
-    fetchSaldo();
+    const fetchRAB = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/rab/list`);
+        const data = await res.json();
+        setRabList(data);
+      } catch (err) {
+        console.error("Gagal mengambil data RAB:", err);
+      }
+    };
+    fetchRAB();
   }, []);
+
+  // Ambil saldo otomatis saat RAB dipilih
+  useEffect(() => {
+    if (formData.rab) {
+      fetchSaldo(formData.rab); // Pass RAB ID ke fetchSaldo
+    }
+  }, [formData.rab, fetchSaldo]); // Include fetchSaldo in dependencies
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -494,6 +511,43 @@ export default function FormInputKasUmum() {
                   />
                 </div>
               </div>
+
+              <div className="flex w-[320px] flex-col items-start gap-1.5">
+                <label className="font-['Inter'] text-sm leading-5 font-medium text-[#011829]">
+                  Kode RAB
+                </label>
+                <div className="relative flex items-center gap-2 self-stretch rounded-lg border border-[#d4d4d8] bg-white px-[14px] py-2.5 shadow-[0_1px_2px_0_rgba(16,24,40,0.05)]">
+                  <select
+                    name="kodeRAB"
+                    value={formData.kodeRAB}
+                    onChange={handleInputChange}
+                    className="w-full cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
+                  >
+                    <option value="">Pilih Kode RAB</option>
+                    {rabList.map((rab) => (
+                      <option key={rab.id} value={rab.id}>
+                        {rab.kode_rab} — {rab.uraian}
+                      </option>
+                    ))}
+                  </select>
+                  <svg
+                    className="pointer-events-none absolute right-3 h-4 w-4 flex-shrink-0"
+                    width="17"
+                    height="16"
+                    viewBox="0 0 17 16"
+                    fill="none"
+                  >
+                    <path
+                      d="M4.33333 6L8.33333 10L12.3333 6"
+                      stroke="#A1A1AA"
+                      strokeWidth="1.33"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+              </div>
+
               <div className="flex flex-col items-start gap-1.5 self-stretch">
                 <label className="font-['Inter'] text-sm leading-5 font-medium text-[#011829]">
                   Klasifikasi Ekonomi
@@ -628,7 +682,7 @@ export default function FormInputKasUmum() {
                       name="bidang"
                       value={formData.bidang}
                       onChange={handleInputChange}
-                      className="w-[170] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
+                      className="w-[250] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
                     >
                       <option value="">Bidang</option>
                       {bidangList.map((b) => (
@@ -658,7 +712,7 @@ export default function FormInputKasUmum() {
                       name="subBidang"
                       value={formData.subBidang}
                       onChange={handleInputChange}
-                      className="w-[170] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
+                      className="w-[220] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
                     >
                       <option value="">Sub-bidang</option>
                       {subBidangList.map((b) => (
@@ -688,7 +742,7 @@ export default function FormInputKasUmum() {
                       name="kegiatan"
                       value={formData.kegiatan}
                       onChange={handleInputChange}
-                      className="w-[170] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
+                      className="w-[220] cursor-pointer appearance-none border-none bg-transparent pr-6 font-['Inter'] text-base leading-6 font-normal text-[#71717a] outline-none"
                     >
                       <option value="">Kegiatan</option>
                       {kegiatanList.map((k) => (
@@ -712,18 +766,6 @@ export default function FormInputKasUmum() {
                         strokeLinejoin="round"
                       />
                     </svg>
-                  </div>
-                  <div className="flex w-[159px] flex-col items-start gap-1.5">
-                    <div className="flex items-center gap-2 self-stretch rounded-lg border border-[#d4d4d8] bg-white px-[14px] py-2.5 shadow-[0_1px_2px_0_rgba(16,24,40,0.05)]">
-                      <input
-                        type="text"
-                        name="kodeRAB"
-                        value={formData.kodeRAB}
-                        onChange={handleInputChange}
-                        placeholder="Kode RAB"
-                        className="placeholder::text-[@a1a1aa] flex-1 border-none bg-transparent font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] outline-none"
-                      />
-                    </div>
                   </div>
                 </div>
                 <input
