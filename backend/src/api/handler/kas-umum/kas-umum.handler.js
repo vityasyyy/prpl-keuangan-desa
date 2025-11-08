@@ -1,5 +1,13 @@
 // src/api/handler/kas-umum/kas-umum.handler.js
 export default function createKasUmumHandler(kasUmumService) {
+  const getRAB = async (_req, res, next) => {
+    try {
+      const data = await kasUmumService.getRAB();
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  };
   const getBku = async (req, res, next) => {
     try {
       const { month, rabId, rkkId } = req.query;
@@ -96,6 +104,7 @@ export default function createKasUmumHandler(kasUmumService) {
   };
 
   return {
+    getRAB,
     getBku,
     getBidang,
     getSubBidang,

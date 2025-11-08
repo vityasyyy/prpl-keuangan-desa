@@ -20,6 +20,15 @@ export default function createKasUmumRepo(arg) {
   const monthRaw = () =>
     `DATE_TRUNC('month', tanggal) = DATE_TRUNC('month', ${P(1)}::date)`;
 
+  const listRAB = async () => {
+    const { rows } = await db.query(`
+      SELECT *
+      FROM rab
+      ORDER BY id
+    `);
+    return rows;
+  };
+
   /**
    * Ambil daftar transaksi BKU (Buku Kas Umum)
    */
@@ -305,6 +314,7 @@ export default function createKasUmumRepo(arg) {
   };
 
   return {
+    listRAB,
     listBkuRows,
     getBkuSummary,
     listBidang,

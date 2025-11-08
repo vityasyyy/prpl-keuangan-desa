@@ -303,19 +303,22 @@ export default function FormInputKasUmum() {
     }
   };
 
-  const fetchSaldo = useCallback(async (rabId) => {
-    try {
-      const q = rabId ? `?rabId=${encodeURIComponent(rabId)}` : "";
-      const res = await fetch(`${API_BASE_URL}/kas-umum/saldo${q}`);
-      if (!res.ok) throw new Error("Gagal ambil saldo");
-      const data = await res.json();
-      // backend returns { saldo: number }
-      setSaldoAutomated(data?.saldo ?? 0);
-    } catch (err) {
-      console.error("[fetchSaldo]", err);
-      setSaldoAutomated(0);
-    }
-  }, [API_BASE_URL]);
+  const fetchSaldo = useCallback(
+    async (rabId) => {
+      try {
+        const q = rabId ? `?rabId=${encodeURIComponent(rabId)}` : "";
+        const res = await fetch(`${API_BASE_URL}/kas-umum/saldo${q}`);
+        if (!res.ok) throw new Error("Gagal ambil saldo");
+        const data = await res.json();
+        // backend returns { saldo: number }
+        setSaldoAutomated(data?.saldo ?? 0);
+      } catch (err) {
+        console.error("[fetchSaldo]", err);
+        setSaldoAutomated(0);
+      }
+    },
+    [API_BASE_URL]
+  );
   // Ambil akun (level tertinggi)
   useEffect(() => {
     async function fetchAkun() {
@@ -451,7 +454,7 @@ export default function FormInputKasUmum() {
   useEffect(() => {
     const fetchRAB = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/rab/list`);
+        const res = await fetch(`${API_BASE_URL}/kas-umum/rab`);
         const data = await res.json();
         setRabList(data);
       } catch (err) {

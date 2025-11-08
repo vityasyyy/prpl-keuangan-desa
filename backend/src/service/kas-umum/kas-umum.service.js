@@ -25,6 +25,7 @@ export default function createKasUmumService(kasUmumRepo) {
     };
   };
 
+  const getRAB = async () => kasUmumRepo.listRAB();
   const getBidang = async () => kasUmumRepo.listBidang();
 
   const getSubBidang = async (bidangId) => {
@@ -142,6 +143,7 @@ export default function createKasUmumService(kasUmumRepo) {
   };
 
   return {
+    getRAB,
     getBku,
     getBidang,
     getSubBidang,

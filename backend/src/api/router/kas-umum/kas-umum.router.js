@@ -4,6 +4,7 @@ import { Router } from "express";
 export default function createKasUmumRouter(kasUmumHandler) {
   const r = Router();
 
+  r.get("/rab", kasUmumHandler.getRAB);
   r.get("/", kasUmumHandler.getBku);
   r.post("/", kasUmumHandler.createBku);
   r.get("/bidang", kasUmumHandler.getBidang);
