@@ -36,62 +36,13 @@ export default function createApbdService(ApbdRepo) {
     return ApbdRepo.listKegiatan(subBidangId);
   };
 
-  /*
-  const createBapbd = async (payload) => {
-    const {
-      kegiatan_id,
-      kode_fungsi_id,
-      kode_ekonomi_id,
-      uraian,
-      jumlah_anggaran,
-      sumber_dana,
-    } = payload;
-
-    if (!kegiatan_id)
-      throw {
-        status: 400,
-        error: "kegiatan_required",
-        hint: "Kegiatan harus dipilih dari dropdown",
-      };
-
-    if (!kode_fungsi_id)
-      throw {
-        status: 400,
-        error: "kode_fungsi_required",
-        hint: "Kode fungsi harus dipilih",
-      };
-
-    if (!kode_ekonomi_id)
-      throw {
-        status: 400,
-        error: "kode_ekonomi_required",
-        hint: "Kode ekonomi harus dipilih",
-      };
-
-    if (!jumlah_anggaran || parseFloat(jumlah_anggaran) <= 0)
-      throw {
-        status: 400,
-        error: "jumlah_anggaran_required",
-        hint: "Jumlah anggaran harus lebih dari 0",
-      };
-
-    const newRow = await ApbdRepo.insertBApbd({
-      kegiatan_id,
-      kode_fungsi_id,
-      kode_ekonomi_id,
-      uraian: uraian || "",
-      jumlah_anggaran: parseFloat(jumlah_anggaran),
-      sumber_dana: sumber_dana || null,
-    });
-
-    return {
-      message: "Data APBD berhasil ditambahkan",
-      data: newRow,
-    };
-  }; */
+  const validateApbdesRincian = async (payload) => {
+    ApbdRepo.validateApbdesRincian(payload);
+    return { message: "Validasi berhasil" };
+  };
 
   const createApbdesRincian = async (payload) => {
-    ApbdRepo.validateApbdesData(payload);
+    ApbdRepo.validateApbdesRincian(payload);
     const newItem = await ApbdRepo.createApbdesRincian(payload);
     // Dapatkan apbdes_id dari kegiatan untuk hitung ulang total
     const apbdesIdQuery = `
@@ -102,7 +53,7 @@ export default function createApbdService(ApbdRepo) {
     ]); // Pastikan menggunakan repo untuk query
     const apbdesId = rows?.[0]?.apbdes_id;
     // Hitung ulang total setelah insert
-    const total = await ApbdRepo.recalculateApbdesTotals(apbdesId);
+    const total = await ApbdRepo.recalculateDraftApbdesTotals(apbdesId);
     return {
       message: "Data APBDes berhasil ditambahkan",
       data: newItem,
@@ -135,8 +86,8 @@ export default function createApbdService(ApbdRepo) {
     return draft;
   };
 
-  const getApbdesSummary = async () => {
-    const summary = await ApbdRepo.getApbdesSummary();
+  const getDraftApbdesSummary = async () => {
+    const summary = await ApbdRepo.getDraftApbdesSummary();
     return {
       pendapatan: summary.pendapatan || 0,
       belanja: summary.belanja || 0,
@@ -145,20 +96,20 @@ export default function createApbdService(ApbdRepo) {
     };
   };
 
-  const updateApbdesItem = async (id, data) => {
-    ApbdRepo.validateApbdesData(data);
-    const updatedItem = await ApbdRepo.updateApbdesItem(id, data);
-    const total = await ApbdRepo.recalculateApbdesTotals(updatedItem.apbd_id); // Hitung ulang total
+  const updateDraftApbdesItem = async (id, data) => {
+    ApbdRepo.validateApbdesRincian(data);
+    const updatedItem = await ApbdRepo.updateDraftApbdesItem(id, data);
+    const total = await ApbdRepo.recalculateDraftApbdesTotals(updatedItem.apbd_id); // Hitung ulang total
     return { updatedItem, total };
   };
 
-  const deleteApbdesItem = async (id) => {
-    const deletedItem = await ApbdRepo.deleteApbdesItem(id);
-    const total = await ApbdRepo.recalculateApbdesTotals(deletedItem.apbd_id); // Hitung ulang total
+  const deleteDraftApbdesItem = async (id) => {
+    const deletedItem = await ApbdRepo.deleteDraftApbdesItem(id);
+    const total = await ApbdRepo.recalculateDraftApbdesTotals(deletedItem.apbd_id); // Hitung ulang total
     return { deletedItem, total };
   };
 
-  const postApbdesDraft = async (id) => {
+  const postDraftApbdes = async (id) => {
     if (!id) throw { status: 400, error: "id_required" };
     const currentStatus = await ApbdRepo.getApbdesStatus(id);
     if (currentStatus === "posted") {
@@ -169,7 +120,54 @@ export default function createApbdService(ApbdRepo) {
       };
     }
 
-    const postedApbdes = await ApbdRepo.postApbdesDraft(id);
+    const postedApbdes = await ApbdRepo.postDraftApbdes(id);
+    return {
+      message: "APBDes berhasil diposting.",
+      data: postedApbdes,
+    };
+  };
+
+  const validateApbdesRincianPenjabaran = async (payload) => {
+    ApbdRepo.validateApbdesRincianPenjabaran(payload);
+    return { message: "Validasi berhasil" };
+  };
+
+  const createApbdesRincianPenjabaran = async (payload) => {
+    ApbdRepo.createApbdesRincianPenjabaran(payload);
+    return { message: "APBDes rincian penjabaran berhasil dibuat" };
+  };  
+
+  const getDraftPenjabaranApbdesList = async () => ApbdRepo.getDraftPenjabaranApbdesList();
+
+  const getDraftPenjabaranApbdesById = async (id) => {
+    if (!id) throw { status: 400, error: "id_required" };
+    const draft = await ApbdRepo.getDraftPenjabaranApbdesById(id);
+    if (!draft) throw { status: 404, error: "draft_not_found" };
+    return draft;
+  };
+
+  const getDraftPenjabaranApbdesSummary = async () => {
+    const summary = await ApbdRepo.getDraftPenjabaranApbdesSummary();
+    return {
+      pendapatan: summary.pendapatan || 0,
+      belanja: summary.belanja || 0,
+      pembiayaan: summary.pembiayaan || 0,
+      raw: summary,
+    };
+  };
+
+  const postDraftPenjabaranApbdes = async (id) => {
+    if (!id) throw { status: 400, error: "id_required" };
+    const currentStatus = await ApbdRepo.getApbdesStatus(id);
+    if (currentStatus === "posted") {
+      throw {
+        status: 409,
+        error: "apbdes_already_posted",
+        message: "APBDes ini sudah diposting dan tidak dapat diubah lagi.",
+      };
+    }
+
+    const postedApbdes = await ApbdRepo.postDraftPenjabaranApbdes(id);
     return {
       message: "APBDes berhasil diposting.",
       data: postedApbdes,
@@ -177,22 +175,38 @@ export default function createApbdService(ApbdRepo) {
   };
 
   return {
-    getApbdes,
+    //input form apbdes rincian
     getBidang,
     getKodeFungsi,
     getSubBidang,
     getKegiatan,
-    createApbdesRincian,
     getKodeEkonomi,
     getAkun,
     getUraian,
     getSumberDana,
-    getApbdesStatus,
+    createApbdesRincian,
+    validateApbdesRincian,
+
+    //output apbdes rincian
     getDraftApbdesList,
     getDraftApbdesById,
-    getApbdesSummary,
-    updateApbdesItem,
-    deleteApbdesItem,
-    postApbdesDraft,
+    getDraftApbdesSummary,
+    updateDraftApbdesItem,
+    deleteDraftApbdesItem,
+    postDraftApbdes,
+
+    //input form apbdes rincian penjabaran
+    validateApbdesRincianPenjabaran,
+    createApbdesRincianPenjabaran,
+
+    //output draft apbdes rincian penjabaran
+    getDraftPenjabaranApbdesList,
+    getDraftPenjabaranApbdesById,
+    getDraftPenjabaranApbdesSummary,
+    postDraftPenjabaranApbdes,
+
+    //buku apbdes
+    getApbdes,
+    getApbdesStatus,
   };
 }

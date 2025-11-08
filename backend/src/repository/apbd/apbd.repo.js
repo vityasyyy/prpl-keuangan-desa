@@ -57,10 +57,6 @@ export default function createApbdRepo(arg) {
     return rows;
   }
 
-  /**
-   * Dropdown kode fungsi — disesuaikan dgn level:
-   * level 1 = Bidang, 2 = Sub-bidang, 3 = Kegiatan
-   */
   const listBidang = async () => {
     const { rows } = await db.query(
       `SELECT id, full_code, uraian FROM kode_fungsi WHERE level = $1 ORDER BY full_code`,
@@ -85,59 +81,6 @@ export default function createApbdRepo(arg) {
     return rows;
   };
 
-  /**
-   * Insert data baru ke tabel apbdes_rincian
-   */
-  const createApbdesRincian = async (data) => {
-    const {
-      id,
-      kegiatan_id,
-      kode_fungsi_id,
-      kode_ekonomi_id,
-      uraian,
-      jumlah_anggaran,
-      sumber_dana,
-    } = data;
-    // insert into apbdes_rincian (schema defined in migrations)
-    const insertQuery = `
-      INSERT INTO apbdes_rincian (
-        id, kegiatan_id, kode_fungsi_id, kode_ekonomi_id, uraian, jumlah_anggaran, sumber_dana
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7)
-      RETURNING id, kegiatan_id, kode_fungsi_id, kode_ekonomi_id, uraian, jumlah_anggaran, sumber_dana
-    `;
-
-    const values = [
-      id,
-      kegiatan_id,
-      kode_fungsi_id,
-      kode_ekonomi_id,
-      uraian,
-      jumlah_anggaran,
-      sumber_dana,
-    ];
-
-    const {
-      rows: [newRow],
-    } = await db.query(insertQuery, values);
-
-    const detailQuery = `
-      SELECT r.*, kf.full_code AS kode_fungsi_full, kf.uraian AS kode_fungsi_uraian,
-             ke.full_code AS kode_ekonomi_full, ke.uraian AS kode_ekonomi_uraian
-      FROM apbdes_rincian r
-      LEFT JOIN kode_fungsi kf ON kf.id = r.kode_fungsi_id
-      LEFT JOIN kode_ekonomi ke ON ke.id = r.kode_ekonomi_id
-      WHERE r.id = $1
-    `;
-
-    const {
-      rows: [detailRow],
-    } = await db.query(detailQuery, [newRow.id]);
-    return detailRow;
-  };
-
-  /**
-   * Dropdown Kode Ekonomi
-   */
   const listKodeEkonomi = async () => {
     const { rows } = await db.query(`
       SELECT id, full_code, uraian 
@@ -174,101 +117,8 @@ export default function createApbdRepo(arg) {
     );
     return rows.map((r) => r.sumber_dana);
   };
-
-  const getApbdesStatus = async (id) => {
-    const q = `
-      SELECT status
-      FROM apbdes
-      WHERE id = $1
-    `;
-    const { rows } = await db.query(q, [id]);
-    return rows[0]?.status || null;
-  };
-
-  const getDraftApbdesList = async () => {
-    const q = `
-      SELECT id, tahun, status
-      FROM apbdes
-      WHERE status = $1
-      ORDER BY tahun DESC
-    `;
-    const { rows } = await db.query(q, ["draft"]);
-    return rows;
-  };
-
-  const getDraftApbdesById = async (id) => {
-    const qMain = `
-      SELECT id, tahun, status
-      FROM apbdes
-      WHERE id = $1
-    `;
-    const {
-      rows: [mainRow],
-    } = await db.query(qMain, [id]);
-
-    if (!mainRow) return null;
-
-    return {
-      ...mainRow,
-    };
-  };
-
-  const getApbdesSummary = async () => {
-    const q = `
-      SELECT e.uraian, SUM(r.jumlah_anggaran) AS total_anggaran
-      FROM apbdes_rincian r
-      JOIN kode_ekonomi e ON e.id = r.kode_ekonomi_id
-      JOIN apbdes a ON a.id = (SELECT k.apbdes_id FROM kegiatan k WHERE k.id = r.kegiatan_id)
-      WHERE e.level = 'akun' AND a.status = $1
-      GROUP BY e.uraian
-    `;
-    const { rows } = await db.query(q, ["draft"]);
-    const result = rows.reduce((acc, cur) => {
-      acc[cur.uraian] = parseFloat(cur.total_anggaran) || 0;
-      return acc;
-    }, {});
-    return result;
-  };
-
-  const updateApbdesItem = async (id, data) => {
-    const { uraian, jumlah_anggaran, sumber_dana } = data;
-    const q = `
-      UPDATE apbdes_rincian
-      SET uraian = $1, jumlah_anggaran = $2, sumber_dana = $3
-      WHERE id = $4
-      RETURNING *;
-    `;
-    const { rows } = await db.query(q, [
-      uraian,
-      jumlah_anggaran,
-      sumber_dana,
-      id,
-    ]);
-    return rows[0];
-  };
-
-  const deleteApbdesItem = async (id) => {
-    const q = `
-      DELETE FROM apbd_rincian
-      WHERE id = $1
-      RETURNING *;
-    `;
-    const { rows } = await db.query(q, [id]);
-    return rows[0];
-  };
-
-  const postApbdesDraft = async (id) => {
-    const q = `
-      UPDATE apbdes
-      SET status = $1, posted_at = NOW()
-      WHERE id = $2
-      RETURNING *;
-    `;
-    const { rows } = await db.query(q, ["posted", id]);
-    return rows[0];
-  };
-
-  const validateApbdesData = (data) => {
+  
+  const validateApbdesRincian = (data) => {
     const {
       uraian,
       jumlah_anggaran,
@@ -326,7 +176,133 @@ export default function createApbdRepo(arg) {
     }
   };
 
-  const recalculateApbdesTotals = async (apbdesId) => {
+  const createApbdesRincian = async (data) => {
+    const {
+      id,
+      kegiatan_id,
+      kode_fungsi_id,
+      kode_ekonomi_id,
+      uraian,
+      jumlah_anggaran,
+      sumber_dana,
+    } = data;
+    const insertQuery = `
+      INSERT INTO apbdes_rincian (
+        id, kegiatan_id, kode_fungsi_id, kode_ekonomi_id, uraian, jumlah_anggaran, sumber_dana
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+      RETURNING id, kegiatan_id, kode_fungsi_id, kode_ekonomi_id, uraian, jumlah_anggaran, sumber_dana
+    `;
+
+    const values = [
+      id,
+      kegiatan_id,
+      kode_fungsi_id,
+      kode_ekonomi_id,
+      uraian,
+      jumlah_anggaran,
+      sumber_dana,
+    ];
+
+    const {
+      rows: [newRow],
+    } = await db.query(insertQuery, values);
+
+    const detailQuery = `
+      SELECT r.*, kf.full_code AS kode_fungsi_full, kf.uraian AS kode_fungsi_uraian,
+             ke.full_code AS kode_ekonomi_full, ke.uraian AS kode_ekonomi_uraian
+      FROM apbdes_rincian r
+      LEFT JOIN kode_fungsi kf ON kf.id = r.kode_fungsi_id
+      LEFT JOIN kode_ekonomi ke ON ke.id = r.kode_ekonomi_id
+      WHERE r.id = $1
+    `;
+
+    const {
+      rows: [detailRow],
+    } = await db.query(detailQuery, [newRow.id]);
+    return detailRow;
+  };
+
+  const getDraftApbdesList = async () => {
+    const q = `
+      SELECT r.id, r.kegiatan_id, k.nama AS kegiatan_nama, a.id AS apbdes_id, a.tahun, a.status,
+             r.kode_fungsi_id, r.kode_ekonomi_id, r.uraian, r.jumlah_anggaran, r.sumber_dana  
+      FROM apbdes_rincian r
+      JOIN kegiatan k ON k.id = r.kegiatan_id
+      JOIN apbdes a ON a.id = k.apbdes_id
+      WHERE a.status = $1
+      ORDER BY a.tahun DESC, r.id
+    `;
+    const { rows } = await db.query(q, ["draft"]);
+    return rows;
+  };
+
+  const getDraftApbdesById = async (id) => {
+    const q = `
+      SELECT r.id, r.kegiatan_id, k.nama AS kegiatan_nama, a.id AS apbdes_id, a.tahun, a.status,
+             r.kode_fungsi_id, r.kode_ekonomi_id, r.uraian, r.jumlah_anggaran, r.sumber_dana
+      FROM apbdes_rincian r
+      JOIN kegiatan k ON k.id = r.kegiatan_id
+      JOIN apbdes a ON a.id = k.apbdes_id
+      WHERE r.id = $1
+    `;
+    const { rows } = await db.query(q, [id]);
+    return rows[0];
+  };
+
+  const getDraftApbdesSummary = async () => {
+    const q = `
+      SELECT e.uraian, SUM(r.jumlah_anggaran) AS total_anggaran
+      FROM apbdes_rincian r
+      JOIN kode_ekonomi e ON e.id = r.kode_ekonomi_id
+      JOIN apbdes a ON a.id = (SELECT k.apbdes_id FROM kegiatan k WHERE k.id = r.kegiatan_id)
+      WHERE e.level = 'akun' AND a.status = $1
+      GROUP BY e.uraian
+    `;
+    const { rows } = await db.query(q, ["draft"]);
+    const result = rows.reduce((acc, cur) => {
+      acc[cur.uraian] = parseFloat(cur.total_anggaran) || 0;
+      return acc;
+    }, {});
+    return result;
+  };
+
+  const updateDraftApbdesItem = async (id, data) => {
+    const { uraian, jumlah_anggaran, sumber_dana } = data;
+    const q = `
+      UPDATE apbdes_rincian
+      SET uraian = $1, jumlah_anggaran = $2, sumber_dana = $3
+      WHERE id = $4
+      RETURNING *;
+    `;
+    const { rows } = await db.query(q, [
+      uraian,
+      jumlah_anggaran,
+      sumber_dana,
+      id,
+    ]);
+    return rows[0];
+  };
+
+  const deleteDraftApbdesItem = async (id) => {
+    const q = `
+      DELETE FROM apbdes_rincian
+      WHERE id = $1
+      RETURNING *;
+    `;
+    const { rows } = await db.query(q, [id]);
+    return rows[0];
+  };
+
+  const postDraftApbdes = async (id) => {
+    const q = `
+      UPDATE apbdes
+      SET status = 'posted'
+      WHERE id = $1
+    `;
+    await db.query(q, [id]);
+  };
+
+  const recalculateDraftApbdesTotals = async (apbdesId) => {
     const q = `
     SELECT e.uraian, SUM(r.jumlah_anggaran) AS total_anggaran
     FROM apbdes_rincian r
@@ -346,6 +322,166 @@ export default function createApbdRepo(arg) {
     return result;
   };
 
+  const validateApbdesRincianPenjabaran = (data) => {
+    const {
+      rincian_id,
+      uraian,
+      volume,
+      satuan,
+      jumlah_anggaran,
+      sumber_dana,
+      kode_fungsi_id,
+      kode_ekonomi_id,
+      kegiatan_id,
+    } = data;
+
+    if (!rincian_id) {
+      throw {
+        status: 400,
+        error: "rincian_id_required",
+        message: "ID rincian APBDes tidak ditemukan",
+      };
+    }
+    if (!volume) {
+      throw {
+        status: 400,
+        error: "volume_required",
+        message: "Volume tidak boleh kosong",
+      };
+    }
+    if (!satuan) {
+      throw {
+        status: 400,
+        error: "satuan_required",
+        message: "Satuan tidak boleh kosong",
+      };
+    }
+    if (!uraian) {
+      throw {
+        status: 400,
+        error: "uraian_required",
+        message: "Uraian tidak boleh kosong",
+      };
+    }
+    if (
+      jumlah_anggaran === undefined ||
+      jumlah_anggaran === null ||
+      parseFloat(jumlah_anggaran) <= 0
+    ) {
+      throw {
+        status: 400,
+        error: "jumlah_anggaran_invalid",
+        message: "Jumlah anggaran harus lebih dari 0",
+      };
+    }
+    if (!sumber_dana) {
+      throw {
+        status: 400,
+        error: "sumber_dana_required",
+        message: "Sumber dana tidak boleh kosong",
+      };
+    }
+    if (!kegiatan_id) {
+      throw {
+        status: 400,
+        error: "kegiatan_required",
+        hint: "Kegiatan harus dipilih dari dropdown",
+      };
+    }
+    if (!kode_fungsi_id) {
+      throw {
+        status: 400,
+        error: "kode_fungsi_required",
+        hint: "Kode fungsi harus dipilih",
+      };
+    }
+    if (!kode_ekonomi_id) {
+      throw {
+        status: 400,
+        error: "kode_ekonomi_required",
+        hint: "Kode ekonomi harus dipilih",
+      };
+    }
+  };
+
+  const createApbdesRincianPenjabaran = async (data) => {
+    const {
+      rincian_id,
+      uraian,
+      volume,
+      satuan,
+      jumlah_anggaran,
+      sumber_dana,
+    } = data;
+    const insertQuery = `
+      INSERT INTO apbdes_rincian_penjabaran (
+        rincian_id, uraian, volume, satuan, jumlah_anggaran, sumber_dana
+      ) VALUES ($1,$2,$3,$4,$5,$6)
+      RETURNING id, rincian_id, uraian, volume, satuan, jumlah_anggaran, sumber_dana
+    `;
+    const values = [
+      rincian_id,
+      uraian,
+      volume,
+      satuan,
+      jumlah_anggaran,
+      sumber_dana,
+    ];
+
+    const {
+      rows: [newRow],
+    } = await db.query(insertQuery, values);
+    return newRow;
+  };
+
+  const getDraftPenjabaranApbdesList = async () => {
+    const q = `
+      SELECT p.id, p.rincian_id, r.uraian AS rincian_uraian, p.uraian, p.volume, p.satuan, p.jumlah_anggaran, p.sumber_dana
+      FROM apbdes_rincian_penjabaran p
+      JOIN apbdes_rincian r ON p.rincian_id = r.id
+      ORDER BY p.id
+    `;
+    const { rows } = await db.query(q);
+    return rows;
+  };
+
+  const getDraftPenjabaranApbdesById = async (id) => {
+    const q = `
+      SELECT id, rincian_id, uraian, volume, satuan, jumlah_anggaran, sumber_dana
+      FROM apbdes_rincian_penjabaran
+      WHERE id = $1
+      ORDER BY id
+    `;
+    const { rows } = await db.query(q, [id]);
+    return rows;
+  };
+
+  const getDraftPenjabaranApbdesSummary = async () => {
+   const q = `
+      SELECT e.uraian, SUM(p.jumlah_anggaran) AS total_anggaran
+      FROM apbdes_rincian_penjabaran p
+      JOIN kode_ekonomi e ON e.id = p.kode_ekonomi_id
+      JOIN apbdes a ON a.id = (SELECT k.apbdes_id FROM kegiatan k WHERE k.id = p.kegiatan_id)
+      WHERE e.level = 'akun' AND a.status = $1
+      GROUP BY e.uraian
+    `;
+    const { rows } = await db.query(q, ["draft"]);
+    const result = rows.reduce((acc, cur) => {
+      acc[cur.uraian] = parseFloat(cur.total_anggaran) || 0;
+      return acc;
+    }, {});
+    return result;
+  };
+
+  const postDraftPenjabaranApbdes = async (id) => {
+    const q = `
+      UPDATE apbdes_rincian_penjabaran
+      SET status = 'posted'
+      WHERE id = $1
+    `;
+    await db.query(q, [id]);
+  };
+
   const generateDraftApbdes = async (apbdesId) => {
     // Implementasi pembuatan laporan APBDes berdasarkan apbdesId
     // Misalnya, mengumpulkan data terkait dan menyusunnya dalam format tertentu
@@ -356,8 +492,18 @@ export default function createApbdRepo(arg) {
     // Implementasi pengunduhan laporan, misalnya mengirimkan file sebagai respons
   }
 
+  const getApbdesStatus = async (id) => {
+    const q = `
+      SELECT status
+      FROM apbdes
+      WHERE id = $1
+    `;
+    const { rows } = await db.query(q, [id]);
+    return rows[0]?.status || null;
+  };
+
   return {
-    listApbdesRows,
+    //input form apbdes rincian
     listKodeFungsi,
     listBidang,
     listSubBidang,
@@ -366,16 +512,31 @@ export default function createApbdRepo(arg) {
     listAkun,
     listUraian,
     listSumberDana,
+    validateApbdesRincian,
     createApbdesRincian,
-    getApbdesStatus,
+
+    //output apbdes rincian
     getDraftApbdesList,
     getDraftApbdesById,
-    getApbdesSummary,
-    updateApbdesItem,
-    deleteApbdesItem,
-    validateApbdesData,
-    recalculateApbdesTotals,
+    getDraftApbdesSummary,
+    updateDraftApbdesItem,
+    deleteDraftApbdesItem,
+    recalculateDraftApbdesTotals,
     downloadDraftApbdes,
-    postApbdesDraft,
+    postDraftApbdes,
+
+    //input form apbdes rincian penjabaran
+    validateApbdesRincianPenjabaran,
+    createApbdesRincianPenjabaran,
+
+    //output draft apbdes rincian penjabaran
+    getDraftPenjabaranApbdesList,
+    getDraftPenjabaranApbdesById,
+    getDraftPenjabaranApbdesSummary,
+    postDraftPenjabaranApbdes,
+
+    //buku apbdes
+    listApbdesRows,
+    getApbdesStatus,
   };
 }

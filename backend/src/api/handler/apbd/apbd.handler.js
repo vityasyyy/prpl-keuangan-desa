@@ -104,6 +104,15 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
+  const validateApbdesRincian = async (req, res, next) => { 
+    try {
+      await ApbdService.validateApbdesRincian(req.body);
+      res.json({ message: "Validasi berhasil" });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   const getDraftApbdesList = async (_req, res, next) => {
     try {
       const data = await ApbdService.getDraftApbdesList();
@@ -134,20 +143,20 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
-  const getApbdesSummary = async (_req, res, next) => {
+  const getDraftApbdesSummary = async (_req, res, next) => {
     try {
-      const data = await ApbdService.getApbdesSummary();
+      const data = await ApbdService.getDraftApbdesSummary();
       res.json(data);
     } catch (e) {
       next(e);
     }
   };
 
-  const updateApbdesItem = async (req, res, next) => {
+  const updateDraftApbdesItem = async (req, res, next) => {
     try {
       const { id } = req.params;
       const data = req.body;
-      const result = await ApbdService.updateApbdesItem(id, data);
+      const result = await ApbdService.updateDraftApbdesItem(id, data);
       res.json(result);
     } catch (e) {
       next(e);
@@ -155,20 +164,76 @@ export default function createApbdHandler(ApbdService) {
   };
 
   // Hapus satu entri data APBDes
-  const deleteApbdesItem = async (req, res, next) => {
+  const deleteDraftApbdesItem = async (req, res, next) => {
     try {
       const { id } = req.params;
-      const result = await ApbdService.deleteApbdesItem(id);
+      const result = await ApbdService.deleteDraftApbdesItem(id);
       res.json(result);
     } catch (e) {
       next(e);
     }
   };
 
-  const postApbdesDraft = async (req, res, next) => {
+  const postDraftApbdes = async (req, res, next) => {
     try {
       const { id } = req.params;
-      const result = await ApbdService.postApbdesDraft(id);
+      const result = await ApbdService.postDraftApbdes(id);
+      res.status(200).json(result);
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  const validateApbdesRincianPenjabaran = async (req, res, next) => {
+    try {
+      await ApbdService.validateApbdesRincianPenjabaran(req.body);
+      res.json({ message: "Validasi berhasil" });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  const createApbdesRincianPenjabaran = async (req, res, next) => {
+    try {
+      const result = await ApbdService.createApbdesRincianPenjabaran(req.body);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  const getDraftPenjabaranApbdesList = async (_req, res, next) => {
+    try {
+      const data = await ApbdService.getDraftPenjabaranApbdesList();
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  const getDraftPenjabaranApbdesById = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const data = await ApbdService.getDraftPenjabaranApbdesById(id);
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  const getDraftPenjabaranApbdesSummary = async (_req, res, next) => {
+    try {
+      const data = await ApbdService.getDraftPenjabaranApbdesSummary();
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  const postDraftPenjabaranApbdes = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const result = await ApbdService.postDraftPenjabaranApbdes(id);
       res.status(200).json(result);
     } catch (e) {
       next(e);
@@ -176,22 +241,38 @@ export default function createApbdHandler(ApbdService) {
   };
 
   return {
-    createApbdesRincian, 
-    getApbdes, 
-    getKodeFungsi, 
-    getBidang, 
-    getSubBidang, 
-    getKegiatan, 
-    getKodeEkonomi, 
+    //input form apbdes rincian
+    getBidang,
+    getKodeFungsi,
+    getSubBidang,
+    getKegiatan,
+    getKodeEkonomi,
     getAkun,
-    getUraian, 
-    getSumberDana, 
-    getApbdesStatus,
+    getUraian,
+    getSumberDana,
+    createApbdesRincian,
+    validateApbdesRincian,
+
+    //output apbdes rincian
     getDraftApbdesList,
     getDraftApbdesById,
-    getApbdesSummary,
-    updateApbdesItem,
-    deleteApbdesItem,
-    postApbdesDraft,
+    getDraftApbdesSummary,
+    updateDraftApbdesItem,
+    deleteDraftApbdesItem,
+    postDraftApbdes,
+
+    //input form apbdes rincian penjabaran
+    validateApbdesRincianPenjabaran,
+    createApbdesRincianPenjabaran,
+
+    //output draft apbdes rincian penjabaran
+    getDraftPenjabaranApbdesList,
+    getDraftPenjabaranApbdesById,
+    getDraftPenjabaranApbdesSummary,
+    postDraftPenjabaranApbdes,
+
+    //buku apbdes
+    getApbdes,
+    getApbdesStatus,
   };
 }
