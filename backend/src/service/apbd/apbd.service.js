@@ -50,7 +50,7 @@ export default function createApbdService(ApbdRepo) {
     `;
     const { rows } = await ApbdRepo.db.query(apbdesIdQuery, [
       payload.kegiatan_id,
-    ]); // Pastikan menggunakan repo untuk query
+    ]);
     const apbdesId = rows?.[0]?.apbdes_id;
     // Hitung ulang total setelah insert
     const total = await ApbdRepo.recalculateDraftApbdesTotals(apbdesId);
@@ -65,11 +65,26 @@ export default function createApbdService(ApbdRepo) {
 
   const getAkun = async () => ApbdRepo.listAkun();
 
-  const getUraian = async () =>
-    ApbdRepo.listUraian ? ApbdRepo.listUraian() : [];
+  const getSumberDana = async (akunId) => {
+    if (!akunId) {
+      throw { status: 400, error: "akunId_required" };
+    }
+    return ApbdRepo.listSumberDana(akunId);
+  };
 
-  const getSumberDana = async () =>
-    ApbdRepo.listSumberDana ? ApbdRepo.listSumberDana() : [];
+  const getUraian1 = async (sumberDanaId) => {
+    if (!sumberDanaId) {
+      throw { status: 400, error: "sumberDanaId_required" };
+    }
+    return ApbdRepo.listUraian1(sumberDanaId);
+  };
+
+  const getUraian2 = async (uraian1Id) => {
+    if (!uraian1Id) {
+      throw { status: 400, error: "uraian1Id_required" };
+    }
+    return ApbdRepo.listUraian2(uraian1Id);
+  };
 
   const getApbdesStatus = async (id) => {
     if (!id) throw { status: 400, error: "id_required" };
@@ -137,8 +152,23 @@ export default function createApbdService(ApbdRepo) {
   };
 
   const createApbdesRincianPenjabaran = async (payload) => {
-    ApbdRepo.createApbdesRincianPenjabaran(payload);
-    return { message: "APBDes rincian penjabaran berhasil dibuat" };
+    ApbdRepo.validateApbdesRincianPenjabaran(payload);
+    const newItem = await ApbdRepo.createApbdesRincianPenjabaran(payload);
+    // Dapatkan apbdes_id dari kegiatan untuk hitung ulang total
+    const apbdesIdQuery = `
+      SELECT apbdes_id FROM kegiatan WHERE id = $1
+    `;
+    const { rows } = await ApbdRepo.db.query(apbdesIdQuery, [
+      payload.kegiatan_id,
+    ]);
+    const apbdesId = rows?.[0]?.apbdes_id;
+    // Hitung ulang total setelah insert
+    const total = await ApbdRepo.recalculatePenjabaranApbdesTotals(apbdesId);
+    return {
+      message: "APBDes rincian penjabaran berhasil dibuat",
+      data: newItem,
+      total,
+    };
   };
 
   const getDraftPenjabaranApbdesList = async () =>
@@ -204,10 +234,11 @@ export default function createApbdService(ApbdRepo) {
     getKegiatan,
     getKodeEkonomi,
     getAkun,
-    getUraian,
     getSumberDana,
-    createApbdesRincian,
+    getUraian1,
+    getUraian2,
     validateApbdesRincian,
+    createApbdesRincian,
 
     //output apbdes rincian
     getDraftApbdesList,

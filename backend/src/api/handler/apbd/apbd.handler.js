@@ -1,5 +1,15 @@
 // src/api/handler/apbd/apbd.handler.js
 export default function createApbdHandler(ApbdService) {
+  //validate
+  const validateApbdesRincian = async (req, res, next) => {
+    try {
+      await ApbdService.validateApbdesRincian(req.body);
+      res.json({ message: "Validasi berhasil" });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   //create
   const createApbdesRincian = async (req, res, next) => {
     try {
@@ -76,18 +86,30 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
-  const getUraian = async (_req, res, next) => {
+  const getSumberDana = async (req, res, next) => {
     try {
-      const data = await ApbdService.getUraian();
+      const { akunId } = req.query;
+      const data = await ApbdService.getSumberDana(akunId);
       res.json(data);
     } catch (e) {
       next(e);
     }
   };
 
-  const getSumberDana = async (_req, res, next) => {
+  const getUraian1 = async (req, res, next) => {
     try {
-      const data = await ApbdService.getSumberDana();
+      const { sumberDanaId } = req.query;
+      const data = await ApbdService.getUraian1(sumberDanaId);
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  const getUraian2 = async (req, res, next) => {
+    try {
+      const { uraian1Id } = req.query;
+      const data = await ApbdService.getUraian2(uraian1Id);
       res.json(data);
     } catch (e) {
       next(e);
@@ -99,15 +121,6 @@ export default function createApbdHandler(ApbdService) {
       const { id } = req.params;
       const data = await ApbdService.getApbdesStatus(id);
       res.json(data);
-    } catch (e) {
-      next(e);
-    }
-  };
-
-  const validateApbdesRincian = async (req, res, next) => {
-    try {
-      await ApbdService.validateApbdesRincian(req.body);
-      res.json({ message: "Validasi berhasil" });
     } catch (e) {
       next(e);
     }
@@ -196,7 +209,7 @@ export default function createApbdHandler(ApbdService) {
   const createApbdesRincianPenjabaran = async (req, res, next) => {
     try {
       const result = await ApbdService.createApbdesRincianPenjabaran(req.body);
-      res.json(result);
+      res.status(201).json(result);
     } catch (e) {
       next(e);
     }
@@ -269,10 +282,11 @@ export default function createApbdHandler(ApbdService) {
     getKegiatan,
     getKodeEkonomi,
     getAkun,
-    getUraian,
     getSumberDana,
-    createApbdesRincian,
+    getUraian1,
+    getUraian2,
     validateApbdesRincian,
+    createApbdesRincian,
 
     //output apbdes rincian
     getDraftApbdesList,

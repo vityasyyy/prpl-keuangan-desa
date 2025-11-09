@@ -104,18 +104,28 @@ export default function createApbdRepo(arg) {
     return rows;
   };
 
-  const listUraian = async () => {
+  const listSumberDana = async (akunId) => {
     const { rows } = await db.query(
-      `SELECT DISTINCT uraian FROM kode_ekonomi ORDER BY uraian`
+      `SELECT id, full_code, uraian AS sumber_dana FROM kode_ekonomi WHERE level = $1 AND parent_id = $2 ORDER BY full_code`,
+      ["kelompok", akunId]
     );
-    return rows.map((r) => r.uraian);
+    return rows;
   };
 
-  const listSumberDana = async () => {
+  const listUraian1 = async (sumberDanaId) => {
     const { rows } = await db.query(
-      `SELECT DISTINCT sumber_dana FROM apbdes_rincian WHERE sumber_dana IS NOT NULL ORDER BY sumber_dana`
+      `SELECT id, full_code, uraian AS uraian1 FROM kode_ekonomi WHERE level = $1 AND parent_id = $2 ORDER BY full_code`,
+      ["jenis", sumberDanaId]
     );
-    return rows.map((r) => r.sumber_dana);
+    return rows;
+  };
+
+  const listUraian2 = async (uraian1Id) => {
+    const { rows } = await db.query(
+      `SELECT id, full_code, uraian AS uraian2 FROM kode_ekonomi WHERE level = $1 AND parent_id = $2 ORDER BY full_code`,
+      ["objek", uraian1Id]
+    );
+    return rows;
   };
 
   const validateApbdesRincian = (data) => {
@@ -244,6 +254,7 @@ export default function createApbdRepo(arg) {
       JOIN kegiatan k ON k.id = r.kegiatan_id
       JOIN apbdes a ON a.id = k.apbdes_id
       WHERE r.id = $1
+      ORDER BY r.id
     `;
     const { rows } = await db.query(q, [id]);
     return rows[0];
@@ -267,14 +278,24 @@ export default function createApbdRepo(arg) {
   };
 
   const updateDraftApbdesItem = async (id, data) => {
-    const { uraian, jumlah_anggaran, sumber_dana } = data;
+    const {
+      kegiatan_id,
+      kode_fungsi_id,
+      kode_ekonomi_id,
+      uraian,
+      jumlah_anggaran,
+      sumber_dana,
+    } = data;
     const q = `
       UPDATE apbdes_rincian
-      SET uraian = $1, jumlah_anggaran = $2, sumber_dana = $3
-      WHERE id = $4
+      SET kegiatan_id = $1, kode_fungsi_id = $2, kode_ekonomi_id = $3, uraian = $4, jumlah_anggaran = $5, sumber_dana = $6
+      WHERE id = $7
       RETURNING *;
     `;
     const { rows } = await db.query(q, [
+      kegiatan_id,
+      kode_fungsi_id,
+      kode_ekonomi_id,
       uraian,
       jumlah_anggaran,
       sumber_dana,
@@ -497,14 +518,16 @@ export default function createApbdRepo(arg) {
   };
 
   const updatePenjabaranApbdesItem = async (id, data) => {
-    const { uraian, volume, satuan, jumlah_anggaran, sumber_dana } = data;
+    const { rincian_id, uraian, volume, satuan, jumlah_anggaran, sumber_dana } =
+      data;
     const q = `
       UPDATE apbdes_rincian_penjabaran
-      SET uraian = $1, volume = $2, satuan = $3, jumlah_anggaran = $4, sumber_dana = $5
-      WHERE id = $6
+      SET rincian_id = $1, uraian = $2, volume = $3, satuan = $4, jumlah_anggaran = $5, sumber_dana = $6
+      WHERE id = $7
       RETURNING *;
     `;
     const { rows } = await db.query(q, [
+      rincian_id,
       uraian,
       volume,
       satuan,
@@ -525,7 +548,7 @@ export default function createApbdRepo(arg) {
     return rows[0];
   };
 
-  const recalculatePenjabaranApbdesTotals = async (id) => {
+  const recalculatePenjabaranApbdesTotals = async (apbdesId) => {
     const q = `
       SELECT e.uraian, SUM(p.jumlah_anggaran) AS total_anggaran
       FROM apbdes_rincian_penjabaran p
@@ -534,10 +557,10 @@ export default function createApbdRepo(arg) {
       JOIN apbdes a ON a.id = (SELECT k.apbdes_id FROM kegiatan k WHERE k.id = r.kegiatan_id)
       WHERE e.level = 'akun'
         AND a.status = $1
-        ${id ? "AND a.id = $2" : ""}
+        ${apbdesId ? "AND a.id = $2" : ""}
       GROUP BY e.uraian
   `;
-    const params = id ? ["draft", id] : ["draft"];
+    const params = apbdesId ? ["draft", apbdesId] : ["draft"];
     const { rows } = await db.query(q, params);
     const result = rows.reduce((acc, cur) => {
       acc[cur.uraian] = parseFloat(cur.total_anggaran) || 0;
@@ -554,8 +577,9 @@ export default function createApbdRepo(arg) {
     listKegiatan,
     listKodeEkonomi,
     listAkun,
-    listUraian,
     listSumberDana,
+    listUraian1,
+    listUraian2,
     validateApbdesRincian,
     createApbdesRincian,
 
