@@ -10,55 +10,24 @@ export default function OutputAPBDes() {
   const router = useRouter();
   const [data, setData] = useState([]);
 
-  // Helpers: sanitize anggaran and tolerant category matching
-  const sanitizeNumber = (val) => {
-    if (val === null || val === undefined) return 0;
-    const s = String(val).replace(/\s/g, "").replace(/[^0-9.,-]/g, "");
-    if (s.indexOf(',') > -1 && s.indexOf('.') > -1) {
-      return Number(s.replace(/\./g, '').replace(',', '.')) || 0;
-    }
-    if (s.indexOf('.') > -1 && s.indexOf(',') === -1) {
-      if ((s.match(/\./g) || []).length > 1) {
-        return Number(s.replace(/\./g, '')) || 0;
-      }
-      return Number(s) || 0;
-    }
-    if (s.indexOf(',') > -1) return Number(s.replace(',', '.')) || 0;
-    return Number(s) || 0;
-  };
-
-  // Load data input draft APBDes and listen for updates
+  // Load data input draft APBDes
   useEffect(() => {
-    const read = () => JSON.parse(localStorage.getItem("apbdesData") || "[]");
-    setData(read());
-
-    const onUpdate = () => setData(read());
-    window.addEventListener('apbdes:update', onUpdate);
-    window.addEventListener('storage', onUpdate);
-    return () => {
-      window.removeEventListener('apbdes:update', onUpdate);
-      window.removeEventListener('storage', onUpdate);
-    };
+    const saved = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+    setData(saved);
   }, []);
 
   // Hitung total per kategori
   const total = (kategori) => {
     if (!data || data.length === 0) return 0;
     return data
-      .filter((item) => {
-        const val = ((item.kategori || item.pendapatanBelanja) || "").toString().toLowerCase();
-        return val.includes(kategori.toLowerCase());
-      })
-      .reduce((sum, item) => sum + (typeof item.anggaran === 'number' ? item.anggaran : sanitizeNumber(item.anggaran)), 0);
+      .filter((item) => (item.pendapatanBelanja || "").toLowerCase() === kategori.toLowerCase())
+      .reduce((sum, item) => sum + Number(item.anggaran || 0), 0);
   };
 
   // Ambil item per kategori
   const getItems = (kategori) => {
     if (!data || data.length === 0) return [];
-    return data.filter((item) => {
-      const val = ((item.kategori || item.pendapatanBelanja) || "").toString().toLowerCase();
-      return val.includes(kategori.toLowerCase());
-    });
+    return data.filter((item) => (item.pendapatanBelanja || "").toLowerCase() === kategori.toLowerCase());
   };
 
   // Simpan hasil posting ke localStorage
@@ -69,7 +38,7 @@ export default function OutputAPBDes() {
     }
 
     localStorage.setItem("apbdesPosted", JSON.stringify(data));
-    alert("APBDes berhasil diposting ke Buku APBDes.");
+    alert("✅ APBDes berhasil diposting ke Buku APBDes.");
     router.push("/APBDes/BukuAPBDes");
   };
 
@@ -95,7 +64,7 @@ export default function OutputAPBDes() {
 
           <button
             className="absolute right-5 text-gray-600 hover:text-gray-900 transition"
-            onClick={() => router.push("/APBDes/InputDraftAPBDes")}
+            onClick={() => router.push("/APBDes/InputDraftPenjabaran")}
           >
             <SquarePlus width={20} height={20} />
           </button>
@@ -107,30 +76,25 @@ export default function OutputAPBDes() {
             <div className="divide-y divide-gray-300">
               {items.map((item, idx) => (
                 <div
-                  key={idx}
-                  className="flex items-center justify-between py-2 px-2 hover:bg-gray-50"
+                  key={item.id || idx}
+                  className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-md transition"
                 >
-                  <div className="flex items-center text-sm text-gray-800 space-x-1">
+                  <div className="flex items-center text-sm text-gray-800 space-x-2">
+                    <span>{item.uraian2 || "Pendapatan Transfer"}</span>
                     <button
-                      type="button"
-                      onClick={() => router.push(`/APBDes/InputDraftAPBDes?id=${item.id}`)}
-                      className="flex items-center space-x-1 text-left"
-                      title="Edit item"
+                      onClick={() =>
+                        router.push(`/APBDes/InputDraftPenjabaran?id=${item.id}`)
+                      }
+                      className="text-blue-600 hover:text-blue-800"
                     >
-                      <span>{item.uraian2 || "Pendapatan Transfer"}</span>
-                      <span className="text-gray-400 text-xs">✎</span>
+                      ✎
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => router.push(`/APBDes/InputDraftAPBDes?id=${item.id}`)}
-                    className="text-sm font-light text-black"
-                    title="Edit amount"
-                  >
-                    Rp{sanitizeNumber(item.anggaran || 0).toLocaleString("id-ID", {
+                  <div className="text-sm font-light text-black">
+                    Rp{Number(item.anggaran || 0).toLocaleString("id-ID", {
                       minimumFractionDigits: 2,
                     })}
-                  </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -146,23 +110,22 @@ export default function OutputAPBDes() {
 
   return (
     <main className="min-h-screen bg-white px-6 md:px-16 py-8">
-      <BreadCrumb category="APBDes" title="Draft APBDes" />
+      <BreadCrumb category="APBDes" title="Draft Penjabaran APBDes" />
 
       {/* Header */}
       <div className="flex justify-between items-start mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            Draft APBDes
+            Draft Penjabaran APBDes
           </h1>
           <h3 className="text-sm font-normal text-gray-700 mt-1">
-            Anggaran Pendapatan dan Belanja Pemerintah Desa BANGUNTAPAN Tahun
-            Anggaran 2025
+            Penjabaran Anggaran Pendapatan dan Belanja Pemerintah Desa
+            BANGUNTAPAN Tahun Anggaran 2025
           </h3>
         </div>
 
         {/* Buttons */}
         <div className="flex flex-col space-y-2">
-          {/* Tombol Posting */}
           <Button
             variant="solid"
             className="bg-[#0779ce] hover:bg-[#066bb8] text-white flex items-center justify-between px-4 py-2 rounded-lg w-48 shadow-sm"
@@ -172,7 +135,6 @@ export default function OutputAPBDes() {
             <ArrowUpRight width={18} height={18} />
           </Button>
 
-          {/* Tombol Unduh (masih nonaktif) */}
           <Button
             variant="solid"
             className="bg-[#ff9500] hover:bg-[#e68600] text-white flex items-center justify-between px-4 py-2 rounded-lg w-48 shadow-sm"
@@ -182,11 +144,10 @@ export default function OutputAPBDes() {
             <Download width={18} height={18} />
           </Button>
 
-          {/* Tombol Input */}
           <Button
             variant="solid"
             className="bg-[#069250] hover:bg-[#058544] text-white flex items-center justify-between px-4 py-2 rounded-lg w-48 shadow-sm"
-            onClick={() => router.push("/APBDes/InputDraftAPBDes")}
+            onClick={() => router.push("/APBDes/InputDraftPenjabaran")}
           >
             <span>Input Data</span>
             <Plus width={18} height={18} />

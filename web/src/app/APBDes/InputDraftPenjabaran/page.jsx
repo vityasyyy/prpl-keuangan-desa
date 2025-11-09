@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import BreadCrumb from "@/components/breadCrumb";
 import Button from "@/components/button";
 import FormDropdown from "@/components/formDropdown";
@@ -10,9 +10,8 @@ import { Trash, Floppy, ToggleLeft, ToggleRight } from "@/components/icons";
 
 export default function InputDraftAPBDes() {
   const router = useRouter();
- const searchParams = useSearchParams();
-  const id = searchParams.get("id"); // Get id from query if editing
-const [akunOptions, setAkunOptions] = useState([]);
+  
+  const [akunOptions, setAkunOptions] = useState([]);
   const [bidangOptions, setBidangOptions] = useState([]);
   const [subBidangOptions, setSubBidangOptions] = useState([]);
   const [kegiatanOptions, setKegiatanOptions] = useState([]);
@@ -24,7 +23,7 @@ const [akunOptions, setAkunOptions] = useState([]);
   const [selectedBidangId, setSelectedBidangId] = useState(null);
   const [selectedSubBidangId, setSelectedSubBidangId] = useState(null);
 
-  useEffect(() => {
+    useEffect(() => {
     async function fetchAkunOptions() {
       try {
         const response = await fetch("http://localhost:8081/api/apbd/akun");
@@ -109,8 +108,31 @@ const [akunOptions, setAkunOptions] = useState([]);
     fetchKegiatanOptions();
   }, [selectedSubBidangId]);
 
+ const [uraianOptions, setUraianOptions] = useState([]);
+
+useEffect(() => {
+  async function fetchUraian() {
+    try {
+      const response = await fetch("http://localhost:8081/api/apbd/uraian");
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const data = await response.json();
+      const options =
+        Array.isArray(data) && typeof data[0] === "object"
+          ? data.map(item => item.uraian)
+          : data;
+
+      setUraianOptions(options);
+    } catch (error) {
+      console.error("Failed to fetch uraian options:", error);
+    }
+  }
+
+  fetchUraian();
+}, []);
+
+
   const [formData, setFormData] = useState({
-    id: Date.now(),
     kodeRekEkonomi: "",
     pendapatanBelanja: "",
     uraian1: "",
@@ -119,48 +141,49 @@ const [akunOptions, setAkunOptions] = useState([]);
     bidang: "",
     subBidang: "",
     kegiatan: "",
+    volumeOutput: "",
+    volumeInput: "",
+    satuanOutput: "",
+    satuanInput: "",
     anggaran: "",
     sumberDana: "",
   });
 
-  // Helpers: sanitize number and normalize kategori
-  const sanitizeNumber = (val) => {
-    if (val === null || val === undefined) return 0;
-    const s = String(val).replace(/\s/g, "").replace(/[^0-9.,-]/g, "");
-    // If contains both '.' and ',' assume '.' thousands and ',' decimal
-    if (s.indexOf(',') > -1 && s.indexOf('.') > -1) {
-      return Number(s.replace(/\./g, '').replace(',', '.')) || 0;
-    }
-    // If contains only '.' and multiple dots, remove them (thousands separators)
-    if (s.indexOf('.') > -1 && s.indexOf(',') === -1) {
-      if ((s.match(/\./g) || []).length > 1) {
-        return Number(s.replace(/\./g, '')) || 0;
-      }
-      return Number(s) || 0;
-    }
-    if (s.indexOf(',') > -1) return Number(s.replace(',', '.')) || 0;
-    return Number(s) || 0;
-  };
-
-  const normalizeKategori = (label) => {
-    if (!label) return "";
-    const v = label.toString().toLowerCase();
-    if (v.includes("pendapatan")) return "Pendapatan";
-    if (v.includes("belanja")) return "Belanja";
-    if (v.includes("pembiayaan")) return "Pembiayaan";
-    return label;
-  };
-
   const [buatLagi, setBuatLagi] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
-  // Load data kalau sedang edit
+  // 🔹 Cek apakah sedang mode edit
   useEffect(() => {
-    if (id) {
-      const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
-      const existing = allData.find((item) => item.id == id);
-      if (existing) setFormData(existing);
+    const editIndex = localStorage.getItem("editIndex");
+
+    if (editIndex !== null && editIndex !== "") {
+      const dataLokal = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+      const editData = dataLokal[editIndex];
+      if (editData) {
+        setFormData(editData);
+        setIsEditMode(true);
+      }
+    } else {
+      localStorage.removeItem("editIndex");
+      setIsEditMode(false);
+      setFormData({
+        kodeRekEkonomi: "",
+        pendapatanBelanja: "",
+        uraian1: "",
+        uraian2: "",
+        kodeRekBidang: "",
+        bidang: "",
+        subBidang: "",
+        kegiatan: "",
+        volumeOutput: "",
+        volumeInput: "",
+        satuanOutput: "",
+        satuanInput: "",
+        anggaran: "",
+        sumberDana: "",
+      });
     }
-  }, [id]);
+  }, []);
 
   const handleOnChange = (field, value) => {
     setFormData((prev) => ({
@@ -169,45 +192,29 @@ const [akunOptions, setAkunOptions] = useState([]);
     }));
   };
 
+  // 🔹 Simpan data baru atau update data lama
   const handleSimpan = (e) => {
     e.preventDefault();
-    let dataLokal = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+    const dataLokal = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+    const editIndex = localStorage.getItem("editIndex");
 
-    if (id) {
-      // mode edit
-      dataLokal = dataLokal.map((item) =>
-        item.id == id
-          ? {
-              ...item,
-              ...formData,
-              anggaran: sanitizeNumber(formData.anggaran),
-              kategori: normalizeKategori(formData.pendapatanBelanja),
-            }
-          : item
-      );
+    if (editIndex !== null && editIndex !== "") {
+      dataLokal[editIndex] = formData;
+      localStorage.setItem("apbdesData", JSON.stringify(dataLokal));
+      localStorage.removeItem("editIndex");
       alert("✅ Data berhasil diperbarui!");
     } else {
-      // mode tambah baru
-      const newItem = {
-        ...formData,
-        id: Date.now(),
-        anggaran: sanitizeNumber(formData.anggaran),
-        kategori: normalizeKategori(formData.pendapatanBelanja),
-      };
-      dataLokal.push(newItem);
+      const newData = [...dataLokal, formData];
+      localStorage.setItem("apbdesData", JSON.stringify(newData));
       alert("✅ Data berhasil disimpan!");
     }
 
-    localStorage.setItem("apbdesData", JSON.stringify(dataLokal));
-    // Dispatch events so other parts of the app can react immediately
     window.dispatchEvent(new Event("storage"));
-    window.dispatchEvent(new CustomEvent('apbdes:update'));
 
     if (!buatLagi) {
-      router.push("/APBDes/OutputDraftAPBDes");
+      router.push("/APBDes/DraftPenjabaran");
     } else {
       setFormData({
-        id: Date.now(),
         kodeRekEkonomi: "",
         pendapatanBelanja: "",
         uraian1: "",
@@ -216,13 +223,19 @@ const [akunOptions, setAkunOptions] = useState([]);
         bidang: "",
         subBidang: "",
         kegiatan: "",
+        volumeOutput: "",
+        volumeInput: "",
+        satuanOutput: "",
+        satuanInput: "",
         anggaran: "",
         sumberDana: "",
       });
+      localStorage.removeItem("editIndex");
+      setIsEditMode(false);
     }
   };
 
-  // 🗑️ Hapus data + konfirmasi (seperti di kode kedua)
+  // 🗑️ Hapus data + konfirmasi
   const handleHapus = () => {
     const confirmDelete = window.confirm(
       "⚠️ Apakah Anda yakin ingin menghapus data ini?"
@@ -230,16 +243,18 @@ const [akunOptions, setAkunOptions] = useState([]);
 
     if (!confirmDelete) return;
 
-    if (id) {
-      let dataLokal = JSON.parse(localStorage.getItem("apbdesData") || "[]");
-      dataLokal = dataLokal.filter((item) => item.id != id);
+    const editIndex = localStorage.getItem("editIndex");
+    const dataLokal = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+
+    if (editIndex !== null && editIndex !== "") {
+      dataLokal.splice(editIndex, 1);
       localStorage.setItem("apbdesData", JSON.stringify(dataLokal));
+      localStorage.removeItem("editIndex");
       alert("🗑️ Data berhasil dihapus!");
       window.dispatchEvent(new Event("storage"));
-      router.push("/APBDes/OutputDraftAPBDes");
+      router.push("/APBDes/DraftPenjabaran");
     } else {
       setFormData({
-        id: Date.now(),
         kodeRekEkonomi: "",
         pendapatanBelanja: "",
         uraian1: "",
@@ -248,6 +263,10 @@ const [akunOptions, setAkunOptions] = useState([]);
         bidang: "",
         subBidang: "",
         kegiatan: "",
+        volumeOutput: "",
+        volumeInput: "",
+        satuanOutput: "",
+        satuanInput: "",
         anggaran: "",
         sumberDana: "",
       });
@@ -258,18 +277,22 @@ const [akunOptions, setAkunOptions] = useState([]);
   return (
     <main className="min-h-screen bg-white px-16 py-8">
       <BreadCrumb category="APBDes" title="Input Draft APBDes" />
-
       <h1 className="mb-6 text-base font-semibold text-black">
-        {id ? "Edit Data APBDes" : "Input Data APBDes"}
+        {isEditMode ? "Edit Data APBDes" : "Input Data APBDes"}
       </h1>
 
-      {/* ===== KODE REKENING DAN URAIAN ===== */}
+      {isEditMode && (
+        <p className="text-sm text-orange-600 mb-4 font-medium">
+          ✏️ Mode Edit: Anda sedang mengubah data yang sudah ada
+        </p>
+      )}
+
+      {/* ===== KODE REKENING ===== */}
       <div className="mb-6 rounded-2xl border border-gray-400 px-6 py-6 overflow-x-auto">
         <h2 className="text-sm font-semibold text-[#011829] mb-4">
           Kode Rekening dan Uraian
         </h2>
 
-        {/* Klasifikasi Ekonomi */}
         <div className="space-y-2 min-w-[900px]">
           <label className="block text-sm font-medium text-[#011829]">
             Klasifikasi Ekonomi
@@ -282,7 +305,7 @@ const [akunOptions, setAkunOptions] = useState([]);
                 onChange={(val) => handleOnChange("kodeRekEkonomi", val)}
               />
             </div>
-            <div className="w-[3%] min-w-[200px]">
+            <div className="w-[35%] min-w-[200px]">
               <FormDropdown
                 label="Pendapatan / Belanja / Pembiayaan"
                 options={akunOptions}
@@ -293,7 +316,7 @@ const [akunOptions, setAkunOptions] = useState([]);
             <div className="w-[27.5%] min-w-[180px]">
               <FormDropdown
                 label="Uraian 1"
-                options={["Uraian 1A", "Uraian 1B"]}
+                options={uraianOptions}
                 value={formData.uraian1}
                 onChange={(val) => handleOnChange("uraian1", val)}
               />
@@ -301,7 +324,7 @@ const [akunOptions, setAkunOptions] = useState([]);
             <div className="w-[27.5%] min-w-[180px]">
               <FormDropdown
                 label="Uraian 2"
-                options={["Uraian 2A", "Uraian 2B"]}
+                options={uraianOptions}
                 value={formData.uraian2}
                 onChange={(val) => handleOnChange("uraian2", val)}
               />
@@ -309,61 +332,120 @@ const [akunOptions, setAkunOptions] = useState([]);
           </div>
         </div>
 
-        {/* Klasifikasi Bidang Kegiatan */}
+      {/* ===== KLASIFIKASI BIDANG KEGIATAN ===== */}
+<div className="space-y-2 min-w-[900px] mt-5">
+  <label className="block text-sm font-medium text-[#011829]">
+    Klasifikasi Bidang Kegiatan
+  </label>
+  <div className="flex gap-3 w-full">
+    {/* Kode Rek Bidang */}
+    <div className="w-[15%] min-w-[120px]">
+      <TextInput
+        placeholder="Kode Rek"
+        value={formData.kodeRekBidang}
+        onChange={(val) => handleOnChange("kodeRekBidang", val)}
+      />
+    </div>
+
+    {/* Bidang */}
+    <div className="w-[28.3%] min-w-[180px]">
+      <FormDropdown
+        label="Bidang"
+        options={bidangOptions}
+        value={formData.bidang}
+        onChange={(val) => {
+          handleOnChange("bidang", val);
+          const selected = bidangData.find(b => b.uraian === val);
+          setSelectedBidangId(selected?.id || null);
+
+          // reset sub-bidang & kegiatan
+          setFormData(prev => ({ ...prev, subBidang: "", kegiatan: "" }));
+          setSelectedSubBidangId(null);
+        }}
+      />
+    </div>
+
+    {/* Sub-Bidang */}
+    <div className="w-[28.3%] min-w-[180px]">
+      <FormDropdown
+        label="Sub-Bidang"
+        options={subBidangOptions}
+        value={formData.subBidang}
+        onChange={(val) => {
+          handleOnChange("subBidang", val);
+          const selected = subBidangData.find(s => s.uraian === val);
+          setSelectedSubBidangId(selected?.id || null);
+
+          // reset kegiatan
+          setFormData(prev => ({ ...prev, kegiatan: "" }));
+        }}
+      />
+    </div>
+
+    {/* Kegiatan */}
+    <div className="w-[28.3%] min-w-[180px]">
+      <FormDropdown
+        label="Kegiatan"
+        options={kegiatanOptions}
+        value={formData.kegiatan}
+        onChange={(val) => handleOnChange("kegiatan", val)}
+      />
+    </div>
+  </div>
+</div>
+
+      </div>
+
+      {/* ===== KELUARAN / OUTPUT ===== */}
+      <div className="mb-6 rounded-2xl border border-gray-400 px-6 py-6 overflow-x-auto">
+        <h2 className="text-sm font-semibold text-[#011829] mb-4">
+          Keluaran / Output
+        </h2>
+
+        {/* VOLUME */}
+        <div className="space-y-2 min-w-[900px]">
+          <label className="block text-sm font-medium text-[#011829]">
+            Volume
+          </label>
+          <div className="flex gap-3">
+            <TextInput
+              prefix="Jml"
+              placeholder="Jumlah Output Kegiatan (Kolom 1.c)"
+              value={formData.volumeOutput}
+              onChange={(val) => handleOnChange("volumeOutput", val)}
+            />
+            <TextInput
+              prefix="Jml"
+              placeholder="Jumlah Input pada Rincian Obyek Belanja (Kolom 2.d)"
+              value={formData.volumeInput}
+              onChange={(val) => handleOnChange("volumeInput", val)}
+            />
+          </div>
+        </div>
+
+        {/* SATUAN */}
         <div className="space-y-2 min-w-[900px] mt-5">
           <label className="block text-sm font-medium text-[#011829]">
-            Klasifikasi Bidang Kegiatan
+            Satuan
           </label>
-          <div className="flex gap-3 w-full">
-            <div className="w-[15%] min-w-[120px]">
-              <TextInput
-                placeholder="Kode Rek"
-                value={formData.kodeRekBidang}
-                onChange={(val) => handleOnChange("kodeRekBidang", val)}
-              />
-            </div>
-            <div className="w-[28.3%] min-w-[180px]">
-              <FormDropdown
-              label="Bidang"
-              options={bidangOptions}
-              value={formData.bidang}
-              onChange={(val) => {
-                handleOnChange("bidang", val);
-                const selected = bidangData.find(item => item.uraian === val);
-                setSelectedBidangId(selected ? selected.id : null);
-                // reset sub-bidang & kegiatan saat bidang berubah
-                setSelectedSubBidangId(null);
-                handleOnChange("subBidang", "");
-                handleOnChange("kegiatan", "");
-              }}
+          <div className="flex gap-3">
+            <TextInput
+              prefix="Jml"
+              placeholder="Satuan Output Kegiatan (paket, unit, km, Ha)"
+              value={formData.satuanOutput}
+              onChange={(val) => handleOnChange("satuanOutput", val)}
             />
-            </div>
-            <div className="w-[28.3%] min-w-[180px]">
-                          <FormDropdown
-              label="Sub-Bidang"
-              options={subBidangOptions}
-              value={formData.subBidang}
-              onChange={(val) => {
-                handleOnChange("subBidang", val);
-                const selected = subBidangData.find(item => item.uraian === val);
-                setSelectedSubBidangId(selected ? selected.id : null);
-                handleOnChange("kegiatan", "");
-              }}
+            <TextInput
+              prefix="Jml"
+              placeholder="Satuan Input Obyek Belanja (paket, unit)"
+              value={formData.satuanInput}
+              onChange={(val) => handleOnChange("satuanInput", val)}
             />
-            </div>
-            <div className="w-[28.3%] min-w-[180px]">
-              <FormDropdown
-                label="Kegiatan"
-                options={kegiatanOptions}
-                value={formData.kegiatan}
-                onChange={(val) => handleOnChange("kegiatan", val)}
-              />
-            </div>
           </div>
         </div>
       </div>
 
-      {/* ===== ANGGARAN DAN SUMBER DANA ===== */}
+      {/* ===== ANGGARAN ===== */}
       <div className="mb-8 space-y-5 rounded-2xl border border-gray-400 px-6 py-6">
         <h2 className="text-sm font-semibold text-[#011829]">
           Anggaran dan Sumber Dana
@@ -409,22 +491,14 @@ const [akunOptions, setAkunOptions] = useState([]);
           >
             <span className="text-sm text-gray-700">Buat lagi</span>
             {buatLagi ? (
-              <ToggleRight
-                width={28}
-                height={28}
-                className="text-blue-600 transition-colors duration-200"
-              />
+              <ToggleRight width={28} height={28} className="text-blue-600" />
             ) : (
-              <ToggleLeft
-                width={28}
-                height={28}
-                className="text-gray-500 transition-colors duration-200"
-              />
+              <ToggleLeft width={28} height={28} className="text-gray-500" />
             )}
           </button>
 
           <Button variant="primary" onClick={handleSimpan}>
-            Simpan
+            {isEditMode ? "Perbarui" : "Simpan"}
             <Floppy width={16} height={16} />
           </Button>
         </div>
