@@ -1,13 +1,20 @@
 {
   "name": "prpl-keuangan-desa-koma",
-  "version": "1.0.0",
+  "version": "1.1.7",
   "description": "",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
-    "seed": "node db/seed/seed.js"
+    "seed": "node db/seed/seed.js",
+    "jest": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles",
+    "test": "pnpm jest",
+    "test:unit": "pnpm jest --testPathPatterns=service",
+    "test:integration:handler": "pnpm jest --testPathPatterns=handler",
+    "test:integration:repo": "dotenv -e .env -- pnpm jest --testPathPatterns=repository",
+    "test:db:up": "docker compose -f compose.test.yml up -d",
+    "test:db:down": "docker compose -f compose.test.yml down",
+    "test:ci": "pnpm test:unit && pnpm test:integration:handler && pnpm test:db:up && wait-on tcp:5433 && pnpm test:integration:repo ; pnpm test:db:down"
   },
   "keywords": [
     "monolithic",
@@ -29,5 +36,12 @@
     "pg": "^8.12.0",
     "pino": "^9.12.0",
     "pino-http": "^10.5.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "dotenv-cli": "^11.0.0",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4",
+    "wait-on": "^9.0.1"
   }
 }
