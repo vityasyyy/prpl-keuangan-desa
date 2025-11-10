@@ -15,5 +15,8 @@ export default function kasPembantuRouter(handler) {
   // buku pembantu panjar
   r.get('/panjar', handler.listPanjar);
   r.delete('/panjar/:id', handler.deletePanjar);
+  r.post('/panjar', handler.createPanjar);
+  r.get('/panjar/:id', handler.getPanjarById);  
+  r.put('/panjar/:id', handler.editPanjar);    
   return r;
 }

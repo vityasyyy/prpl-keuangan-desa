@@ -56,7 +56,6 @@ export default function createKasPembantuService(repo) {
       }
       return kegiatan;
     },
-
     async deleteKegiatanById(id) {
       return await repo.deleteById(id);
     },
@@ -100,7 +99,6 @@ export default function createKasPembantuService(repo) {
       const inserted = await repo.insertKegiatan(toInsert);
       return inserted;
     },
-     
     async  editKegiatan(id, updates) {
       if (!id) throw { status: 400, message: 'id is required' };
       if (!updates || Object.keys(updates).length === 0) throw { status: 400, message: 'no update fields provided' };
@@ -154,9 +152,121 @@ export default function createKasPembantuService(repo) {
       if (!deleted) throw { status: 404, message: `Panjar entry with id ${id} not found` };
 
       return `Entry panjar dengan id ${id} telah dihapus`;
+    },
+
+    async createPanjar(input) {
+      // required fields
+      const { id: rawId, bku_id, tanggal, uraian } = input || {};
+      if (!bku_id) throw { status: 400, message: 'bku_id is required' };
+      if (!tanggal) throw { status: 400, message: 'tanggal is required' };
+      if (!uraian) throw { status: 400, message: 'uraian is required' };
+
+      // validate tanggal YYYY-MM-DD
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) {
+        throw { status: 400, message: 'tanggal must be in YYYY-MM-DD format' };
+      }
+
+      // numeric fields default and validation (must be >= 0)
+      const pemberian = input.pemberian !== undefined ? Number(input.pemberian) : 0;
+      const pertanggungjawaban = input.pertanggungjawaban !== undefined ? Number(input.pertanggungjawaban) : 0;
+      const saldo_after = input.saldo_after !== undefined ? Number(input.saldo_after) : (pemberian - pertanggungjawaban);
+
+      if (Number.isNaN(pemberian) || pemberian < 0) throw { status: 400, message: 'pemberian must be a non-negative number' };
+      if (Number.isNaN(pertanggungjawaban) || pertanggungjawaban < 0) throw { status: 400, message: 'pertanggungjawaban must be a non-negative number' };
+      if (Number.isNaN(saldo_after)) throw { status: 400, message: 'saldo_after must be numeric' };
+
+      // generate id if not provided
+      const id = rawId ? String(rawId) : `panjar${Date.now()}`;
+
+      // if id provided, ensure not conflict
+      if (rawId) {
+        const exists = await repo.getPanjarById(id);
+        if (exists) throw { status: 409, message: `Panjar entry with id ${id} already exists` };
+      }
+
+      // optional: if you have repo.checkBkuExists, validate bku_id exists in buku_kas_umum
+      if (typeof repo.checkBkuExists === 'function') {
+        const ok = await repo.checkBkuExists(bku_id);
+        if (!ok) throw { status: 400, message: `bku_id ${bku_id} not found` };
+      }
+
+      const payload = {
+        id,
+        bku_id,
+        tanggal,
+        uraian,
+        pemberian,
+        pertanggungjawaban,
+        saldo_after
+      };
+
+      const inserted = await repo.insertPanjar(payload);
+      return inserted;
+    },
+
+    async getPanjarById(id) {
+      const panjar = await repo.getPanjarById(id);
+      if (!panjar) {
+        return { message: `Panjar entry with id ${id} not found` };
+      }
+      return panjar;
+    },
+
+    async editPanjar(id, updates) {
+      if (!id) throw { status: 400, message: 'id is required' };
+      if (!updates || Object.keys(updates).length === 0) throw { status: 400, message: 'no update fields provided' };
+
+      // validate tanggal if provided
+      if (updates.tanggal !== undefined) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(updates.tanggal))) {
+          throw { status: 400, message: 'tanggal must be in YYYY-MM-DD format' };
+        }
+      }
+
+      // validate numeric fields if provided
+      if (updates.pemberian !== undefined) {
+        const p = Number(updates.pemberian);
+        if (Number.isNaN(p) || p < 0) throw { status: 400, message: 'pemberian must be a non-negative number' };
+      }
+      if (updates.pertanggungjawaban !== undefined) {
+        const pj = Number(updates.pertanggungjawaban);
+        if (Number.isNaN(pj) || pj < 0) throw { status: 400, message: 'pertanggungjawaban must be a non-negative number' };
+      }
+      if (updates.saldo_after !== undefined) {
+        const s = Number(updates.saldo_after);
+        if (Number.isNaN(s)) throw { status: 400, message: 'saldo_after must be numeric' };
+      }
+
+      // compute final saldo_after if not provided
+      let finalPemberian = updates.pemberian !== undefined ? Number(updates.pemberian) : undefined;
+      let finalPertanggungjawaban = updates.pertanggungjawaban !== undefined ? Number(updates.pertanggungjawaban) : undefined;
+
+      // if both not provided, repo will reuse old values; to check business rule we need final values.
+      // fetch current row to compute missing values
+      const existing = await repo.getPanjarById(id);
+      if (!existing) throw { status: 404, message: `Panjar entry with id ${id} not found` };
+
+      if (finalPemberian === undefined) finalPemberian = Number(existing.pemberian ?? 0);
+      if (finalPertanggungjawaban === undefined) finalPertanggungjawaban = Number(existing.pertanggungjawaban ?? 0);
+
+      const finalSaldo = updates.saldo_after !== undefined ? Number(updates.saldo_after) : (finalPemberian - finalPertanggungjawaban);
+
+      // business rule: saldo cannot be negative
+      if (finalSaldo < 0) {
+        throw { status: 409, message: 'Update would cause negative saldo_after (conflict with business rules)' };
+      }
+
+      // optional: validate bku_id exists if repo has checkBkuExists
+      if (updates.bku_id !== undefined && typeof repo.checkBkuExists === 'function') {
+        const ok = await repo.checkBkuExists(updates.bku_id);
+        if (!ok) throw { status: 400, message: `bku_id ${updates.bku_id} not found` };
+      }
+
+      // delegate update to repo (repo will return updated row or null)
+      const updated = await repo.updatePanjarById(id, updates);
+      if (!updated) throw { status: 404, message: `Panjar entry with id ${id} not found` };
+      return updated;
     }
 
-
- 
   };
 }

@@ -294,6 +294,73 @@ export default function createRepo(db) {
     return rowCount > 0;
   }
 
+  async function getPanjarById(id) {
+    const sql = `
+      SELECT id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
+      FROM buku_pembantu_panjar
+      WHERE id = $1
+      LIMIT 1
+    `;
+    const { rows } = await db.query(sql, [id]);
+    return rows[0] ?? null;
+  }
+
+  async function insertPanjar(payload) {
+    const sql = `
+      INSERT INTO buku_pembantu_panjar
+        (id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after)
+      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      RETURNING id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
+    `;
+    const values = [
+      payload.id,
+      payload.bku_id,
+      payload.tanggal,
+      payload.uraian,
+      payload.pemberian ?? 0,
+      payload.pertanggungjawaban ?? 0,
+      payload.saldo_after ?? 0
+    ];
+    const { rows } = await db.query(sql, values);
+    return rows[0];
+  }
+
+  async function updatePanjarById(id, updates) {
+    // ambil row lama
+    const qOld = `
+      SELECT id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
+      FROM buku_pembantu_panjar
+      WHERE id = $1
+      LIMIT 1
+    `;
+    const { rows: oldRows } = await db.query(qOld, [id]);
+    const oldRow = oldRows[0];
+    if (!oldRow) return null;
+
+    // tentukan nilai baru (pakai nilai lama kalau tidak disediakan)
+    const newBkuId = updates.bku_id ?? oldRow.bku_id;
+    const newTanggal = updates.tanggal ?? oldRow.tanggal;
+    const newUraian = updates.uraian ?? oldRow.uraian;
+    const newPemberian = updates.pemberian !== undefined ? Number(updates.pemberian) : Number(oldRow.pemberian ?? 0);
+    const newPertanggungjawaban = updates.pertanggungjawaban !== undefined ? Number(updates.pertanggungjawaban) : Number(oldRow.pertanggungjawaban ?? 0);
+    const newSaldoAfter = updates.saldo_after !== undefined ? Number(updates.saldo_after) : (newPemberian - newPertanggungjawaban);
+
+    const qUpdate = `
+      UPDATE buku_pembantu_panjar
+      SET bku_id = $1,
+          tanggal = $2,
+          uraian = $3,
+          pemberian = $4,
+          pertanggungjawaban = $5,
+          saldo_after = $6
+      WHERE id = $7
+      RETURNING id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
+    `;
+    const values = [newBkuId, newTanggal, newUraian, newPemberian, newPertanggungjawaban, newSaldoAfter, id];
+    const { rows: updatedRows } = await db.query(qUpdate, values);
+    return updatedRows[0] ?? null;
+  }
+
   return {
     listKegiatanTransaksi,
     getKegiatanById,
@@ -305,6 +372,9 @@ export default function createRepo(db) {
     insertKegiatan,
     updateKegiatanById,
     listPanjar,
-    deletePanjarById
+    deletePanjarById,
+    getPanjarById,
+    insertPanjar,
+    updatePanjarById
   };
 }
