@@ -30,7 +30,53 @@ export default function FormInputKasUmum() {
 
   const [rabList, setRabList] = useState([]);
 
-  const [kodeRekError, setKodeRekError] = useState("");
+  const [kodeRekError, setKodeRekError] = useState(""); // Error state (opsional ditampilkan di UI)
+  const [kodeEkoError, setKodeEkoError] = useState("");
+
+  // Parse "5.3 5 3" → ["5","3","5","3"]
+  const ekoParse = (s) =>
+    (s || "")
+      .toString()
+      .replace(/\./g, " ")
+      .replace(/[^\d ]+/g, "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+  // Format ke "a b c dd" (dd dipad 2 digit bila ada)
+  const ekoFormat = (parts) => {
+    const [a = "", b = "", c = "", d = ""] = parts;
+    const out = [];
+    if (a) out.push(String(parseInt(a, 10)));
+    if (b) out.push(String(parseInt(b, 10)));
+    if (c) out.push(String(parseInt(c, 10)));
+    if (d) out.push(String(d).padStart(2, "0"));
+    return out.join(" ");
+  };
+
+  // Validator sederhana untuk a b c dd
+  const validateKodeEko = (kode) => {
+    if (!kode) return "";
+    const clean = kode.replace(/\./g, " ").trim();
+    const pattern = /^\d+(\s+\d+(\s+\d+(\s+\d{1,2})?)?)?$/; // a [b [c [dd]]]
+    if (!pattern.test(clean)) return "Format harus 'a b c dd' (contoh: 5 3 5 03)";
+    const p = clean.split(/\s+/);
+    if (p[0] && p[0].length > 1) return "Akun (a) 1 digit";
+    if (p[1] && p[1].length > 1) return "Jenis (b) 1 digit";
+    if (p[2] && p[2].length > 1) return "Objek (c) 1 digit";
+    if (p[3] && p[3].length > 2) return "Rincian (dd) 2 digit";
+    return "";
+  };
+
+  // Format dari full_code API (bisa bertitik) → spasi
+  const formatEkoFromFullCode = (full) => ekoFormat(ekoParse(full));
+  const formatJenisOnly = (full) => {
+    const t = ekoParse(full); // ambil a b c
+    return [t[0], t[1], t[2]]
+      .filter(Boolean)
+      .map((x, i) => (i < 3 ? String(parseInt(x, 10)) : x))
+      .join(" ");
+  };
 
   // Fungsi validasi format kode rekening
   const validateKodeRek = (kode) => {
@@ -79,6 +125,155 @@ export default function FormInputKasUmum() {
       // Ensure only numeric input
       const numericValue = value.replace(/[^0-9]/g, "");
       setFormData((prev) => ({ ...prev, [name]: numericValue }));
+      return;
+    }
+    // ====== KODE EKONOMI (manual) ======
+    if (name === "kodeEko") {
+      if (value === formData.kodeEko) return;
+
+      const err = validateKodeEko(value);
+      setKodeEkoError?.(err); // kalau kamu punya state error
+
+      // simpan apa adanya dulu (biar user bebas ketik spasi/titik)
+      setFormData((prev) => ({ ...prev, kodeEko: value }));
+
+      if (!err) {
+        const parts = ekoParse(value); // ["a","b","c","dd"]
+
+        // 1) AKUN = token[0]
+        if (parts[0] && akunList.length > 0) {
+          const mAkun = akunList.find((a) => {
+            const tok = ekoParse(a.full_code);
+            return tok[0] === parts[0];
+          });
+          if (mAkun) {
+            setFormData((prev) => ({ ...prev, akun: mAkun.id }));
+            // reset turunannya
+            setFormData((prev) => ({ ...prev, jenis: "", objek: "" }));
+          }
+        }
+
+        // 2) JENIS = token[0..2] (a b c)
+        if (parts.length >= 3 && jenisList.length > 0) {
+          const mJenis = jenisList.find((j) => {
+            const tok = ekoParse(j.full_code);
+            return tok[0] === parts[0] && tok[1] === parts[1] && tok[2] === parts[2];
+          });
+          if (mJenis) {
+            setFormData((prev) => ({ ...prev, jenis: mJenis.id }));
+            // reset objek
+            setFormData((prev) => ({ ...prev, objek: "" }));
+          }
+        }
+
+        // 3) OBJEK = token[0..3] (a b c dd) — dd harus 2 digit
+        if (parts.length >= 4 && objekList.length > 0) {
+          const dd = parts[3].padStart(2, "0");
+          const mObj = objekList.find((o) => {
+            const tok = ekoParse(o.full_code);
+            return (
+              tok[0] === parts[0] && tok[1] === parts[1] && tok[2] === parts[2] && tok[3] === dd
+            );
+          });
+          if (mObj) {
+            setFormData((prev) => ({ ...prev, objek: mObj.id }));
+          }
+        }
+
+        // Jika kosong total → kosongkan dropdown
+        if (parts.length === 0) {
+          setFormData((prev) => ({ ...prev, akun: "", jenis: "", objek: "" }));
+        }
+      }
+      return;
+    }
+
+    // ====== DROPDOWN → sinkron ke kodeEko ======
+    if (name === "objek") {
+      if (!value) {
+        // kosongkan objek → kembali ke kode jenis (a b c) atau akun (a)
+        if (formData.jenis) {
+          const j = jenisList.find((x) => x.id === formData.jenis);
+          setFormData((prev) => ({
+            ...prev,
+            objek: "",
+            kodeEko: j ? formatJenisOnly(j.full_code) : "",
+          }));
+        } else if (formData.akun) {
+          const a = akunList.find((x) => x.id === formData.akun);
+          setFormData((prev) => ({
+            ...prev,
+            objek: "",
+            kodeEko: a ? formatEkoFromFullCode(a.full_code) : "",
+          }));
+        } else {
+          setFormData((prev) => ({ ...prev, objek: "", kodeEko: "" }));
+        }
+        setKodeEkoError?.("");
+        return;
+      }
+      // pilih objek → tampil a b c dd
+      const o = objekList.find((x) => x.id === value);
+      if (o) {
+        setFormData((prev) => ({
+          ...prev,
+          objek: value,
+          kodeEko: formatEkoFromFullCode(o.full_code),
+        }));
+        setKodeEkoError?.("");
+      }
+      return;
+    }
+
+    if (name === "jenis") {
+      if (!value) {
+        // kosongkan jenis → balik ke akun (a)
+        if (formData.akun) {
+          const a = akunList.find((x) => x.id === formData.akun);
+          setFormData((prev) => ({
+            ...prev,
+            jenis: "",
+            objek: "",
+            kodeEko: a ? formatEkoFromFullCode(a.full_code) : "",
+          }));
+        } else {
+          setFormData((prev) => ({ ...prev, jenis: "", objek: "", kodeEko: "" }));
+        }
+        setKodeEkoError?.("");
+        return;
+      }
+      // pilih jenis → tampil a b c
+      const j = jenisList.find((x) => x.id === value);
+      if (j) {
+        setFormData((prev) => ({
+          ...prev,
+          jenis: value,
+          objek: "",
+          kodeEko: formatJenisOnly(j.full_code),
+        }));
+        setKodeEkoError?.("");
+      }
+      return;
+    }
+
+    if (name === "akun") {
+      if (!value) {
+        setFormData((prev) => ({ ...prev, akun: "", jenis: "", objek: "", kodeEko: "" }));
+        setKodeEkoError?.("");
+        return;
+      }
+      // pilih akun → tampil a
+      const a = akunList.find((x) => x.id === value);
+      if (a) {
+        setFormData((prev) => ({
+          ...prev,
+          akun: value,
+          jenis: "",
+          objek: "",
+          kodeEko: formatEkoFromFullCode(a.full_code),
+        }));
+        setKodeEkoError?.("");
+      }
       return;
     }
 
@@ -304,11 +499,16 @@ export default function FormInputKasUmum() {
   };
 
   const fetchSaldo = useCallback(
-    async (rabId) => {
+    async (kodeRAB) => {
       try {
-        const q = rabId ? `?rabId=${encodeURIComponent(rabId)}` : "";
+        if (!kodeRAB) {
+          // kalau belum pilih RAB, kosongkan tampilan saldo
+          setSaldoAutomated(null);
+          return;
+        }
+        const q = `?rabId=${encodeURIComponent(kodeRAB)}`;
         const res = await fetch(`${API_BASE_URL}/kas-umum/saldo${q}`);
-        if (!res.ok) throw new Error("Gagal ambil saldo");
+        if (!res.ok) throw new Error(`Gagal ambil saldo (HTTP ${res.status})`);
         const data = await res.json();
         // backend returns { saldo: number }
         setSaldoAutomated(data?.saldo ?? 0);
@@ -319,6 +519,7 @@ export default function FormInputKasUmum() {
     },
     [API_BASE_URL]
   );
+
   // Ambil akun (level tertinggi)
   useEffect(() => {
     async function fetchAkun() {
@@ -438,14 +639,11 @@ export default function FormInputKasUmum() {
     fetchKegiatan();
   }, [formData.subBidang]);
   useEffect(() => {
-    const pemasukan = parseFloat(formData.pemasukan) || 0;
-    const pengeluaran = parseFloat(formData.pengeluaran) || 0;
-
-    // Hitung netto (positif = pemasukan, negatif = pengeluaran)
+    const pemasukan = Number(formData.pemasukan) || 0;
+    const pengeluaran = Number(formData.pengeluaran) || 0;
     const netto = pemasukan - pengeluaran;
 
-    // Kalau negatif, tampilkan dalam tanda kurung
-    const displayValue = netto < 0 ? `(${Math.abs(netto)})` : netto.toString();
+    const displayValue = netto < 0 ? `(${formatNumber(Math.abs(netto))})` : formatNumber(netto);
 
     setFormData((prev) => ({ ...prev, nettoTransaksi: displayValue }));
   }, [formData.pemasukan, formData.pengeluaran]);
@@ -466,10 +664,10 @@ export default function FormInputKasUmum() {
 
   // Ambil saldo otomatis saat RAB dipilih
   useEffect(() => {
-    if (formData.rab) {
-      fetchSaldo(formData.rab); // Pass RAB ID ke fetchSaldo
+    if (formData.kodeRAB) {
+      fetchSaldo(formData.kodeRAB); // Pass RAB ID ke fetchSaldo
     }
-  }, [formData.rab, fetchSaldo]); // Include fetchSaldo in dependencies
+  }, [formData.kodeRAB, fetchSaldo]); // Include fetchSaldo in dependencies
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -529,7 +727,7 @@ export default function FormInputKasUmum() {
                     <option value="">Pilih Kode RAB</option>
                     {rabList.map((rab) => (
                       <option key={rab.id} value={rab.id}>
-                        {rab.kode_rab} — {rab.uraian}
+                        {rab.id}
                       </option>
                     ))}
                   </select>
