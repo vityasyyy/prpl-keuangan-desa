@@ -66,5 +66,39 @@ export default function createKasPembantuHandler(service) {
     }
   };
 
-  return { health, kegiatan, deleteKegiatan, createKegiatan, getKegiatanById, editKegiatan };
+  const listPanjar = async (req, res, next) => {
+    try {
+      const page = req.query.page ? parseInt(req.query.page, 10) : 1;
+      const per_page = req.query.per_page ? parseInt(req.query.per_page, 10) : 20;
+      const bku_id = req.query.bku_id || undefined;
+      const from = req.query.from || undefined;
+      const to = req.query.to || undefined;
+      const sort_by = req.query.sort_by || 'tanggal';
+      const order = req.query.order || 'asc';
+
+      const result = await service.getPanjarList({ page, per_page, bku_id, from, to, sort_by, order });
+      res.status(200).json(result);
+    } catch (err) {
+      if (err.status) {
+        return res.status(err.status).json({ error: err.message });
+      }
+      next(err);
+    }
+  };
+
+  const deletePanjar = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const message = await service.deletePanjar(id);
+      return res.status(200).json({ message });
+    } catch (err) {
+      if (err && err.status) {
+        return res.status(err.status).json({ error: err.message });
+      }
+      next(err);
+    }
+  };
+
+
+  return { health, kegiatan, deleteKegiatan, createKegiatan, getKegiatanById, editKegiatan, listPanjar, deletePanjar };
 }

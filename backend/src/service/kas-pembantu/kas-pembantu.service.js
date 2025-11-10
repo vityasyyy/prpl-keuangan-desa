@@ -117,6 +117,46 @@ export default function createKasPembantuService(repo) {
       const updated = await repo.updateKegiatanById(id, updates);
       if (!updated) throw { status: 404, message: `Kegiatan with id ${id} not found` };
       return updated;
+    },
+
+    async getPanjarList({ page = 1, per_page = 20, bku_id, from, to, sort_by = 'tanggal', order = 'asc' }) {
+      page = Number(page) || 1;
+      per_page = Number(per_page) || 20;
+      if (per_page > 100) per_page = 100;
+      if (page < 1) page = 1;
+
+      const allowedSort = ['tanggal', 'id', 'saldo_after'];
+      const allowedOrder = ['asc', 'desc'];
+      if (!allowedSort.includes(sort_by)) throw { status: 400, message: 'invalid sort_by' };
+      if (!allowedOrder.includes(String(order).toLowerCase())) throw { status: 400, message: 'invalid order' };
+
+      const isValidDate = (d) => !d || /^\d{4}-\d{2}-\d{2}$/.test(d);
+      if (!isValidDate(from) || !isValidDate(to)) throw { status: 400, message: 'invalid date format for from/to (expected YYYY-MM-DD)' };
+
+      const { rows, total } = await repo.listPanjar({ page, per_page, bku_id, from, to, sort_by, order });
+      const total_pages = total === 0 ? 1 : Math.max(1, Math.ceil(total / per_page));
+
+      return {
+        meta: {
+          page,
+          per_page,
+          total_pages,
+          total_items: total
+        },
+        data: rows
+      };
+    },
+
+    async deletePanjar(id) {
+      if (!id) throw { status: 400, message: 'id is required' };
+
+      const deleted = await repo.deletePanjarById(id);
+      if (!deleted) throw { status: 404, message: `Panjar entry with id ${id} not found` };
+
+      return `Entry panjar dengan id ${id} telah dihapus`;
     }
+
+
+ 
   };
 }

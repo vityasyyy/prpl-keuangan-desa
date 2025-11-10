@@ -243,7 +243,56 @@ export default function createRepo(db) {
     }
   }
 
+  async function listPanjar({ page = 1, per_page = 20, bku_id, from, to, sort_by = 'tanggal', order = 'asc' }) {
+    const allowedSort = ['tanggal', 'id', 'saldo_after'];
+    const allowedOrder = ['asc', 'desc'];
+    if (!allowedSort.includes(sort_by)) throw new Error('invalid sort_by');
+    if (!allowedOrder.includes(order.toLowerCase())) throw new Error('invalid order');
 
+    const where = [];
+    const params = [];
+    let idx = 1;
+
+    if (bku_id) {
+      where.push(`bku_id = $${idx++}`);
+      params.push(bku_id);
+    }
+    if (from) {
+      where.push(`tanggal >= $${idx++}`);
+      params.push(from);
+    }
+    if (to) {
+      where.push(`tanggal <= $${idx++}`);
+      params.push(to);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    // Total data
+    const countSql = `SELECT COUNT(*)::int AS total FROM buku_pembantu_panjar ${whereSql}`;
+    const { rows: countRows } = await db.query(countSql, params);
+    const total = countRows[0] ? Number(countRows[0].total) : 0;
+
+    // Paging
+    const offset = (page - 1) * per_page;
+    const sql = `
+      SELECT id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
+      FROM buku_pembantu_panjar
+      ${whereSql}
+      ORDER BY ${sort_by} ${order.toUpperCase()}, id ${order.toUpperCase()}
+      LIMIT $${idx++} OFFSET $${idx++}
+    `;
+    params.push(per_page, offset);
+
+    const { rows } = await db.query(sql, params);
+    return { rows, total };
+  }
+
+  async function deletePanjarById(id) {
+    const sql = `DELETE FROM buku_pembantu_panjar WHERE id = $1 RETURNING id`;
+    const { rows, rowCount } = await db.query(sql, [id]);
+    return rowCount > 0;
+  }
 
   return {
     listKegiatanTransaksi,
@@ -254,6 +303,8 @@ export default function createRepo(db) {
     checkBkuExists,
     getLastSaldoByBkuId,
     insertKegiatan,
-    updateKegiatanById
+    updateKegiatanById,
+    listPanjar,
+    deletePanjarById
   };
 }
