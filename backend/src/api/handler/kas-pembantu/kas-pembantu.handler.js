@@ -17,6 +17,18 @@ export default function createKasPembantuHandler(service) {
       next(err);
     }
   };
+  const getKegiatanById = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const kegiatan = await service.getKegiatanById(id);
+      if (!kegiatan || kegiatan.message) {
+        return res.status(404).json({ success: false, message: kegiatan?.message || 'Data tidak ditemukan' });
+      }
+      res.json({ success: true, data: kegiatan });
+    } catch (err) {
+      next(err);
+    }
+  };
 
   const deleteKegiatan = async (req, res, next) => {
     try {
@@ -41,5 +53,18 @@ export default function createKasPembantuHandler(service) {
     }
   };
 
-  return { health, kegiatan, deleteKegiatan, createKegiatan };
+  const editKegiatan = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body || {};
+      const updated = await service.editKegiatan(id, updates);
+      return res.status(200).json({ success: true, data: updated });
+    } catch (err) {
+      // jika service melempar object {status, message}, gunakan itu
+      if (err && err.status) return res.status(err.status).json({ success: false, message: err.message });
+      next(err);
+    }
+  };
+
+  return { health, kegiatan, deleteKegiatan, createKegiatan, getKegiatanById, editKegiatan };
 }

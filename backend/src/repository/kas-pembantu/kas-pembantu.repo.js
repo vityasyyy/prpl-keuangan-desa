@@ -42,6 +42,16 @@ export default function createRepo(db) {
     const { rows } = await db.query(sql, params);
     return rows;
   }
+  async function getKegiatanById(id) {
+    const sql = `
+      SELECT id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after
+      FROM buku_kas_pembantu
+      WHERE id = ${P(1)}
+      LIMIT 1
+    `;
+    const { rows } = await db.query(sql, [id]);
+    return rows[0] || null;
+  }
 
   /**
    * Hitung ringkasan bulanan kas pembantu
@@ -153,15 +163,97 @@ export default function createRepo(db) {
     const { rows } = await db.query(q, values);
     return rows[0];
   }
- 
+
+  async function updateKegiatanById(id, updates = {}) {
+    const client = await db.connect();
+    try {
+      await client.query('BEGIN');
+
+      // ambil row lama
+      const qOld = `
+        SELECT id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after
+        FROM buku_kas_pembantu
+        WHERE id = ${P(1)}
+        LIMIT 1
+      `;
+      const { rows: oldRows } = await client.query(qOld, [id]);
+      const oldRow = oldRows[0];
+      if (!oldRow) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+
+      // nilai baru (pakai nilai lama bila tidak di-provide)
+      const newTanggal = updates.tanggal ?? oldRow.tanggal;
+      const newUraian = updates.uraian ?? oldRow.uraian;
+      const newPenerimaan = updates.penerimaan !== undefined ? Number(updates.penerimaan) : Number(oldRow.penerimaan ?? 0);
+      const newPengeluaran = updates.pengeluaran !== undefined ? Number(updates.pengeluaran) : Number(oldRow.pengeluaran ?? 0);
+      const newTypeEnum = updates.type_enum ?? oldRow.type_enum;
+
+      // ambil saldo_before (saldo_after dari row sebelum row ini) berdasarkan ordering tanggal,id
+      const qPrev = `
+        SELECT saldo_after FROM buku_kas_pembantu
+        WHERE bku_id = ${P(1)}
+          AND (tanggal < ${P(2)} OR (tanggal = ${P(2)} AND id < ${P(3)}))
+        ORDER BY tanggal DESC, id DESC
+        LIMIT 1
+      `;
+      const { rows: prevRows } = await client.query(qPrev, [oldRow.bku_id, newTanggal, id]);
+      const prevSaldo = prevRows.length ? Number(prevRows[0].saldo_after) : 0;
+
+      // hitung saldo baru untuk row ini
+      const newSaldoAfter = Number((prevSaldo + newPenerimaan - newPengeluaran).toFixed(2));
+      const oldSaldoAfter = Number(oldRow.saldo_after ?? 0);
+      const delta = Number((newSaldoAfter - oldSaldoAfter).toFixed(2));
+
+      // update baris ini
+      const qUpdate = `
+        UPDATE buku_kas_pembantu
+        SET tanggal = ${P(1)},
+            uraian = ${P(2)},
+            penerimaan = ${P(3)},
+            pengeluaran = ${P(4)},
+            saldo_after = ${P(5)},
+            type_enum = ${P(6)}
+        WHERE id = ${P(7)}
+        RETURNING id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after
+      `;
+      const valuesUpdate = [newTanggal, newUraian, newPenerimaan, newPengeluaran, newSaldoAfter, newTypeEnum, id];
+      const { rows: updatedRows } = await client.query(qUpdate, valuesUpdate);
+      const updatedRow = updatedRows[0];
+
+      // jika ada perubahan saldo, adjust semua baris berikutnya untuk bku_id yang sama
+      if (delta !== 0) {
+        const qAdjust = `
+          UPDATE buku_kas_pembantu
+          SET saldo_after = (saldo_after + ${P(1)})
+          WHERE bku_id = ${P(2)}
+            AND (tanggal > ${P(3)} OR (tanggal = ${P(3)} AND id > ${P(4)}))
+        `;
+        await client.query(qAdjust, [delta, oldRow.bku_id, newTanggal, id]);
+      }
+
+      await client.query('COMMIT');
+      return updatedRow;
+    } catch (err) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+
 
   return {
     listKegiatanTransaksi,
+    getKegiatanById,
     getRingkasan,
     getAllData,
     deleteById,
     checkBkuExists,
     getLastSaldoByBkuId,
     insertKegiatan,
+    updateKegiatanById
   };
 }

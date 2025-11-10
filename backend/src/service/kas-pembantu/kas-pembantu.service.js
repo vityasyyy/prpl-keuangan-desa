@@ -49,6 +49,13 @@ export default function createKasPembantuService(repo) {
         ringkasan
       };
     },
+    async getKegiatanById(id) {
+      const kegiatan = await repo.getKegiatanById(id);
+      if (!kegiatan) {
+        return { message: `Kegiatan dengan id ${id} tidak ditemukan.` };
+      }
+      return kegiatan;
+    },
 
     async deleteKegiatanById(id) {
       return await repo.deleteById(id);
@@ -76,7 +83,7 @@ export default function createKasPembantuService(repo) {
       const starting = lastSaldo === null ? 0 : lastSaldo;
       const saldo_after = Number((starting + penerimaan - pengeluaran).toFixed(2));
 
-      // generate id sederhana (unik). Jika ingin format serial bkp001, saya bisa tambahkan generator DB-safe.
+      // generate id sederhana (unik). 
       const id = `bkp${Date.now()}`;
 
       const toInsert = {
@@ -93,5 +100,23 @@ export default function createKasPembantuService(repo) {
       const inserted = await repo.insertKegiatan(toInsert);
       return inserted;
     },
+     
+    async  editKegiatan(id, updates) {
+      if (!id) throw { status: 400, message: 'id is required' };
+      if (!updates || Object.keys(updates).length === 0) throw { status: 400, message: 'no update fields provided' };
+
+      // optional: validasi numeric
+      if (updates.penerimaan !== undefined && Number.isNaN(Number(updates.penerimaan))) {
+        throw { status: 400, message: 'penerimaan must be numeric' };
+      }
+      if (updates.pengeluaran !== undefined && Number.isNaN(Number(updates.pengeluaran))) {
+        throw { status: 400, message: 'pengeluaran must be numeric' };
+      }
+
+      // delegasi ke repo — repo akan membuka transaksi sendiri
+      const updated = await repo.updateKegiatanById(id, updates);
+      if (!updated) throw { status: 404, message: `Kegiatan with id ${id} not found` };
+      return updated;
+    }
   };
 }
