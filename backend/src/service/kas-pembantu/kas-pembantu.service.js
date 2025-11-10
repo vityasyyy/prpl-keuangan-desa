@@ -53,5 +53,45 @@ export default function createKasPembantuService(repo) {
     async deleteKegiatanById(id) {
       return await repo.deleteById(id);
     },
+    async createKegiatan(payload) {
+      // validasi minimal
+      const required = ['bku_id', 'type_enum', 'tanggal', 'uraian'];
+      for (const r of required) {
+        if (!payload[r]) throw new Error(`${r} is required`);
+      }
+
+      // pastikan bku_id valid (ada di buku_kas_umum)
+      const exists = await repo.checkBkuExists(payload.bku_id);
+      if (!exists) throw new Error(`bku_id ${payload.bku_id} not found`);
+
+      // parse angka
+      const penerimaan = Number(payload.penerimaan ?? 0);
+      const pengeluaran = Number(payload.pengeluaran ?? 0);
+      if (Number.isNaN(penerimaan) || Number.isNaN(pengeluaran)) {
+        throw new Error('penerimaan and pengeluaran must be numeric');
+      }
+
+      // ambil saldo terakhir untuk bku_id (jika ada)
+      const lastSaldo = await repo.getLastSaldoByBkuId(payload.bku_id);
+      const starting = lastSaldo === null ? 0 : lastSaldo;
+      const saldo_after = Number((starting + penerimaan - pengeluaran).toFixed(2));
+
+      // generate id sederhana (unik). Jika ingin format serial bkp001, saya bisa tambahkan generator DB-safe.
+      const id = `bkp${Date.now()}`;
+
+      const toInsert = {
+        id,
+        bku_id: payload.bku_id,
+        type_enum: payload.type_enum,
+        tanggal: payload.tanggal,
+        uraian: payload.uraian,
+        penerimaan,
+        pengeluaran,
+        saldo_after
+      };
+
+      const inserted = await repo.insertKegiatan(toInsert);
+      return inserted;
+    },
   };
 }

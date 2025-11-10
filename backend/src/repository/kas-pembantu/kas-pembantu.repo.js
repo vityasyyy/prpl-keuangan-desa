@@ -119,10 +119,49 @@ export default function createRepo(db) {
     }
   }
 
+  async function checkBkuExists(bku_id) {
+    const q = `SELECT 1 FROM buku_kas_umum WHERE id = ${P(1)} LIMIT 1`;
+    const { rows } = await db.query(q, [bku_id]);
+    return rows.length > 0;
+  }
+  async function getLastSaldoByBkuId(bku_id) {
+    const q = `SELECT saldo_after FROM buku_kas_pembantu WHERE bku_id = ${P(1)} ORDER BY tanggal DESC, id DESC LIMIT 1`;
+    const { rows } = await db.query(q, [bku_id]);
+    if (rows.length === 0) return null;
+    return Number(rows[0].saldo_after);
+  }
+   /**
+   * Insert satu row ke buku_kas_pembantu
+   * payload: { id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after }
+   */
+  async function insertKegiatan(payload) {
+    const q = `
+      INSERT INTO buku_kas_pembantu
+        (id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after)
+      VALUES (${P(1)},${P(2)},${P(3)},${P(4)},${P(5)},${P(6)},${P(7)},${P(8)})
+      RETURNING *`;
+    const values = [
+      payload.id,
+      payload.bku_id,
+      payload.type_enum,
+      payload.tanggal,
+      payload.uraian,
+      payload.penerimaan ?? 0,
+      payload.pengeluaran ?? 0,
+      payload.saldo_after
+    ];
+    const { rows } = await db.query(q, values);
+    return rows[0];
+  }
+ 
+
   return {
     listKegiatanTransaksi,
     getRingkasan,
     getAllData,
     deleteById,
+    checkBkuExists,
+    getLastSaldoByBkuId,
+    insertKegiatan,
   };
 }

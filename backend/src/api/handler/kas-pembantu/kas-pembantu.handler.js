@@ -31,6 +31,15 @@ export default function createKasPembantuHandler(service) {
       next(err);
     }
   };
+  const createKegiatan = async (req, res, next) => {
+    try {
+      const payload = req.body;
+      const result = await service.createKegiatan(payload);
+      return res.status(201).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
 
-  return { health, kegiatan, deleteKegiatan };
+  return { health, kegiatan, deleteKegiatan, createKegiatan };
 }
