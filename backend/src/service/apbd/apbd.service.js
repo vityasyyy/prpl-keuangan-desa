@@ -44,15 +44,11 @@ export default function createApbdService(ApbdRepo) {
   const createApbdesRincian = async (payload) => {
     ApbdRepo.validateApbdesRincian(payload);
     const newItem = await ApbdRepo.createApbdesRincian(payload);
-    // Dapatkan apbdes_id dari kegiatan untuk hitung ulang total
-    const apbdesIdQuery = `
-      SELECT apbdes_id FROM kegiatan WHERE id = $1
-    `;
-    const { rows } = await ApbdRepo.db.query(apbdesIdQuery, [
-      payload.kegiatan_id,
-    ]);
-    const apbdesId = rows?.[0]?.apbdes_id;
-    // Hitung ulang total setelah insert
+    const apbdesId = await ApbdRepo.getApbdesIdByKegiatanId(
+      payload.kegiatan_id
+    );
+    if (!apbdesId) throw { status: 400, error: "invalid_kegiatan_id" };
+
     const total = await ApbdRepo.recalculateDraftApbdesTotals(apbdesId);
     return {
       message: "Data APBDes berhasil ditambahkan",
@@ -114,9 +110,15 @@ export default function createApbdService(ApbdRepo) {
   const updateDraftApbdesItem = async (id, data) => {
     ApbdRepo.validateApbdesRincian(data);
     const updatedItem = await ApbdRepo.updateDraftApbdesItem(id, data);
-    const total = await ApbdRepo.recalculateDraftApbdesTotals(
-      updatedItem.apbd_id
-    ); // Hitung ulang total
+    const q = `
+      SELECT k.apbdes_id
+      FROM kegiatan k
+      JOIN apbdes_rincian r ON r.kegiatan_id = k.id
+      WHERE r.id = $1;
+    `;
+    const { rows } = await db.query(q, [id]);
+    const apbdesId = rows?.[0]?.apbdes_id;
+    const total = await ApbdRepo.recalculateDraftApbdesTotals(apbdesId);
     return { updatedItem, total };
   };
 
@@ -154,15 +156,7 @@ export default function createApbdService(ApbdRepo) {
   const createApbdesRincianPenjabaran = async (payload) => {
     ApbdRepo.validateApbdesRincianPenjabaran(payload);
     const newItem = await ApbdRepo.createApbdesRincianPenjabaran(payload);
-    // Dapatkan apbdes_id dari kegiatan untuk hitung ulang total
-    const apbdesIdQuery = `
-      SELECT apbdes_id FROM kegiatan WHERE id = $1
-    `;
-    const { rows } = await ApbdRepo.db.query(apbdesIdQuery, [
-      payload.kegiatan_id,
-    ]);
-    const apbdesId = rows?.[0]?.apbdes_id;
-    // Hitung ulang total setelah insert
+    const apbdesId = await ApbdRepo.getApbdesIdByRincianId(payload.rincian_id);
     const total = await ApbdRepo.recalculatePenjabaranApbdesTotals(apbdesId);
     return {
       message: "APBDes rincian penjabaran berhasil dibuat",
@@ -212,9 +206,16 @@ export default function createApbdService(ApbdRepo) {
   const updatePenjabaranApbdesItem = async (id, data) => {
     ApbdRepo.validateApbdesRincianPenjabaran(data);
     const updatedItem = await ApbdRepo.updatePenjabaranApbdesItem(id, data);
-    const total = await ApbdRepo.recalculatePenjabaranApbdesTotals(
-      updatedItem.penjabaran_id
-    ); // Hitung ulang total
+    const q = `
+      SELECT a.id AS apbdes_id
+      FROM apbdes a
+      JOIN kegiatan k ON k.apbdes_id = a.id
+      JOIN apbdes_rincian r ON r.kegiatan_id = k.id
+      WHERE r.id = $1
+    `;
+    const { rows } = await db.query(q, [updatedItem.rincian_id]);
+    const apbdesId = rows?.[0]?.apbdes_id;
+    const total = await ApbdRepo.recalculatePenjabaranApbdesTotals(apbdesId);
     return { updatedItem, total };
   };
 

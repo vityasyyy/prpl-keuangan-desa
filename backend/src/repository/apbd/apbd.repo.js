@@ -232,6 +232,12 @@ export default function createApbdRepo(arg) {
     return detailRow;
   };
 
+  const getApbdesIdByKegiatanId = async (kegiatanId) => {
+    const q = `SELECT apbdes_id FROM kegiatan WHERE id = $1;`;
+    const { rows } = await db.query(q, [kegiatanId]);
+    return rows[0]?.apbdes_id || null;
+  };
+
   const getDraftApbdesList = async () => {
     const q = `
       SELECT r.id, r.kegiatan_id, k.nama AS kegiatan_nama, a.id AS apbdes_id, a.tahun, a.status,
@@ -288,7 +294,8 @@ export default function createApbdRepo(arg) {
     } = data;
     const q = `
       UPDATE apbdes_rincian
-      SET kegiatan_id = $1, kode_fungsi_id = $2, kode_ekonomi_id = $3, uraian = $4, jumlah_anggaran = $5, sumber_dana = $6
+      SET kegiatan_id = $1, kode_fungsi_id = $2, kode_ekonomi_id = $3,
+          uraian = $4, jumlah_anggaran = $5, sumber_dana = $6
       WHERE id = $7
       RETURNING *;
     `;
@@ -333,14 +340,13 @@ export default function createApbdRepo(arg) {
         AND a.status = $1
         ${apbdesId ? "AND a.id = $2" : ""}
       GROUP BY e.uraian
-  `;
+    `;
     const params = apbdesId ? ["draft", apbdesId] : ["draft"];
     const { rows } = await db.query(q, params);
-    const result = rows.reduce((acc, cur) => {
+    return rows.reduce((acc, cur) => {
       acc[cur.uraian] = parseFloat(cur.total_anggaran) || 0;
       return acc;
     }, {});
-    return result;
   };
 
   const validateApbdesRincianPenjabaran = (data) => {
@@ -449,6 +455,18 @@ export default function createApbdRepo(arg) {
     return newRow;
   };
 
+  const getApbdesIdByRincianId = async (rincianId) => {
+    const q = `
+      SELECT a.id AS apbdes_id
+      FROM apbdes a
+      JOIN kegiatan k ON k.apbdes_id = a.id
+      JOIN apbdes_rincian r ON r.kegiatan_id = k.id
+      WHERE r.id = $1;
+    `;
+    const { rows } = await db.query(q, [rincianId]);
+    return rows[0]?.apbdes_id || null;
+  };
+
   const getDraftPenjabaranApbdesList = async () => {
     const q = `
       SELECT p.id, p.rincian_id, r.uraian AS rincian_uraian, p.uraian, p.volume, p.satuan, p.jumlah_anggaran, p.sumber_dana
@@ -518,17 +536,14 @@ export default function createApbdRepo(arg) {
   };
 
   const updatePenjabaranApbdesItem = async (id, data) => {
-    const { rincian_id, uraian, volume, satuan, jumlah_anggaran, sumber_dana } =
-      data;
+    const { volume, satuan, jumlah_anggaran, sumber_dana } = data;
     const q = `
       UPDATE apbdes_rincian_penjabaran
-      SET rincian_id = $1, uraian = $2, volume = $3, satuan = $4, jumlah_anggaran = $5, sumber_dana = $6
-      WHERE id = $7
+      SET volume = $1, satuan = $2, jumlah_anggaran = $3, sumber_dana = $4
+      WHERE id = $5
       RETURNING *;
     `;
     const { rows } = await db.query(q, [
-      rincian_id,
-      uraian,
       volume,
       satuan,
       jumlah_anggaran,
@@ -582,6 +597,7 @@ export default function createApbdRepo(arg) {
     listUraian2,
     validateApbdesRincian,
     createApbdesRincian,
+    getApbdesIdByKegiatanId,
 
     //output apbdes rincian
     getDraftApbdesList,
@@ -596,6 +612,7 @@ export default function createApbdRepo(arg) {
     //input form apbdes rincian penjabaran
     validateApbdesRincianPenjabaran,
     createApbdesRincianPenjabaran,
+    getApbdesIdByRincianId,
 
     //output draft apbdes rincian penjabaran
     getDraftPenjabaranApbdesList,
