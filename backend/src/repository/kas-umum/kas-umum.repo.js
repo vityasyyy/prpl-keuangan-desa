@@ -1,4 +1,6 @@
 // src/repository/kas-umum/kas-umum.repo.js
+import crypto from "crypto";
+
 export default function createKasUmumRepo(arg) {
   // Deteksi instance Pool / BoundPool / Client dari pg
   const db =
@@ -178,12 +180,16 @@ export default function createKasUmumRepo(arg) {
     const {
       rows: [lastRow],
     } = await db.query(lastSaldoQuery, [rab_id]);
-    const saldoBefore = lastRow?.saldo_after || 0;
+    const saldoBefore = parseFloat(lastRow?.saldo_after) || 0;
     const saldoAfter = saldoBefore + penerimaan - pengeluaran;
+
+    // Generate ID for new record
+    const id = crypto.randomUUID();
 
     // Insert data baru ke tabel Buku_Kas_Umum
     const insertQuery = `
       INSERT INTO Buku_Kas_Umum (
+        id,
         tanggal, 
         rab_id, 
         kode_ekonomi_id,
@@ -193,12 +199,13 @@ export default function createKasUmumRepo(arg) {
         pengeluaran, 
         no_bukti,
         saldo_after
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id, tanggal, rab_id, kode_ekonomi_id, kode_fungsi_id, 
                 uraian, penerimaan, pengeluaran, no_bukti, saldo_after
     `;
 
     const values = [
+      id,
       tanggal,
       rab_id,
       kode_ekonomi_id,
