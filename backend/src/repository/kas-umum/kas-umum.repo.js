@@ -34,77 +34,150 @@ export default function createKasUmumRepo(arg) {
   /**
    * Ambil daftar transaksi BKU (Buku Kas Umum)
    */
-  async function listBkuRows({ monthDate, rabId, rkkId }) {
-    const where = [monthBku()];
-    const params = [monthDate];
-    let join = "";
+  // repo.js
 
-    if (rabId) {
-      where.push(`bku.rab_id = ${P(2)}`);
-      params.push(rabId);
-    } else if (rkkId) {
-      join = `LEFT JOIN rab r ON r.id = bku.rab_id`;
-      where.push(`r.rkk_id = ${P(2)}`);
-      params.push(rkkId);
+  /**
+   * List baris BKU untuk satu bulan atau tahun tertentu
+   */
+  async function listBkuRows({ monthDate, yearDate }) {
+    const where = [];
+    const params = [];
+    let p = 1;
+
+    // Filter waktu
+    if (yearDate && monthDate) {
+      where.push(`
+      bku.tanggal >= date_trunc('month', $${p}::date)
+      AND bku.tanggal <  (date_trunc('month', $${p}::date) + INTERVAL '1 month')
+      AND date_part('year', bku.tanggal) = date_part('year', $${p + 1}::date)
+    `);
+      params.push(monthDate, yearDate);
+      p += 2;
+    } else if (yearDate) {
+      where.push(`
+      bku.tanggal >= date_trunc('year', $${p}::date)
+      AND bku.tanggal <  (date_trunc('year', $${p}::date) + INTERVAL '1 year')
+    `);
+      params.push(yearDate);
+      p += 1;
+    } else if (monthDate) {
+      where.push(`
+      bku.tanggal >= date_trunc('month', $${p}::date)
+      AND bku.tanggal <  (date_trunc('month', $${p}::date) + INTERVAL '1 month')
+    `);
+      params.push(monthDate);
+      p += 1;
+    } else {
+      throw new Error("listBkuRows requires monthDate or yearDate");
     }
 
     const sql = `
-      SELECT ROW_NUMBER() OVER (ORDER BY bku.tanggal, bku.id) AS no,
-             bku.tanggal,
-             ke.full_code AS kode_rekening,
-             bku.uraian,
-             bku.penerimaan AS pemasukan,
-             bku.pengeluaran,
-             bku.no_bukti,
-             (bku.penerimaan - bku.pengeluaran) AS netto_transaksi,
-             bku.saldo_after AS saldo
-      FROM buku_kas_umum bku
-      LEFT JOIN kode_ekonomi ke ON ke.id = bku.kode_ekonomi_id
-      ${join}
-      WHERE ${where.join(" AND ")}
-      ORDER BY bku.tanggal, bku.id
-    `;
+    SELECT
+      ROW_NUMBER() OVER (ORDER BY bku.tanggal, bku.id) AS no,
+      bku.tanggal,
+      ke.full_code AS kode_rekening,
+      bku.uraian,
+      bku.penerimaan AS pemasukan,
+      bku.pengeluaran,
+      bku.no_bukti,
+      (bku.penerimaan - bku.pengeluaran) AS netto_transaksi,
+      bku.saldo_after AS saldo
+    FROM buku_kas_umum bku
+    LEFT JOIN kode_ekonomi ke ON ke.id = bku.kode_ekonomi_id
+    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+    ORDER BY bku.tanggal, bku.id
+  `;
 
     const { rows } = await db.query(sql, params);
     return rows;
   }
 
   /**
-   * Hitung rekapitulasi total pemasukan/pengeluaran/netto BKU
+   * Rekap total pemasukan, pengeluaran, dan netto BKU
    */
-  async function getBkuSummary({ monthDate, rabId, rkkId }) {
-    const where = [monthRaw()];
-    const params = [monthDate];
+  async function getBkuSummary({ monthDate, yearDate }) {
+    const where = [];
+    const params = [];
+    let p = 1;
 
-    if (rabId) {
-      where.push(`rab_id = ${P(2)}`);
-      params.push(rabId);
-    } else if (rkkId) {
-      where.push(
-        `EXISTS (
-          SELECT 1
-          FROM rab r
-          WHERE r.id = buku_kas_umum.rab_id
-          AND r.rkk_id = ${P(2)}
-        )`
-      );
-      params.push(rkkId);
+    if (yearDate && monthDate) {
+      where.push(`
+      tanggal >= date_trunc('month', $${p}::date)
+      AND tanggal <  (date_trunc('month', $${p}::date) + INTERVAL '1 month')
+      AND date_part('year', tanggal) = date_part('year', $${p + 1}::date)
+    `);
+      params.push(monthDate, yearDate);
+      p += 2;
+    } else if (yearDate) {
+      where.push(`
+      tanggal >= date_trunc('year', $${p}::date)
+      AND tanggal <  (date_trunc('year', $${p}::date) + INTERVAL '1 year')
+    `);
+      params.push(yearDate);
+      p += 1;
+    } else if (monthDate) {
+      where.push(`
+      tanggal >= date_trunc('month', $${p}::date)
+      AND tanggal <  (date_trunc('month', $${p}::date) + INTERVAL '1 month')
+    `);
+      params.push(monthDate);
+      p += 1;
+    } else {
+      throw new Error("getBkuSummary requires monthDate or yearDate");
     }
 
     const sql = `
-      SELECT
-        COALESCE(SUM(penerimaan), 0) AS total_pemasukan,
-        COALESCE(SUM(pengeluaran), 0) AS total_pengeluaran,
-        COALESCE(SUM(penerimaan - pengeluaran), 0) AS total_netto
-      FROM buku_kas_umum
-      WHERE ${where.join(" AND ")}
-    `;
+    SELECT
+      COALESCE(SUM(penerimaan), 0) AS total_pemasukan,
+      COALESCE(SUM(pengeluaran), 0) AS total_pengeluaran,
+      COALESCE(SUM(penerimaan - pengeluaran), 0) AS total_netto
+    FROM buku_kas_umum
+    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+  `;
 
     const {
       rows: [row],
     } = await db.query(sql, params);
-
     return row || { total_pemasukan: 0, total_pengeluaran: 0, total_netto: 0 };
+  }
+  // kasUmum.repo.js
+  async function getMonthlySaldo({ yearDate }) {
+    const sql = `
+    WITH
+    yr AS (
+      SELECT date_trunc('year', $1::date) AS y0,
+             (date_trunc('year', $1::date) + INTERVAL '1 year') AS y1
+    ),
+    months AS (
+      SELECT generate_series(y0, y1 - INTERVAL '1 month', INTERVAL '1 month')::date AS m
+      FROM yr
+    ),
+    rows_in_year AS (
+      SELECT
+        date_trunc('month', bku.tanggal)::date AS m,
+        bku.tanggal,
+        bku.id,
+        bku.saldo_after
+      FROM buku_kas_umum bku, yr
+      WHERE bku.tanggal >= yr.y0
+        AND bku.tanggal <  yr.y1
+    ),
+    last_per_month AS (
+      SELECT DISTINCT ON (m)
+        m,
+        saldo_after
+      FROM rows_in_year
+      ORDER BY m, tanggal DESC, id DESC
+    )
+    SELECT
+      to_char(months.m, 'YYYY-MM') AS ym,
+      COALESCE(lpm.saldo_after, 0)   AS saldo_after
+    FROM months
+    LEFT JOIN last_per_month lpm ON lpm.m = months.m
+    ORDER BY months.m;
+  `;
+    const { rows } = await db.query(sql, [yearDate]);
+    return rows; // [{ ym: '2025-01', saldo_after: number }, ... 12 item]
   }
 
   /**
@@ -324,6 +397,7 @@ export default function createKasUmumRepo(arg) {
     listRAB,
     listBkuRows,
     getBkuSummary,
+    getMonthlySaldo,
     listBidang,
     listSubBidang,
     listKegiatan,

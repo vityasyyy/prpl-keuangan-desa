@@ -10,8 +10,19 @@ export default function createKasUmumHandler(kasUmumService) {
   };
   const getBku = async (req, res, next) => {
     try {
-      const { month, rabId, rkkId } = req.query;
-      const result = await kasUmumService.getBku({ month, rabId, rkkId });
+      const { month, year } = req.query;
+
+      const result = await kasUmumService.getBku({ month, year });
+
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  };
+  const getMonthlySaldo = async (req, res, next) => {
+    try {
+      const { year } = req.query;
+      const result = await kasUmumService.getMonthlySaldo({ year });
       res.json(result);
     } catch (e) {
       next(e);
@@ -106,6 +117,7 @@ export default function createKasUmumHandler(kasUmumService) {
   return {
     getRAB,
     getBku,
+    getMonthlySaldo,
     getBidang,
     getSubBidang,
     getKegiatan,
