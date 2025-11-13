@@ -1,4 +1,5 @@
 // src/service/kas-umum/kas-umum.service.js
+import ExcelJS from "exceljs";
 const normalizeMonth = (m) => (m?.length === 7 ? `${m}-01` : m);
 
 export default function createKasUmumService(kasUmumRepo) {
@@ -69,10 +70,68 @@ export default function createKasUmumService(kasUmumRepo) {
     const yearDate = normalizeYear(year);
     const rows = await kasUmumRepo.getMonthlySaldo({ yearDate });
     const map = {};
-    for (const r of rows) map[r.ym] = Number(r.saldo_after) || 0;
+    for (const r of rows) {
+      map[r.ym] = r.saldo_after == null ? null : Number(r.saldo_after);
+    }
     return { year: String(year), saldo: map };
   }
 
+  async function exportBku({ month, year }) {
+    if (!month && !year) {
+      throw {
+        status: 400,
+        error: "period_required",
+        hint: "Gunakan year=YYYY atau month=YYYY-MM",
+      };
+    }
+
+    const monthDate = month ? normalizeMonth(month) : undefined;
+    const yearDate = year ? normalizeYear(year) : undefined;
+
+    const rows = await kasUmumRepo.listBkuRows({ monthDate, yearDate });
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("BKU");
+
+    ws.columns = [
+      { header: "No", key: "no", width: 6 },
+      { header: "Tanggal", key: "tanggal", width: 12 },
+      { header: "Kode Rekening", key: "kode_rekening", width: 18 },
+      { header: "Uraian", key: "uraian", width: 30 },
+      { header: "Pemasukan", key: "pemasukan", width: 15 },
+      { header: "Pengeluaran", key: "pengeluaran", width: 15 },
+      { header: "No. Bukti", key: "no_bukti", width: 12 },
+      { header: "Netto Transaksi", key: "netto_transaksi", width: 17 },
+      { header: "Saldo", key: "saldo", width: 15 },
+    ];
+
+    rows.forEach((r) => {
+      ws.addRow({
+        no: r.no,
+        tanggal: new Date(r.tanggal).toISOString().slice(0, 10),
+        kode_rekening: r.kode_rekening,
+        uraian: r.uraian,
+        pemasukan: r.pemasukan,
+        pengeluaran: r.pengeluaran,
+        no_bukti: r.no_bukti,
+
+        netto_transaksi:
+          r.netto_transaksi < 0
+            ? `(${Math.abs(r.netto_transaksi)})`
+            : r.netto_transaksi,
+
+        saldo: r.saldo,
+      });
+    });
+
+    const filename = month
+      ? `BKU-${String(month).slice(0, 7)}.xlsx`
+      : `BKU-${String(year)}.xlsx`;
+
+    const buffer = await wb.xlsx.writeBuffer();
+
+    return { filename, buffer };
+  }
   const getRAB = async () => kasUmumRepo.listRAB();
   const getBidang = async () => kasUmumRepo.listBidang();
 
@@ -194,6 +253,7 @@ export default function createKasUmumService(kasUmumRepo) {
     getRAB,
     getBku,
     getMonthlySaldo,
+    exportBku,
     getBidang,
     getSubBidang,
     getKegiatan,

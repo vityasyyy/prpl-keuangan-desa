@@ -124,9 +124,12 @@ export default function BukuKasUmumPage() {
     fetchMonth(firstKey);
   }, [year]);
 
-  const handleDownload = async () => {
-    const openedKey = Object.keys(expanded).find((k) => expanded[k]) || toMonthKey(year, 0);
-    const url = `${API_BASE_URL}/bku/export?month=${openedKey}`;
+  const handleDownloadYear = () => {
+    const url = `${API_BASE_URL}/kas-umum/export?year=${year}`;
+    window.location.href = url;
+  };
+  const handleDownloadMonth = (key) => {
+    const url = `${API_BASE_URL}/kas-umum/export?month=${key}`;
     window.location.href = url;
   };
 
@@ -148,7 +151,7 @@ export default function BukuKasUmumPage() {
             <div className="flex flex-col items-start justify-center gap-0.5">
               <Button
                 variant="orange"
-                onClick={handleDownload}
+                onClick={handleDownloadYear}
                 icon={
                   <svg width="20" height="21" viewBox="0 0 20 21" fill="none">
                     <path
@@ -267,7 +270,7 @@ export default function BukuKasUmumPage() {
                       <button
                         className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#4b5565] bg-transparent p-2"
                         onClick={() => {
-                          window.location.href = `${API_BASE_URL}/bku/export?month=${key}`;
+                          handleDownloadMonth(key);
                         }}
                         title="Unduh bulan ini"
                       >

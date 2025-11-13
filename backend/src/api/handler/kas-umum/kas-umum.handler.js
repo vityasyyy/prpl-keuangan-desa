@@ -28,6 +28,28 @@ export default function createKasUmumHandler(kasUmumService) {
       next(e);
     }
   };
+  const exportBku = async (req, res, next) => {
+    try {
+      const { month, year } = req.query;
+      const { filename, buffer } = await kasUmumService.exportBku({
+        month,
+        year,
+      });
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`
+      );
+
+      res.send(buffer);
+    } catch (e) {
+      next(e);
+    }
+  };
 
   const getBidang = async (_req, res, next) => {
     try {
@@ -118,6 +140,7 @@ export default function createKasUmumHandler(kasUmumService) {
     getRAB,
     getBku,
     getMonthlySaldo,
+    exportBku,
     getBidang,
     getSubBidang,
     getKegiatan,

@@ -44,11 +44,10 @@ export default function createKasUmumRepo(arg) {
     const params = [];
     let p = 1;
 
-    // Filter waktu
     if (yearDate && monthDate) {
       where.push(`
       bku.tanggal >= date_trunc('month', $${p}::date)
-      AND bku.tanggal <  (date_trunc('month', $${p}::date) + INTERVAL '1 month')
+      AND bku.tanggal < (date_trunc('month', $${p}::date) + INTERVAL '1 month')
       AND date_part('year', bku.tanggal) = date_part('year', $${p + 1}::date)
     `);
       params.push(monthDate, yearDate);
@@ -56,14 +55,14 @@ export default function createKasUmumRepo(arg) {
     } else if (yearDate) {
       where.push(`
       bku.tanggal >= date_trunc('year', $${p}::date)
-      AND bku.tanggal <  (date_trunc('year', $${p}::date) + INTERVAL '1 year')
+      AND bku.tanggal < (date_trunc('year', $${p}::date) + INTERVAL '1 year')
     `);
       params.push(yearDate);
       p += 1;
     } else if (monthDate) {
       where.push(`
       bku.tanggal >= date_trunc('month', $${p}::date)
-      AND bku.tanggal <  (date_trunc('month', $${p}::date) + INTERVAL '1 month')
+      AND bku.tanggal < (date_trunc('month', $${p}::date) + INTERVAL '1 month')
     `);
       params.push(monthDate);
       p += 1;
@@ -73,7 +72,8 @@ export default function createKasUmumRepo(arg) {
 
     const sql = `
     SELECT
-      ROW_NUMBER() OVER (ORDER BY bku.tanggal, bku.id) AS no,
+      ROW_NUMBER() OVER (ORDER BY bku.tanggal ASC, bku.id ASC) AS no,
+      bku.id,
       bku.tanggal,
       ke.full_code AS kode_rekening,
       bku.uraian,
@@ -85,7 +85,7 @@ export default function createKasUmumRepo(arg) {
     FROM buku_kas_umum bku
     LEFT JOIN kode_ekonomi ke ON ke.id = bku.kode_ekonomi_id
     ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
-    ORDER BY bku.tanggal, bku.id
+    ORDER BY bku.tanggal ASC, bku.id ASC
   `;
 
     const { rows } = await db.query(sql, params);
@@ -143,41 +143,28 @@ export default function createKasUmumRepo(arg) {
   // kasUmum.repo.js
   async function getMonthlySaldo({ yearDate }) {
     const sql = `
-    WITH
-    yr AS (
+    WITH yr AS (
       SELECT date_trunc('year', $1::date) AS y0,
              (date_trunc('year', $1::date) + INTERVAL '1 year') AS y1
     ),
     months AS (
       SELECT generate_series(y0, y1 - INTERVAL '1 month', INTERVAL '1 month')::date AS m
       FROM yr
-    ),
-    rows_in_year AS (
-      SELECT
-        date_trunc('month', bku.tanggal)::date AS m,
-        bku.tanggal,
-        bku.id,
-        bku.saldo_after
-      FROM buku_kas_umum bku, yr
-      WHERE bku.tanggal >= yr.y0
-        AND bku.tanggal <  yr.y1
-    ),
-    last_per_month AS (
-      SELECT DISTINCT ON (m)
-        m,
-        saldo_after
-      FROM rows_in_year
-      ORDER BY m, tanggal DESC, id DESC
     )
     SELECT
-      to_char(months.m, 'YYYY-MM') AS ym,
-      COALESCE(lpm.saldo_after, 0)   AS saldo_after
-    FROM months
-    LEFT JOIN last_per_month lpm ON lpm.m = months.m
-    ORDER BY months.m;
+      to_char(m.m, 'YYYY-MM') AS ym,
+      (
+        SELECT bku.saldo_after
+        FROM buku_kas_umum bku
+        WHERE bku.tanggal < (m.m + INTERVAL '1 month')
+        ORDER BY bku.tanggal DESC, bku.id DESC
+        LIMIT 1
+      ) AS saldo_after
+    FROM months m
+    ORDER BY m.m
   `;
     const { rows } = await db.query(sql, [yearDate]);
-    return rows; // [{ ym: '2025-01', saldo_after: number }, ... 12 item]
+    return rows;
   }
 
   /**
@@ -223,61 +210,63 @@ export default function createKasUmumRepo(arg) {
   /**
    * Insert data baru ke tabel Buku_Kas_Umum
    */
+  async function generateBkuId() {
+    const sql = `
+    SELECT id
+    FROM buku_kas_umum
+    WHERE id LIKE 'bku%'
+    ORDER BY id DESC
+    LIMIT 1
+  `;
+    const { rows } = await db.query(sql);
+    const lastId = rows[0]?.id;
+    if (!lastId) {
+      return "bku001";
+    }
+    const numericPart = parseInt(lastId.slice(3), 10);
+    const next = numericPart + 1;
+    return "bku" + next.toString().padStart(3, "0");
+  }
+
   const insertBku = async (data) => {
     const {
       tanggal,
       rab_id,
-      kode_ekonomi_id, // ID dari tabel Kode_Ekonomi
-      kode_fungsi_id, // ID dari tabel Kode_Fungsi (kegiatan)
+      kode_ekonomi_id,
+      kode_fungsi_id,
       uraian,
       penerimaan = 0,
       pengeluaran = 0,
       no_bukti,
     } = data;
 
-    // Validasi: tidak boleh penerimaan dan pengeluaran keduanya terisi
-    if (penerimaan > 0 && pengeluaran > 0) {
+    const penerimaanNum = Number(penerimaan) || 0;
+    const pengeluaranNum = Number(pengeluaran) || 0;
+
+    if (penerimaanNum > 0 && pengeluaranNum > 0) {
       throw new Error(
         "Transaksi hanya boleh pemasukan ATAU pengeluaran, tidak keduanya"
       );
     }
 
-    // Hitung saldo_after berdasarkan saldo terakhir dari RAB yang sama
     const lastSaldoQuery = `
-      SELECT saldo_after 
-      FROM Buku_Kas_Umum 
-      WHERE rab_id = $1 
-      ORDER BY tanggal DESC, id DESC 
-      LIMIT 1
-    `;
+    SELECT saldo_after
+    FROM buku_kas_umum
+    WHERE rab_id = $1
+    ORDER BY tanggal DESC, id DESC
+    LIMIT 1
+  `;
     const {
       rows: [lastRow],
     } = await db.query(lastSaldoQuery, [rab_id]);
+
     const saldoBefore = parseFloat(lastRow?.saldo_after) || 0;
-    const saldoAfter = saldoBefore + penerimaan - pengeluaran;
+    const saldoAfter = saldoBefore + penerimaanNum - pengeluaranNum;
 
-    // Generate ID for new record
-    const id = crypto.randomUUID();
+    const id = await generateBkuId();
 
-    // Insert data baru ke tabel Buku_Kas_Umum
     const insertQuery = `
-      INSERT INTO Buku_Kas_Umum (
-        id,
-        tanggal, 
-        rab_id, 
-        kode_ekonomi_id,
-        kode_fungsi_id,
-        uraian, 
-        penerimaan, 
-        pengeluaran, 
-        no_bukti,
-        saldo_after
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING id, tanggal, rab_id, kode_ekonomi_id, kode_fungsi_id, 
-                uraian, penerimaan, pengeluaran, no_bukti, saldo_after
-    `;
-
-    const values = [
+    INSERT INTO buku_kas_umum (
       id,
       tanggal,
       rab_id,
@@ -286,6 +275,22 @@ export default function createKasUmumRepo(arg) {
       uraian,
       penerimaan,
       pengeluaran,
+      no_bukti,
+      saldo_after
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    RETURNING id, tanggal, rab_id, kode_ekonomi_id, kode_fungsi_id,
+              uraian, penerimaan, pengeluaran, no_bukti, saldo_after
+  `;
+
+    const values = [
+      id,
+      tanggal,
+      rab_id,
+      kode_ekonomi_id,
+      kode_fungsi_id,
+      uraian,
+      penerimaanNum,
+      pengeluaranNum,
       no_bukti,
       saldoAfter,
     ];
