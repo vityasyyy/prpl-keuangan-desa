@@ -166,7 +166,7 @@ export default function BukuKasUmumPage() {
               <Button
                 variant="green"
                 icon={
-                  <svg width="20" height="21" viewBox="0 0 20 21" fill="none">
+                  <svg width="25" height="21" viewBox="0 0 15 21" fill="none">
                     <path
                       d="M10 4.6665V16.3332M4.16669 10.4998H15.8334"
                       stroke="white"

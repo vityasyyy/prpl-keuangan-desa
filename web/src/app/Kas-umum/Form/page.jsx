@@ -419,6 +419,29 @@ export default function FormInputKasUmum() {
     setFormData((prev) => ({ ...prev, buatLagi: !prev.buatLagi }));
   };
 
+  const resetForm = () => {
+    // Reset semua field form ke state awal
+    setFormData({
+      tanggal: "",
+      kodeEko: "",
+      kodeRek: "",
+      bidang: "",
+      subBidang: "",
+      kegiatan: "",
+      akun: "",
+      kelompok: "",
+      jenis: "",
+      objek: "",
+      uraian: "",
+      pemasukan: "",
+      pengeluaran: "",
+      nomorBukti: "",
+      nettoTransaksi: "",
+      buatLagi: true, // Keep toggle on since user wants to create another
+      kodeRAB: "",
+    });
+  };
+
   const handleCancel = () => {
     // Navigate back to Kas Umum page without saving
     router.push("/Kas-umum");
@@ -469,6 +492,14 @@ export default function FormInputKasUmum() {
 
       console.log("✅ Success:", data);
       alert(data.message || "Data berhasil disimpan!");
+
+      // If user selected "Buat lagi", reset form for new entry
+      if (formData.buatLagi) {
+        resetForm();
+      } else {
+        // Otherwise navigate back to Kas Umum page
+        router.push("/Kas-umum");
+      }
     } catch (error) {
       console.error("🚨 Caught error:", error);
       alert(`Terjadi kesalahan: ${error.message || JSON.stringify(error)}`);
@@ -1118,24 +1149,19 @@ export default function FormInputKasUmum() {
                 </span>
                 <button
                   onClick={handleToggle}
-                  className="flex h-8 w-8 cursor-pointer items-center justify-center border-none bg-transparent p-0"
+                  className="relative flex h-6 w-12 cursor-pointer items-center rounded-full border-none transition-all duration-300"
+                  style={{
+                    backgroundColor: formData.buatLagi ? "#10B981" : "#D1D5DB",
+                    padding: "2px",
+                  }}
                 >
-                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                    <path
-                      d="M21.3333 6.66699H10.6667C5.51202 6.66699 1.33334 10.8457 1.33334 16.0003C1.33334 21.155 5.51202 25.3337 10.6667 25.3337H21.3333C26.488 25.3337 30.6667 21.155 30.6667 16.0003C30.6667 10.8457 26.488 6.66699 21.3333 6.66699Z"
-                      stroke="#1E1E1E"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M10.6667 20.0003C12.8758 20.0003 14.6667 18.2095 14.6667 16.0003C14.6667 13.7912 12.8758 12.0003 10.6667 12.0003C8.45754 12.0003 6.66668 13.7912 6.66668 16.0003C6.66668 18.2095 8.45754 20.0003 10.6667 20.0003Z"
-                      stroke="#1E1E1E"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  {/* Animated Circle */}
+                  <div
+                    className="h-4 w-4 rounded-full bg-white transition-all duration-300"
+                    style={{
+                      marginLeft: formData.buatLagi ? "calc(100% - 1rem)" : "0",
+                    }}
+                  />
                 </button>
               </div>
 
