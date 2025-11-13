@@ -2,6 +2,9 @@
 -- DROP (for clean re-run)
 -- =========================
 DROP TABLE IF EXISTS 
+    refresh_tokens,
+    users,
+    buku_pembantu_panjar,
     buku_bank,
     buku_kas_pajak,
     buku_kas_pembantu,

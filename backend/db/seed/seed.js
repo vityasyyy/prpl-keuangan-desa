@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import { Pool } from "pg";
 import "dotenv/config";
+import runMigrations from "../migrations/run-migrations.js";
 
 // --- Database Configuration ---
 const pool = new Pool({
@@ -338,6 +339,11 @@ async function main() {
     await testClient.query("SELECT 1");
     testClient.release();
     console.log("✅ Database connection successful");
+
+    // Run migrations first
+    console.log("\n📋 Running migrations before seeding...");
+    await runMigrations();
+    console.log("✅ Migrations completed\n");
 
     // Run seeding
     await seedDatabase();

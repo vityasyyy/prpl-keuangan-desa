@@ -74,7 +74,36 @@ async function main() {
     } else {
       logger.logError(err, "Unhandled error");
     }
-    res.status(500).json({ error: err.message || "Internal Server Error" });
+    
+    // Use the status from the error if provided, otherwise default to 500
+    let status = err.status || 500;
+    const response = {
+      error: err.error || err.message || "Internal Server Error"
+    };
+    
+    // Include hint if provided (for validation errors)
+    if (err.hint) {
+      response.hint = err.hint;
+    }
+    
+    // Handle PostgreSQL foreign key violations
+    if (err.code === '23503') {
+      status = 400;
+      response.error = "Data tidak valid";
+      
+      // Extract more helpful information from the error detail
+      if (err.detail) {
+        const match = err.detail.match(/Key \((\w+)\)=\(([^)]+)\)/);
+        if (match) {
+          const [, column, value] = match;
+          response.hint = `Nilai '${value}' tidak ditemukan. Pastikan Anda memilih dari dropdown yang tersedia.`;
+        } else {
+          response.hint = "Data yang dipilih tidak valid. Pastikan memilih dari dropdown yang tersedia.";
+        }
+      }
+    }
+    
+    res.status(status).json(response);
   });
 
   const port = parseInt(process.env.PORT, 10) || 3000;
@@ -112,3 +141,4 @@ main().catch((err) => {
   console.error("Failed to start application", err);
   process.exit(1);
 });
+

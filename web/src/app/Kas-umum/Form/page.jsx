@@ -421,25 +421,17 @@ export default function FormInputKasUmum() {
       // Map frontend field names to backend field names
       const payload = {
         tanggal: formData.tanggal,
-        // TODO: Add rab_id field to the form - this is required by backend
-        // You need to either:
-        // 1. Add a dropdown to select RAB
-        // 2. Get it from route params/context
-        // 3. Have a default RAB for the current period
-        // rab_id: "RAB001", // TEMPORARY PLACEHOLDER
         rab_id: formData.kodeRAB,
-
-        // TODO: Add kode_ekonomi_id field to the form - this is required by backend
-        // You can fetch the list from: GET /api/kas-umum/kode-ekonomi
-        // Add a dropdown similar to bidang/sub-bidang/kegiatan
-        kode_ekonomi_id: "KE001", // TEMPORARY PLACEHOLDER
-
+        kode_ekonomi_id: formData.objek, // Use the selected objek as kode_ekonomi_id
         kegiatan_id: formData.kegiatan,
         uraian: formData.uraian,
         pemasukan: formData.pemasukan,
         pengeluaran: formData.pengeluaran,
         nomor_bukti: formData.nomorBukti,
       };
+
+      console.log("📤 Sending payload:", payload);
+      console.log("📋 Current formData.objek:", formData.objek);
 
       const res = await fetch(`${API_BASE_URL}/kas-umum`, {
         method: "POST",
@@ -462,7 +454,9 @@ export default function FormInputKasUmum() {
 
       if (!res.ok) {
         console.error("❌ Backend error:", data);
-        throw data;
+        // Display the hint if available for better user feedback
+        const errorMsg = data.hint || data.error || "Terjadi kesalahan";
+        throw new Error(errorMsg);
       }
 
       console.log("✅ Success:", data);
