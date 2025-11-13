@@ -19,26 +19,169 @@ export default function InputDraftAPBDes() {
   const [bidangData, setBidangData] = useState([]); // To store full bidang objects
   const [subBidangData, setSubBidangData] = useState([]); // To store full subBidang objects
   const [kegiatanData, setKegiatanData] = useState([]); // To store full kegiatan objects
+  const [akunData, setAkunData] = useState([]);
+const [uraian1Options, setUraian1Options] = useState([]);
+const [uraian2Options, setUraian2Options] = useState([]);
+const [allUraian1Data, setAllUraian1Data] = useState([]);
+const [allUraian2Data, setAllUraian2Data] = useState([]);
+
+
+const [selectedAkunId, setSelectedAkunId] = useState(null);
+const [selectedUraian1Id, setSelectedUraian1Id] = useState(null);
+
 
   const [selectedBidangId, setSelectedBidangId] = useState(null);
   const [selectedSubBidangId, setSelectedSubBidangId] = useState(null);
 
-    useEffect(() => {
-    async function fetchAkunOptions() {
-      try {
-        const response = await fetch("http://localhost:8081/api/apbd/akun");
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        const options = data.map((item) => item.uraian);
-        setAkunOptions(options);
-      } catch (error) {
-        console.error("Failed to fetch akun options:", error);
-      }
+const [formData, setFormData] = useState({
+  kodeRekEkonomi: "",
+  pendapatanBelanja: "",
+  uraian1: "",
+  uraian2: "",
+  kodeRekBidang: "",
+  bidang: "",
+  subBidang: "",
+  kegiatan: "",
+  volumeOutput: "",
+  volumeInput: "",
+  satuanOutput: "",
+  satuanInput: "",
+  anggaran: "",
+  sumberDana: "",
+});
+
+  // ====== Fetch Akun ======
+useEffect(() => {
+  async function fetchAkunOptions() {
+    try {
+      const response = await fetch("http://localhost:8081/api/apbd/akun");
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      setAkunData(data); // simpan full object agar bisa ambil id-nya
+      const options = data.map((item) => item.uraian);
+      setAkunOptions(options);
+    } catch (error) {
+      console.error("Failed to fetch akun options:", error);
     }
-    fetchAkunOptions();
-  }, []);
+  }
+  fetchAkunOptions();
+}, []);
+
+
+useEffect(() => {
+  if (akunData.length > 0) {
+    setAkunOptions(akunData.map((a) => a.uraian));
+  }
+}, [akunData]);
+
+// ======================================
+// Fetch semua data uraian1
+// ======================================
+useEffect(() => {
+  async function fetchAllUraian1() {
+    try {
+      const sumberIds = ["4.1", "4.2", "4.3", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2"];
+      let combined = [];
+      for (const id of sumberIds) {
+        const res = await fetch(`http://localhost:8081/api/apbd/uraian1?sumberDanaId=${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          combined = [...combined, ...data];
+        }
+      }
+      setAllUraian1Data(combined);
+    } catch (err) {
+      console.error("Error fetch uraian1:", err);
+    }
+  }
+  fetchAllUraian1();
+}, []);
+
+// ======================================
+// Fetch semua data uraian2
+// ======================================
+useEffect(() => {
+  async function fetchAllUraian2() {
+    try {
+      let combined = [];
+      for (const uraian1 of allUraian1Data) {
+        const res = await fetch(`http://localhost:8081/api/apbd/uraian2?uraian1Id=${uraian1.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          combined = [...combined, ...data];
+        }
+      }
+      setAllUraian2Data(combined);
+    } catch (err) {
+      console.error("Error fetch uraian2:", err);
+    }
+  }
+  if (allUraian1Data.length > 0) fetchAllUraian2();
+}, [allUraian1Data]);
+
+
+// ====== Fetch Uraian 1 berdasarkan Akun ======
+useEffect(() => {
+  if (!selectedAkunId) {
+    setUraian1Options([]);
+    return;
+  }
+
+  const filtered = allUraian1Data.filter((item) =>
+    item.id.startsWith(`${selectedAkunId}.`)
+  );
+
+  setUraian1Options(filtered);
+}, [selectedAkunId, allUraian1Data]);
+
+
+
+// ====== Fetch Uraian 2 berdasarkan Uraian 1 ======
+useEffect(() => {
+  if (!selectedUraian1Id) {
+    setUraian2Options([]);
+    return;
+  }
+
+  const fetchUraian2Group = async () => {
+    try {
+      const prefix = selectedUraian1Id.slice(0, 3);
+      const groups = {
+        "4.1": ["4.1.1", "4.1.2", "4.1.3", "4.1.4"],
+        "4.2": ["4.2.1", "4.2.2", "4.2.3", "4.2.4", "4.2.5"],
+        "4.3": ["4.3.1", "4.3.2", "4.3.3", "4.3.4", "4.3.5", "4.3.6", "4.3.9"],
+        "5.1": ["5.1.1", "5.1.2", "5.1.3", "5.1.4"],
+        "5.2": ["5.2.1", "5.2.2", "5.2.3", "5.2.4", "5.2.5", "5.2.6", "5.2.7"],
+        "5.3": ["5.3.1", "5.3.2", "5.3.3", "5.3.4", "5.3.5", "5.3.6", "5.3.7", "5.3.8", "5.3.9"],
+        "5.4": ["5.4.1"],
+        "6.1": ["6.1.1", "6.1.2", "6.1.3", "6.1.9"],
+        "6.2": ["6.2.1", "6.2.2", "6.2.9"],
+      };
+
+      const relatedIds = groups[prefix] || [selectedUraian1Id];
+
+      const results = await Promise.all(
+        relatedIds.map(async (id) => {
+          const res = await fetch(`http://localhost:8081/api/apbd/uraian2?uraian1Id=${id}`);
+          if (!res.ok) return [];
+          return await res.json();
+        })
+      );
+
+      // gabung dan urutkan berdasarkan full_code
+      const merged = results.flat().sort((a, b) => a.full_code.localeCompare(b.full_code));
+      setUraian2Options(merged);
+    } catch (err) {
+      console.error("Error fetching grouped uraian2:", err);
+      setUraian2Options([]);
+    }
+  };
+
+  fetchUraian2Group();
+}, [selectedUraian1Id]); // ✅ HANYA INI, jangan ada array/object lain
+
+
+
 
   useEffect(() => {
     async function fetchBidangOptions() {
@@ -107,47 +250,6 @@ export default function InputDraftAPBDes() {
     }
     fetchKegiatanOptions();
   }, [selectedSubBidangId]);
-
- const [uraianOptions, setUraianOptions] = useState([]);
-
-useEffect(() => {
-  async function fetchUraian() {
-    try {
-      const response = await fetch("http://localhost:8081/api/apbd/uraian");
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-      const data = await response.json();
-      const options =
-        Array.isArray(data) && typeof data[0] === "object"
-          ? data.map(item => item.uraian)
-          : data;
-
-      setUraianOptions(options);
-    } catch (error) {
-      console.error("Failed to fetch uraian options:", error);
-    }
-  }
-
-  fetchUraian();
-}, []);
-
-
-  const [formData, setFormData] = useState({
-    kodeRekEkonomi: "",
-    pendapatanBelanja: "",
-    uraian1: "",
-    uraian2: "",
-    kodeRekBidang: "",
-    bidang: "",
-    subBidang: "",
-    kegiatan: "",
-    volumeOutput: "",
-    volumeInput: "",
-    satuanOutput: "",
-    satuanInput: "",
-    anggaran: "",
-    sumberDana: "",
-  });
 
   const [buatLagi, setBuatLagi] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -305,30 +407,50 @@ useEffect(() => {
                 onChange={(val) => handleOnChange("kodeRekEkonomi", val)}
               />
             </div>
-            <div className="w-[35%] min-w-[200px]">
-              <FormDropdown
-                label="Pendapatan / Belanja / Pembiayaan"
-                options={akunOptions}
-                value={formData.pendapatanBelanja}
-                onChange={(val) => handleOnChange("pendapatanBelanja", val)}
-              />
-            </div>
-            <div className="w-[27.5%] min-w-[180px]">
-              <FormDropdown
-                label="Uraian 1"
-                options={uraianOptions}
-                value={formData.uraian1}
-                onChange={(val) => handleOnChange("uraian1", val)}
-              />
-            </div>
-            <div className="w-[27.5%] min-w-[180px]">
-              <FormDropdown
-                label="Uraian 2"
-                options={uraianOptions}
-                value={formData.uraian2}
-                onChange={(val) => handleOnChange("uraian2", val)}
-              />
-            </div>
+        <div className="w-[35%] min-w-[200px]">
+  <FormDropdown
+    label="Pendapatan / Belanja / Pembiayaan"
+    options={akunOptions}
+    value={formData.pendapatanBelanja}
+    onChange={(val) => {
+      handleOnChange("pendapatanBelanja", val);
+      const selected = akunData.find((a) => a.uraian === val);
+      setSelectedAkunId(selected?.id || null);
+
+      // reset uraian1 & uraian2
+      setUraian1Options([]);
+      setUraian2Options([]);
+      setFormData((prev) => ({ ...prev, uraian1: "", uraian2: "" }));
+    }}
+  />
+</div>
+
+<div className="w-[27.5%] min-w-[180px]">
+  <FormDropdown
+    label="Uraian 1"
+    options={uraian1Options.map((u) => u.uraian1)}
+    value={formData.uraian1}
+    onChange={(val) => {
+      handleOnChange("uraian1", val);
+      const selected = uraian1Options.find((u) => u.uraian1 === val);
+      setSelectedUraian1Id(selected?.id || null);
+
+      // reset uraian2
+      setUraian2Options([]);
+      setFormData((prev) => ({ ...prev, uraian2: "" }));
+    }}
+  />
+</div>
+
+<div className="w-[27.5%] min-w-[180px]">
+  <FormDropdown
+    label="Uraian 2"
+    options={uraian2Options.map((u) => u.uraian2)}
+    value={formData.uraian2}
+    onChange={(val) => handleOnChange("uraian2", val)}
+  />
+</div>
+
           </div>
         </div>
 
