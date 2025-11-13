@@ -68,13 +68,11 @@ describe("KasUmumService (Unit)", () => {
       });
       expect(mockKasUmumRepo.listBkuRows).toHaveBeenCalledWith({
         monthDate: '2025-01-01',
-        rabId: undefined,
-        rkkId: undefined,
+        yearDate: undefined,
       });
       expect(mockKasUmumRepo.getBkuSummary).toHaveBeenCalledWith({
         monthDate: '2025-01-01',
-        rabId: undefined,
-        rkkId: undefined,
+        yearDate: undefined,
       });
     });
 
@@ -93,8 +91,7 @@ describe("KasUmumService (Unit)", () => {
       // Assert
       expect(mockKasUmumRepo.listBkuRows).toHaveBeenCalledWith({
         monthDate: '2025-01-01',
-        rabId: undefined,
-        rkkId: undefined,
+        yearDate: undefined,
       });
     });
 
@@ -102,8 +99,8 @@ describe("KasUmumService (Unit)", () => {
       // Act & Assert
       await expect(kasUmumService.getBku({})).rejects.toEqual({
         status: 400,
-        error: "month_required",
-        hint: "YYYY-MM atau YYYY-MM-DD",
+        error: "period_required",
+        hint: "Gunakan year=YYYY atau month=YYYY-MM / YYYY-MM-DD",
       });
     });
 
@@ -122,8 +119,7 @@ describe("KasUmumService (Unit)", () => {
       // Assert
       expect(mockKasUmumRepo.listBkuRows).toHaveBeenCalledWith({
         monthDate: '2025-01-01',
-        rabId: 1,
-        rkkId: undefined,
+        yearDate: undefined,
       });
     });
 
@@ -142,8 +138,7 @@ describe("KasUmumService (Unit)", () => {
       // Assert
       expect(mockKasUmumRepo.listBkuRows).toHaveBeenCalledWith({
         monthDate: '2025-01-01',
-        rabId: undefined,
-        rkkId: 2,
+        yearDate: undefined,
       });
     });
   });
