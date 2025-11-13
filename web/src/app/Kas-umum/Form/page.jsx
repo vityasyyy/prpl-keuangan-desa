@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Breadcrumb from "@/components/Breadcrumb";
 import Button from "@/components/Button";
@@ -8,6 +9,7 @@ import Button from "@/components/Button";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 export default function FormInputKasUmum() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     tanggal: "",
     kodeEko: "",
@@ -416,6 +418,12 @@ export default function FormInputKasUmum() {
   const handleToggle = () => {
     setFormData((prev) => ({ ...prev, buatLagi: !prev.buatLagi }));
   };
+
+  const handleCancel = () => {
+    // Navigate back to Kas Umum page without saving
+    router.push("/Kas-umum");
+  };
+
   const handleSubmit = async () => {
     try {
       // Map frontend field names to backend field names
@@ -1088,6 +1096,7 @@ export default function FormInputKasUmum() {
             <Button
               variant="danger"
               className="px-[18px] py-2.5"
+              onClick={handleCancel}
               icon={
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path
