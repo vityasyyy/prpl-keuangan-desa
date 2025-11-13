@@ -13,10 +13,17 @@ export default function kasPembantuRouter(handler) {
   r.put("/kegiatan/:id", handler.editKegiatan);
 
   // buku pembantu panjar
-  r.get('/panjar', handler.listPanjar);
-  r.delete('/panjar/:id', handler.deletePanjar);
-  r.post('/panjar', handler.createPanjar);
-  r.get('/panjar/:id', handler.getPanjarById);  
-  r.put('/panjar/:id', handler.editPanjar);    
+  r.get("/panjar", handler.listPanjar);
+  r.delete("/panjar/:id", handler.deletePanjar);
+  r.post("/panjar", handler.createPanjar);
+  r.get("/panjar/:id", handler.getPanjarById);
+  r.put("/panjar/:id", handler.editPanjar);
+
+  // buku pembantu pajak
+  r.get("/pajak", handler.listPajak);
+  r.get("/pajak/:id", handler.getPajakById);
+  r.post("/pajak", handler.createPajak);
+  r.put("/pajak/:id", handler.editPajak);
+  r.delete("/pajak/:id", handler.deletePajak);
   return r;
 }
