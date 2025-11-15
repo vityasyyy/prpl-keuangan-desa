@@ -7,8 +7,13 @@ export default function createKasPembantuHandler(service) {
     try {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
-      const bulan = req.query.bulan ? parseInt(req.query.bulan) : 1;
-      const tahun = req.query.tahun ? parseInt(req.query.tahun) : 2024;
+      const now = new Date();
+      // Only use bulan if explicitly provided in query
+      const bulan = req.query.bulan ? parseInt(req.query.bulan) : null;
+      // Use current year if tahun not provided
+      const tahun = req.query.tahun
+        ? parseInt(req.query.tahun)
+        : now.getFullYear();
       const type_enum = req.query.type_enum || "";
       const search = req.query.search || "";
       const result = await service.getKegiatan({
@@ -29,12 +34,10 @@ export default function createKasPembantuHandler(service) {
       const { id } = req.params;
       const kegiatan = await service.getKegiatanById(id);
       if (!kegiatan || kegiatan.message) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: kegiatan?.message || "Data tidak ditemukan",
-          });
+        return res.status(404).json({
+          success: false,
+          message: kegiatan?.message || "Data tidak ditemukan",
+        });
       }
       res.json({ success: true, data: kegiatan });
     } catch (err) {
@@ -145,12 +148,10 @@ export default function createKasPembantuHandler(service) {
       const { id } = req.params;
       const panjar = await service.getPanjarById(id);
       if (!panjar || panjar.message) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: panjar?.message || "Data tidak ditemukan",
-          });
+        return res.status(404).json({
+          success: false,
+          message: panjar?.message || "Data tidak ditemukan",
+        });
       }
       res.json({ success: true, data: panjar });
     } catch (err) {
@@ -206,12 +207,10 @@ export default function createKasPembantuHandler(service) {
       const { id } = req.params;
       const pajak = await service.getPajakById(id);
       if (!pajak || pajak.message) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: pajak?.message || "Data tidak ditemukan",
-          });
+        return res.status(404).json({
+          success: false,
+          message: pajak?.message || "Data tidak ditemukan",
+        });
       }
       res.json({ success: true, data: pajak });
     } catch (err) {
@@ -259,6 +258,36 @@ export default function createKasPembantuHandler(service) {
     }
   };
 
+  // Category handlers
+  const getBidang = async (req, res, next) => {
+    try {
+      const bidang = await service.getKodeFungsi(null);
+      res.json({ success: true, data: bidang });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  const getSubBidang = async (req, res, next) => {
+    try {
+      const { bidangId } = req.params;
+      const subBidang = await service.getKodeFungsi(bidangId);
+      res.json({ success: true, data: subBidang });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  const getKegiatan = async (req, res, next) => {
+    try {
+      const { subBidangId } = req.params;
+      const kegiatan = await service.getKegiatanBySubBidang(subBidangId);
+      res.json({ success: true, data: kegiatan });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   return {
     health,
     kegiatan,
@@ -276,5 +305,8 @@ export default function createKasPembantuHandler(service) {
     createPajak,
     editPajak,
     getPajakById,
+    getBidang,
+    getSubBidang,
+    getKegiatan,
   };
 }

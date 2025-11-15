@@ -1,13 +1,83 @@
 "use client";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/features/kas-pembantu/Sidebar";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { Calendar } from "lucide-react";
 import Footer from "@/features/kas-pembantu/Footer";
+import {
+  createKegiatan,
+  getBidang,
+  getSubBidang,
+  getKegiatan as getKegiatanOptions,
+} from "@/services/kas-pembantu";
+import { parseCurrency, formatCurrency } from "@/lib/format";
 
 export default function Page() {
+  const router = useRouter();
   const dateInputRef = useRef(null);
+
+  // Form state
   const [tanggal, setTanggal] = useState("");
+  const [kodeRek, setKodeRek] = useState("");
+  const [bidang, setBidang] = useState("");
+  const [subBidang, setSubBidang] = useState("");
+  const [kegiatan, setKegiatan] = useState("");
+  const [uraian, setUraian] = useState("");
+  const [dariBendahara, setDariBendahara] = useState("");
+  const [swadaya, setSwadaya] = useState("");
+  const [belanjaBarang, setBelanjaBarang] = useState("");
+  const [belanjaModal, setBelanjaModal] = useState("");
+  const [nomorBukti, setNomorBukti] = useState("");
+
+  // UI state
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [buatLagi, setBuatLagi] = useState(false);
+
+  // Category dropdown data
+  const [bidangOptions, setBidangOptions] = useState([]);
+  const [subBidangOptions, setSubBidangOptions] = useState([]);
+  const [kegiatanOptions, setKegiatanOptions] = useState([]);
+
+  // Fetch initial bidang options
+  useEffect(() => {
+    async function fetchBidang() {
+      const data = await getBidang();
+      setBidangOptions(data);
+    }
+    fetchBidang();
+  }, []);
+
+  // Fetch sub-bidang when bidang changes
+  useEffect(() => {
+    if (bidang) {
+      async function fetchSubBidang() {
+        const data = await getSubBidang(bidang);
+        setSubBidangOptions(data);
+        setSubBidang(""); // Reset sub-bidang selection
+        setKegiatanOptions([]); // Clear kegiatan
+      }
+      fetchSubBidang();
+    } else {
+      setSubBidangOptions([]);
+      setKegiatanOptions([]);
+    }
+  }, [bidang]);
+
+  // Fetch kegiatan when sub-bidang changes
+  useEffect(() => {
+    if (subBidang) {
+      async function fetchKegiatan() {
+        const data = await getKegiatanOptions(subBidang);
+        setKegiatanOptions(data);
+        setKegiatan(""); // Reset kegiatan selection
+      }
+      fetchKegiatan();
+    } else {
+      setKegiatanOptions([]);
+    }
+  }, [subBidang]);
 
   const formatTanggal = (value) => {
     if (!value) return "";
@@ -20,25 +90,80 @@ export default function Page() {
   };
 
   const handleCreate = () => {
-    console.log("buat lagi diklik");
+    setBuatLagi(true);
+    // Reset form
+    setTanggal("");
+    setKodeRek("");
+    setBidang("");
+    setSubBidang("");
+    setKegiatan("");
+    setUraian("");
+    setDariBendahara("");
+    setSwadaya("");
+    setBelanjaBarang("");
+    setBelanjaModal("");
+    setNomorBukti("");
+    setError(null);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    console.log("simpan diklik");
+
+    // Validation
+    if (!tanggal || !uraian) {
+      setError("Tanggal dan Uraian harus diisi");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Parse currency values
+      const penerimaan = parseCurrency(dariBendahara) + parseCurrency(swadaya);
+      const pengeluaran = parseCurrency(belanjaBarang) + parseCurrency(belanjaModal);
+
+      // Map classification to type_enum
+      const type_enum = kegiatan || "kegiatan";
+
+      // Prepare payload
+      const payload = {
+        bku_id: "bku003", // Default for now
+        type_enum: type_enum,
+        tanggal: tanggal, // Already in YYYY-MM-DD format
+        uraian: uraian,
+        penerimaan: penerimaan,
+        pengeluaran: pengeluaran,
+      };
+
+      // Submit to API
+      await createKegiatan(payload);
+
+      // Success - check if "buat lagi" is enabled
+      if (buatLagi) {
+        handleCreate();
+      } else {
+        // Redirect to list
+        router.push("/Kas-pembantu-kegiatan");
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Helper untuk input Rupiah (dipakai berulang kali)
-  const RupiahInput = ({ label, placeholder }) => (
+  const RupiahInput = ({ label, placeholder, value, onChange }) => (
     <div className="relative">
-      <label className="block text-sm text-gray-800 mb-1">{label}</label>
-      <span className="absolute left-3 top-[34px] text-gray-400 text-sm">
-        Rp
-      </span>
+      <label className="mb-1 block text-sm text-gray-800">{label}</label>
+      <span className="absolute top-[34px] left-3 text-sm text-gray-400">Rp</span>
       <input
         type="text"
         placeholder={placeholder || "0.000.000,00"}
-        className="w-full border border-gray-300 rounded-md pl-9 pr-3 py-2 text-sm placeholder-gray-400 text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-400"
+        value={value}
+        onChange={onChange}
+        className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
       />
     </div>
   );
@@ -47,40 +172,42 @@ export default function Page() {
     <div className="flex h-screen bg-gray-100">
       <Sidebar />
 
-      <div className="flex-1 p-8 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto p-8">
         <BreadcrumbHeader items={["Penatausahaan", "Buku Pembantu Kegiatan"]} />
 
-        <h1 className="text-[20px] font-semibold text-gray-800 mb-6 mt-2">
+        <h1 className="mt-2 mb-6 text-[20px] font-semibold text-gray-800">
           Input Data Pembantu Kegiatan
         </h1>
 
         <form className="space-y-5" onSubmit={handleSave}>
+          {/* Error Alert */}
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 p-4">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
           {/* Detail */}
-          <div className="border border-gray-300 rounded-2xl bg-white p-5">
-            <h2 className="text-gray-800 font-semibold mb-4">Detail</h2>
+          <div className="rounded-2xl border border-gray-300 bg-white p-5">
+            <h2 className="mb-4 font-semibold text-gray-800">Detail</h2>
 
             <div className="flex flex-col space-y-4">
               {/* Tanggal */}
               <div>
-                <label className="block text-sm text-gray-800 mb-1">
-                  Tanggal
-                </label>
+                <label className="mb-1 block text-sm text-gray-800">Tanggal</label>
                 <div
-                  className="relative w-[180px] border border-gray-300 rounded-md pl-9 pr-3 py-2 
-                                   bg-white cursor-pointer hover:bg-gray-50 transition-colors
-                                   focus-within:ring-1 focus-within:ring-gray-400"
+                  className="relative w-[180px] cursor-pointer rounded-md border border-gray-300 bg-white py-2 pr-3 pl-9 transition-colors focus-within:ring-1 focus-within:ring-gray-400 hover:bg-gray-50"
                   onClick={() => dateInputRef.current?.showPicker()}
                 >
-                  <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-600 pointer-events-none" />
+                  <Calendar className="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-gray-600" />
                   <input
                     ref={dateInputRef}
                     type="date"
                     value={tanggal}
                     onChange={(e) => setTanggal(e.target.value)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer
-                                       [appearance:none] [&::-webkit-calendar-picker-indicator]:opacity-0"
+                    className="absolute inset-0 h-full w-full cursor-pointer [appearance:none] opacity-0 [&::-webkit-calendar-picker-indicator]:opacity-0"
                   />
-                  <span className="text-sm text-gray-800 select-none pointer-events-none uppercase">
+                  <span className="pointer-events-none text-sm text-gray-800 uppercase select-none">
                     {tanggal ? formatTanggal(tanggal) : "DD/MM/YYYY"}
                   </span>
                 </div>
@@ -88,74 +215,119 @@ export default function Page() {
 
               {/* Klasifikasi Bidang Kegiatan */}
               <div>
-                <label className="block text-sm text-gray-800 mb-1">
+                <label className="mb-1 block text-sm text-gray-800">
                   Klasifikasi Bidang Kegiatan
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-400">
-                    <option value="">Kode Rek</option>
-                  </select>
-                  <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-400">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+                  <input
+                    type="text"
+                    placeholder="Kode Rek"
+                    value={kodeRek}
+                    onChange={(e) => setKodeRek(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
+                  />
+                  <select
+                    value={bidang}
+                    onChange={(e) => setBidang(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:ring-1 focus:ring-gray-400 focus:outline-none"
+                  >
                     <option value="">Bidang</option>
+                    {bidangOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.uraian}
+                      </option>
+                    ))}
                   </select>
-                  <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-400">
+                  <select
+                    value={subBidang}
+                    onChange={(e) => setSubBidang(e.target.value)}
+                    disabled={!bidang}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:ring-1 focus:ring-gray-400 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                  >
                     <option value="">Sub-Bidang</option>
+                    {subBidangOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.uraian}
+                      </option>
+                    ))}
                   </select>
-                  <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-400">
+                  <select
+                    value={kegiatan}
+                    onChange={(e) => setKegiatan(e.target.value)}
+                    disabled={!subBidang}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:ring-1 focus:ring-gray-400 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                  >
                     <option value="">Kegiatan</option>
+                    {kegiatanOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.uraian}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
 
               {/* Uraian */}
               <div>
-                <label className="block text-sm text-gray-800 mb-1">
-                  Uraian
-                </label>
+                <label className="mb-1 block text-sm text-gray-800">Uraian</label>
                 <input
                   type="text"
                   placeholder="Uraian Pajak / Retribusi / Penerimaan Lainnya"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm placeholder-gray-600 text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  value={uraian}
+                  onChange={(e) => setUraian(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-600 focus:ring-1 focus:ring-gray-400 focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
           {/* Penerimaan */}
-          <div className="border border-gray-300 rounded-2xl bg-white p-5">
-            <h2 className="text-gray-800 font-semibold mb-4">Penerimaan</h2>
+          <div className="rounded-2xl border border-gray-300 bg-white p-5">
+            <h2 className="mb-4 font-semibold text-gray-800">Penerimaan</h2>
             <div className="flex flex-col space-y-4">
-              <RupiahInput label="Dari Bendahara" />
-              <RupiahInput label="Swadaya Masyarakat" />
+              <RupiahInput
+                label="Dari Bendahara"
+                value={dariBendahara}
+                onChange={(e) => setDariBendahara(e.target.value)}
+              />
+              <RupiahInput
+                label="Swadaya Masyarakat"
+                value={swadaya}
+                onChange={(e) => setSwadaya(e.target.value)}
+              />
             </div>
           </div>
 
           {/* Pengeluaran */}
-          <div className="border border-gray-300 rounded-2xl bg-white p-5">
-            <h2 className="text-gray-800 font-semibold mb-4">Pengeluaran</h2>
+          <div className="rounded-2xl border border-gray-300 bg-white p-5">
+            <h2 className="mb-4 font-semibold text-gray-800">Pengeluaran</h2>
             <div className="flex flex-col space-y-4">
-              <RupiahInput label="Belanja Barang dan Jasa" />
-              <RupiahInput label="Belanja Modal" />
+              <RupiahInput
+                label="Belanja Barang dan Jasa"
+                value={belanjaBarang}
+                onChange={(e) => setBelanjaBarang(e.target.value)}
+              />
+              <RupiahInput
+                label="Belanja Modal"
+                value={belanjaModal}
+                onChange={(e) => setBelanjaModal(e.target.value)}
+              />
             </div>
           </div>
 
           {/* Bukti dan Kumulatif */}
-          <div className="border border-gray-300 rounded-2xl bg-white p-5">
-            <h2 className="text-gray-800 font-semibold mb-4">
-              Bukti dan Kumulatif
-            </h2>
+          <div className="rounded-2xl border border-gray-300 bg-white p-5">
+            <h2 className="mb-4 font-semibold text-gray-800">Bukti dan Kumulatif</h2>
             <div className="flex flex-col space-y-4">
               <div className="relative">
-                <label className="block text-sm text-gray-800 mb-1">
-                  Nomor Bukti
-                </label>
-                <span className="absolute left-3 top-[34px] text-gray-400 text-sm">
-                  No
-                </span>
+                <label className="mb-1 block text-sm text-gray-800">Nomor Bukti</label>
+                <span className="absolute top-[34px] left-3 text-sm text-gray-400">No</span>
                 <input
                   type="text"
                   placeholder="12345"
-                  className="w-full border border-gray-300 rounded-md pl-9 pr-3 py-2 text-sm placeholder-gray-400 text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  value={nomorBukti}
+                  onChange={(e) => setNomorBukti(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
                 />
               </div>
               <RupiahInput label="Jumlah Pengembalian ke Bendahara" />
@@ -164,17 +336,17 @@ export default function Page() {
 
           {/* Saldo Kas */}
           <div>
-            <h2 className="text-gray-800 font-semibold mb-2">Saldo Kas</h2>
-            <div className="border border-gray-300 rounded-md bg-white px-3 py-2">
+            <h2 className="mb-2 font-semibold text-gray-800">Saldo Kas</h2>
+            <div className="rounded-md border border-gray-300 bg-white px-3 py-2">
               <div className="relative flex items-center">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm text-gray-400">
                   Rp
                 </span>
                 <input
                   type="text"
                   value="100.000.000,00"
                   readOnly
-                  className="w-full pl-9 pr-3 py-1.5 text-sm text-gray-800 bg-white focus:outline-none"
+                  className="w-full bg-white py-1.5 pr-3 pl-9 text-sm text-gray-800 focus:outline-none"
                 />
               </div>
             </div>
@@ -185,6 +357,7 @@ export default function Page() {
             onDelete={handleDelete}
             onCreate={handleCreate}
             onSave={handleSave}
+            isLoading={loading}
           />
         </form>
       </div>

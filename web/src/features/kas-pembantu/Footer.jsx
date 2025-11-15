@@ -11,26 +11,26 @@ export default function Footer({ onDelete, onCreate, onSave }) {
   };
 
   return (
-    <div className="flex justify-between items-center mt-6">
+    <div className="mt-6 flex items-center justify-between">
       {/* Tombol Hapus (kiri) */}
       <button
         type="button"
         onClick={onDelete}
-        className="flex items-center gap-2 px-5 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+        className="flex items-center gap-2 rounded-md bg-red-600 px-5 py-2 text-white transition-colors hover:bg-red-700"
       >
         Hapus
-        <Trash2 className="w-4 h-4" />
+        <Trash2 className="h-4 w-4" />
       </button>
 
       {/* Kanan */}
       <div className="flex items-center space-x-4">
         {/* Teks dan Toggle */}
         <div className="flex items-center gap-2">
-          <span className="text-gray-800 text-sm font-medium">Buat lagi</span>
+          <span className="text-sm font-medium text-gray-800">Buat lagi</span>
           <button
             type="button"
             onClick={handleToggle}
-            className={`relative w-9 h-5 rounded-full border-[2.5px] flex items-center transition-colors duration-200 ${
+            className={`relative flex h-5 w-9 items-center rounded-full border-[2.5px] transition-colors duration-200 ${
               isActive
                 ? "border-black bg-gradient-to-r from-blue-500/90 to-blue-400/90"
                 : "border-black bg-transparent"
@@ -44,7 +44,7 @@ export default function Footer({ onDelete, onCreate, onSave }) {
             />
             {/* bola putih */}
             <span
-              className={`absolute rounded-full bg-white border-[2.5px] border-black w-3 h-3 top-1/2 -translate-y-1/2 transition-transform duration-200 ${
+              className={`absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full border-[2.5px] border-black bg-white transition-transform duration-200 ${
                 isActive ? "translate-x-[18px]" : "translate-x-[2px]"
               }`}
             />
@@ -55,10 +55,10 @@ export default function Footer({ onDelete, onCreate, onSave }) {
         <button
           type="submit"
           onClick={onSave}
-          className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-transform active:scale-95"
+          className="flex items-center gap-2 rounded-md bg-blue-600 px-5 py-2 text-white transition-transform hover:bg-blue-700 active:scale-95"
         >
           Simpan
-          <Save className="w-4 h-4" />
+          <Save className="h-4 w-4" />
         </button>
       </div>
     </div>

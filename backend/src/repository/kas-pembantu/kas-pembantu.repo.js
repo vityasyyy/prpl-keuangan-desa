@@ -153,7 +153,9 @@ export default function createRepo(db) {
     return rows.length > 0;
   }
   async function getLastSaldoByBkuId(bku_id) {
-    const q = `SELECT saldo_after FROM buku_kas_pembantu WHERE bku_id = ${P(1)} ORDER BY tanggal DESC, id DESC LIMIT 1`;
+    const q = `SELECT saldo_after FROM buku_kas_pembantu WHERE bku_id = ${P(
+      1
+    )} ORDER BY tanggal DESC, id DESC LIMIT 1`;
     const { rows } = await db.query(q, [bku_id]);
     if (rows.length === 0) return null;
     return Number(rows[0].saldo_after);
@@ -231,7 +233,7 @@ export default function createRepo(db) {
 
       // hitung saldo baru untuk row ini
       const newSaldoAfter = Number(
-        (prevSaldo + newPenerimaan - newPengeluaran).toFixed(2),
+        (prevSaldo + newPenerimaan - newPengeluaran).toFixed(2)
       );
       const oldSaldoAfter = Number(oldRow.saldo_after ?? 0);
       const delta = Number((newSaldoAfter - oldSaldoAfter).toFixed(2));
@@ -581,7 +583,7 @@ export default function createRepo(db) {
 
       // hitung saldo baru untuk row ini
       const newSaldoAfter = Number(
-        (prevSaldo + newPemotongan - newPenyetoran).toFixed(2),
+        (prevSaldo + newPemotongan - newPenyetoran).toFixed(2)
       );
       const oldSaldoAfter = Number(oldRow.saldo_after ?? 0);
       const delta = Number((newSaldoAfter - oldSaldoAfter).toFixed(2));
@@ -632,6 +634,25 @@ export default function createRepo(db) {
     }
   }
 
+  // Fetch kode_fungsi (categories) hierarchically
+  async function getKodeFungsi(parentId = null) {
+    let sql = `
+      SELECT id, full_code, uraian, level, parent_id
+      FROM kode_fungsi
+    `;
+    const params = [];
+
+    if (parentId === null) {
+      sql += ` WHERE level = 'bidang' ORDER BY id`;
+    } else {
+      sql += ` WHERE parent_id = $1 ORDER BY id`;
+      params.push(parentId);
+    }
+
+    const { rows } = await db.query(sql, params);
+    return rows;
+  }
+
   return {
     listKegiatanTransaksi,
     getKegiatanById,
@@ -654,5 +675,6 @@ export default function createRepo(db) {
     getLastSaldoPajak,
     insertPajak,
     updatePajakById,
+    getKodeFungsi,
   };
 }

@@ -32,7 +32,7 @@ export default function createKasPembantuService(repo) {
       } catch (error) {
         logger.logError(
           error.message,
-          "error getting all buku_kas_pembantu data",
+          "error getting all buku_kas_pembantu data"
         );
       }
 
@@ -104,7 +104,7 @@ export default function createKasPembantuService(repo) {
       const lastSaldo = await repo.getLastSaldoByBkuId(payload.bku_id);
       const starting = lastSaldo === null ? 0 : lastSaldo;
       const saldo_after = Number(
-        (starting + penerimaan - pengeluaran).toFixed(2),
+        (starting + penerimaan - pengeluaran).toFixed(2)
       );
 
       // generate id sederhana (unik).
@@ -586,6 +586,17 @@ export default function createKasPembantuService(repo) {
       if (!updated)
         throw { status: 404, message: `Pajak entry with id ${id} not found` };
       return updated;
+    },
+
+    // Category/Master Data Methods
+    async getKodeFungsi(parentId = null) {
+      const categories = await repo.getKodeFungsi(parentId);
+      return categories || [];
+    },
+
+    async getKegiatanBySubBidang(parentId) {
+      const kegiatan = await repo.getKodeFungsi(parentId);
+      return kegiatan || [];
     },
   };
 }
