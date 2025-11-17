@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/features/kas-pembantu/Sidebar";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
@@ -56,9 +56,9 @@ export default function Page() {
       setLoading(true);
       setError(null);
 
-      // Parse currency values
-      const pemotonganAmount = parseCurrency(pemotongan);
-      const penyetoranAmount = parseCurrency(penyetoran);
+      // Parse currency values - convert to number directly
+      const pemotonganAmount = pemotongan ? parseInt(pemotongan) : 0;
+      const penyetoranAmount = penyetoran ? parseInt(penyetoran) : 0;
 
       // Prepare payload
       const payload = {
@@ -86,19 +86,34 @@ export default function Page() {
     }
   };
 
+  const memoizedSetPemotongan = useCallback((value) => {
+    setPemotongan(value);
+  }, []);
+
+  const memoizedSetPenyetoran = useCallback((value) => {
+    setPenyetoran(value);
+  }, []);
+
   // Helper untuk input Rupiah (dipakai berulang kali)
-  const RupiahInput = ({ label, placeholder, value, onChange }) => (
-    <div className="relative">
-      <label className="mb-1 block text-sm text-gray-800">{label}</label>
-      <span className="absolute top-[34px] left-3 text-sm text-gray-400">Rp</span>
-      <input
-        type="text"
-        placeholder={placeholder || "0.000.000,00"}
-        value={value}
-        onChange={onChange}
-        className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
-      />
-    </div>
+  const RupiahInput = useCallback(
+    ({ label, placeholder, value, onChange }) => {
+      return (
+        <div className="relative">
+          <label className="mb-1 block text-sm text-gray-800">{label}</label>
+          <span className="absolute top-[34px] left-3 text-sm text-gray-400">
+            Rp
+          </span>
+          <input
+            type="number"
+            placeholder={placeholder || "0"}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
+          />
+        </div>
+      );
+    },
+    []
   );
 
   return (
@@ -172,14 +187,14 @@ export default function Page() {
               <RupiahInput
                 label="Pemotongan"
                 value={pemotongan}
-                onChange={(e) => setPemotongan(e.target.value)}
+                onChange={memoizedSetPemotongan}
               />
 
               {/* Penyetoran */}
               <RupiahInput
                 label="Penyetoran"
                 value={penyetoran}
-                onChange={(e) => setPenyetoran(e.target.value)}
+                onChange={memoizedSetPenyetoran}
               />
             </div>
           </div>

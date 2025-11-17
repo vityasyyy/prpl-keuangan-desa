@@ -1,44 +1,52 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, LogOut } from "lucide-react";
 
 export default function Sidebar() {
+  const router = useRouter();
   const [openMenu, setOpenMenu] = useState(null);
 
   const menus = [
     {
       title: "APBDes",
       items: [
-        "Draft APBDes",
-        "Draft Penjabaran APBDes",
-        "Buku APBDes",
+        { label: "Draft APBDes", href: "#" },
+        { label: "Draft Penjabaran APBDes", href: "#" },
+        { label: "Buku APBDes", href: "#" },
       ],
     },
     {
       title: "Rencana & Kegiatan",
       items: [
-        "Rencana Kegiatan dan Anggaran",
-        "Rencana Kerja Kegiatan",
-        "Rencana Anggaran Biaya",
+        { label: "Rencana Kegiatan dan Anggaran", href: "#" },
+        { label: "Rencana Kerja Kegiatan", href: "#" },
+        { label: "Rencana Anggaran Biaya", href: "#" },
       ],
     },
     {
       title: "Penatausahaan",
       items: [
-        "Buku Kas Umum",
-        "Buku Pembantu Pajak",
-        "Buku Pembantu Panjar",
-        "Buku Pembantu Kegiatan",
-        "Buku Bank Desa",
+        { label: "Buku Kas Umum", href: "#" },
+        { label: "Buku Pembantu Pajak", href: "/Kas-pembantu-pajak" },
+        { label: "Buku Pembantu Panjar", href: "/Kas-pembantu-panjar" },
+        { label: "Buku Pembantu Kegiatan", href: "/Kas-pembantu-kegiatan" },
+        { label: "Buku Bank Desa", href: "#" },
       ],
     },
     {
       title: "Laporan Akhir",
       items: [
-        "Laporan Realisasi Akhir Tahun",
+        { label: "Laporan Realisasi Akhir Tahun", href: "#" },
       ],
     },
   ];
+
+  const handleMenuItemClick = (href) => {
+    if (href !== "#") {
+      router.push(href);
+    }
+  };
 
   return (
     <div className="flex flex-col justify-between h-screen w-64 bg-[#3C3C3C] text-gray-100">
@@ -76,12 +84,13 @@ export default function Sidebar() {
               {openMenu === idx && (
                 <div className="pl-10 mt-1 space-y-1 text-gray-300">
                   {menu.items.map((item, i) => (
-                    <div
+                    <button
                       key={i}
-                      className="cursor-pointer hover:text-white"
+                      onClick={() => handleMenuItemClick(item.href)}
+                      className="w-full text-left cursor-pointer hover:text-white transition"
                     >
-                      {item}
-                    </div>
+                      {item.label}
+                    </button>
                   ))}
                 </div>
               )}

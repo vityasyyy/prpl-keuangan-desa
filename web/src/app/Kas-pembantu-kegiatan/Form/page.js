@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/features/kas-pembantu/Sidebar";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
@@ -29,6 +29,7 @@ export default function Page() {
   const [belanjaBarang, setBelanjaBarang] = useState("");
   const [belanjaModal, setBelanjaModal] = useState("");
   const [nomorBukti, setNomorBukti] = useState("");
+  const [jumlahPengembalian, setJumlahPengembalian] = useState(""); // New state for Jumlah Pengembalian
 
   // UI state
   const [loading, setLoading] = useState(false);
@@ -103,6 +104,7 @@ export default function Page() {
     setBelanjaBarang("");
     setBelanjaModal("");
     setNomorBukti("");
+    setJumlahPengembalian(""); // Reset Jumlah Pengembalian
     setError(null);
   };
 
@@ -153,19 +155,46 @@ export default function Page() {
     }
   };
 
+  const memoizedSetDariBendahara = useCallback((value) => {
+    setDariBendahara(value);
+  }, []);
+
+  const memoizedSetSwadaya = useCallback((value) => {
+    setSwadaya(value);
+  }, []);
+
+  const memoizedSetBelanjaBarang = useCallback((value) => {
+    setBelanjaBarang(value);
+  }, []);
+
+  const memoizedSetBelanjaModal = useCallback((value) => {
+    setBelanjaModal(value);
+  }, []);
+
+  const memoizedSetJumlahPengembalian = useCallback((value) => {
+    setJumlahPengembalian(value);
+  }, []);
+
   // Helper untuk input Rupiah (dipakai berulang kali)
-  const RupiahInput = ({ label, placeholder, value, onChange }) => (
-    <div className="relative">
-      <label className="mb-1 block text-sm text-gray-800">{label}</label>
-      <span className="absolute top-[34px] left-3 text-sm text-gray-400">Rp</span>
-      <input
-        type="text"
-        placeholder={placeholder || "0.000.000,00"}
-        value={value}
-        onChange={onChange}
-        className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
-      />
-    </div>
+  const RupiahInput = useCallback(
+    ({ label, placeholder, value, onChange }) => {
+      return (
+        <div className="relative">
+          <label className="mb-1 block text-sm text-gray-800">{label}</label>
+          <span className="absolute top-[34px] left-3 text-sm text-gray-400">
+            Rp
+          </span>
+          <input
+            type="number"
+            placeholder={placeholder || "0"}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
+          />
+        </div>
+      );
+    },
+    []
   );
 
   return (
@@ -288,12 +317,12 @@ export default function Page() {
               <RupiahInput
                 label="Dari Bendahara"
                 value={dariBendahara}
-                onChange={(e) => setDariBendahara(e.target.value)}
+                onChange={memoizedSetDariBendahara}
               />
               <RupiahInput
                 label="Swadaya Masyarakat"
                 value={swadaya}
-                onChange={(e) => setSwadaya(e.target.value)}
+                onChange={memoizedSetSwadaya}
               />
             </div>
           </div>
@@ -305,12 +334,12 @@ export default function Page() {
               <RupiahInput
                 label="Belanja Barang dan Jasa"
                 value={belanjaBarang}
-                onChange={(e) => setBelanjaBarang(e.target.value)}
+                onChange={memoizedSetBelanjaBarang}
               />
               <RupiahInput
                 label="Belanja Modal"
                 value={belanjaModal}
-                onChange={(e) => setBelanjaModal(e.target.value)}
+                onChange={memoizedSetBelanjaModal}
               />
             </div>
           </div>
@@ -330,7 +359,11 @@ export default function Page() {
                   className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
                 />
               </div>
-              <RupiahInput label="Jumlah Pengembalian ke Bendahara" />
+              <RupiahInput
+                label="Jumlah Pengembalian ke Bendahara"
+                value={jumlahPengembalian}
+                onChange={memoizedSetJumlahPengembalian}
+              />
             </div>
           </div>
 

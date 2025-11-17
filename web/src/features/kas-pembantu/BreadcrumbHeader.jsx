@@ -1,19 +1,28 @@
 "use client";
 import { Circle, Book } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function BreadcrumbHeader() {
   const pathname = usePathname();
+  const router = useRouter();
 
   // deteksi halaman sekarang
   let pageTitle = "";
-  if (pathname.includes("Kas-pembantu-pajak"))
+  let pageLink = "";
+
+  if (pathname.includes("Kas-pembantu-pajak")) {
     pageTitle = "Buku Pembantu Pajak";
-  else if (pathname.includes("Kas-pembantu-panjar"))
+    pageLink = "/Kas-pembantu-pajak";
+  } else if (pathname.includes("Kas-pembantu-panjar")) {
     pageTitle = "Buku Pembantu Panjar";
-  else if (pathname.includes("Kas-pembantu-kegiatan"))
+    pageLink = "/Kas-pembantu-panjar";
+  } else if (pathname.includes("Kas-pembantu-kegiatan")) {
     pageTitle = "Buku Pembantu Kegiatan";
-  else pageTitle = "Halaman";
+    pageLink = "/Kas-pembantu-kegiatan";
+  } else {
+    pageTitle = "Halaman";
+    pageLink = "#";
+  }
 
   return (
     <div className="flex items-center text-[15px] font-medium mb-6 mt-2">
@@ -29,12 +38,12 @@ export default function BreadcrumbHeader() {
       {/* Breadcrumb */}
       <span className="text-gray-800">Penatausahaan</span>
       <span className="mx-1 text-gray-600">{">"}</span>
-      <a
-        href="#"
-        className="text-blue-600 hover:underline underline-offset-[3px]"
+      <button
+        onClick={() => router.push(pageLink)}
+        className="text-blue-600 hover:underline underline-offset-[3px] cursor-pointer bg-transparent border-none p-0 font-medium"
       >
         {pageTitle}
-      </a>
+      </button>
     </div>
   );
 }
