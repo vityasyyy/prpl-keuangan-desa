@@ -32,6 +32,8 @@ export default function createApbdRouter(apbdHandler) {
   r.get("/sumber-dana", apbdHandler.getSumberDana); // GET /api/apbd/sumber-dana
   r.get("/uraian1", apbdHandler.getUraian1); // GET /api/apbd/uraian1
   r.get("/uraian2", apbdHandler.getUraian2); // GET /api/apbd/uraian2
+  r.get("/dropdown-options", apbdHandler.getDropdownOptionsByKodeRekening); // GET /api/apbd/dropdown-options
+
 
   // Draft APBDes endpoints
   r.get("/draft/rincian", apbdHandler.getDraftApbdesList); // GET /api/apbd/draft/rincian

@@ -584,6 +584,71 @@ export default function createApbdRepo(arg) {
     return result;
   };
 
+    const getKodeFungsiDetailsByFullCode = async (fullCode) => {
+    const parts = fullCode.split(" ");
+    let bidang, subBidang, kegiatan;
+
+    if (parts.length >= 1) {
+      const { rows } = await db.query(
+        `SELECT id, uraian FROM kode_fungsi WHERE full_code = $1 AND level = 'bidang'`,
+        [parts[0]]
+      );
+      bidang = rows[0];
+    }
+    if (parts.length >= 2) {
+      const { rows } = await db.query(
+        `SELECT id, uraian FROM kode_fungsi WHERE full_code = $1 AND level = 'sub_bidang'`,
+        [`${parts[0]} ${parts[1]}`]
+      );
+      subBidang = rows[0];
+    }
+    if (parts.length >= 3) {
+      const { rows } = await db.query(
+        `SELECT id, uraian FROM kode_fungsi WHERE full_code = $1 AND level = 'kegiatan'`,
+        [`${parts[0]} ${parts[1]} ${parts[2]}`]
+      );
+      kegiatan = rows[0];
+    }
+
+    return { bidang, subBidang, kegiatan };
+  };
+
+  const getKodeEkonomiDetailsByFullCode = async (fullCode) => {
+    const parts = fullCode.split(" ");
+    let akun, kelompok, jenis, objek;
+
+    if (parts.length >= 1) {
+      const { rows } = await db.query(
+        `SELECT id, uraian FROM kode_ekonomi WHERE full_code = $1 AND level = 'akun'`,
+        [parts[0]]
+      );
+      akun = rows[0];
+    }
+    if (parts.length >= 2) {
+      const { rows } = await db.query(
+        `SELECT id, uraian FROM kode_ekonomi WHERE full_code = $1 AND level = 'kelompok'`,
+        [`${parts[0]} ${parts[1]}`]
+      );
+      kelompok = rows[0];
+    }
+    if (parts.length >= 3) {
+      const { rows } = await db.query(
+        `SELECT id, uraian FROM kode_ekonomi WHERE full_code = $1 AND level = 'jenis'`,
+        [`${parts[0]} ${parts[1]} ${parts[2]}`]
+      );
+      jenis = rows[0];
+    }
+    if (parts.length >= 4) {
+      const { rows } = await db.query(
+        `SELECT id, uraian FROM kode_ekonomi WHERE full_code = $1 AND level = 'objek'`,
+        [`${parts[0]} ${parts[1]} ${parts[2]} ${parts[3]}`]
+      );
+      objek = rows[0];
+    }
+
+    return { akun, kelompok, jenis, objek };
+  };
+
   return {
     //input form apbdes rincian
     listKodeFungsi,
@@ -626,5 +691,9 @@ export default function createApbdRepo(arg) {
     //buku apbdes
     listApbdesRows,
     getApbdesStatus,
+
+    //dropdown helper
+    getKodeFungsiDetailsByFullCode,
+    getKodeEkonomiDetailsByFullCode,
   };
 }

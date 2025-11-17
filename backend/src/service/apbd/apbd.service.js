@@ -227,6 +227,55 @@ export default function createApbdService(ApbdRepo) {
     return { deletedItem, total };
   };
 
+  const getDropdownOptionsByKodeRekening = async (kodeRekening) => {
+    const dotParts = kodeRekening.split(".");
+    const fullCode = dotParts.join(" "); // Convert to space-separated for repo
+
+    // Check for Kode Fungsi (Bidang Kegiatan)
+    // Bidang: 1 part (e.g., "1")
+    // Sub Bidang: 2 parts (e.g., "1.1")
+    // Kegiatan: 3 parts (e.g., "1.1.01")
+    if (dotParts.length >= 1 && dotParts.length <= 3) {
+      const result = await ApbdRepo.getKodeFungsiDetailsByFullCode(fullCode);
+      if (result && result.kegiatan) {
+        return {
+          type: "kode_fungsi",
+          bidang: result.bidang,
+          subBidang: result.subBidang,
+          kegiatan: result.kegiatan,
+        };
+      }
+    }
+
+    // Check for Kode Ekonomi (Pendapatan / Belanja / Pembiayaan)
+    // Akun: 1 part (e.g., "4")
+    // Kelompok: 2 parts (e.g., "4.1")
+    // Jenis: 3 parts (e.g., "4.1.1")
+    // Objek: 4 parts (e.g., "4.1.1.01")
+    if (dotParts.length >= 1 && dotParts.length <= 4) {
+      const result = await ApbdRepo.getKodeEkonomiDetailsByFullCode(fullCode);
+      if (result && result.objek) {
+        // Fetch all options for dependent dropdowns
+        const allSumberDana = await ApbdRepo.listSumberDana(result.akun.id);
+        const allUraian1 = await ApbdRepo.listUraian1(result.kelompok.id);
+        const allUraian2 = await ApbdRepo.listUraian2(result.jenis.id);
+
+        return {
+          type: "kode_ekonomi",
+          akun: result.akun,
+          kelompok: result.kelompok,
+          jenis: result.jenis,
+          objek: result.objek,
+          sumberDana: allSumberDana, // Return all options, not just the selected one
+          uraian1: allUraian1, // Return all options
+          uraian2: allUraian2, // Return all options
+        };
+      }
+    }
+
+    throw { status: 400, error: "invalid_kode_rekening", message: "Kode rekening tidak ditemukan atau tidak valid." };
+  };
+
   return {
     //input form apbdes rincian
     getBidang,
@@ -264,5 +313,8 @@ export default function createApbdService(ApbdRepo) {
     //buku apbdes
     getApbdes,
     getApbdesStatus,
+
+    //dropdown helper
+    getDropdownOptionsByKodeRekening,
   };
 }

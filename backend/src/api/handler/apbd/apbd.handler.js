@@ -274,6 +274,21 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
+  const getDropdownOptionsByKodeRekening = async (req, res, next) => {
+    try {
+      const { kodeRekening } = req.query;
+      if (!kodeRekening) {
+        return res.status(400).json({ success: false, message: "kodeRekening_required" });
+      }
+      const data = await ApbdService.getDropdownOptionsByKodeRekening(kodeRekening);
+      res.json({ success: true, data });
+    } catch (e) {
+      console.error("Error getDropdownOptionsByKodeRekening:", e);
+      res.status(e.status || 500).json({ success: false, message: e.message || "internal_error", error: e.error });
+    }
+  };
+
+
   return {
     //input form apbdes rincian
     getBidang,
@@ -311,5 +326,8 @@ export default function createApbdHandler(ApbdService) {
     //buku apbdes
     getApbdes,
     getApbdesStatus,
+
+    //dropdown helper
+    getDropdownOptionsByKodeRekening,
   };
 }
