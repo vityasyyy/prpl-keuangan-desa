@@ -43,15 +43,19 @@ const fmtDateID = (iso) => {
 
 // Table columns configuration
 const COLUMNS = [
-  { key: "no", label: "No", class: "flex-none w-[40px] text-center px-3"},
-  { key: "tanggal", label: "Tanggal", class: "flex-none w-[90px] text-center px-3"},
-  { key: "kode_rekening", label: "Kode Rekening", class: "flex-none w-[110px] text-center px-3"},
-  { key: "uraian", label: "Uraian", class: "flex-none w-[200px] text-center px-3"},
-  { key: "pemasukan", label: "Pemasukan", class: "flex-none w-[170px] text-center px-3"},
-  { key: "pengeluaran", label: "Pengeluaran", class: "flex-none w-[170px] text-center px-3"},
-  { key: "no_bukti", label: "No. Bukti", class: "flex-none w-[100px] text-center px-3"},
-  { key: "netto_transaksi", label: "Netto Transaksi", class: "flex-none w-[170px] text-center px-3" },
-  { key: "saldo", label: "Saldo", class: "flex-none w-[170px] text-center px-3"},
+  { key: "no", label: "No", class: "flex-none w-[40px] text-center px-3" },
+  { key: "tanggal", label: "Tanggal", class: "flex-none w-[90px] text-center px-3" },
+  { key: "kode_rekening", label: "Kode Rekening", class: "flex-none w-[110px] text-center px-3" },
+  { key: "uraian", label: "Uraian", class: "flex-none w-[200px] text-center px-3" },
+  { key: "pemasukan", label: "Pemasukan", class: "flex-none w-[170px] text-center px-3" },
+  { key: "pengeluaran", label: "Pengeluaran", class: "flex-none w-[170px] text-center px-3" },
+  { key: "no_bukti", label: "No. Bukti", class: "flex-none w-[100px] text-center px-3" },
+  {
+    key: "netto_transaksi",
+    label: "Netto Transaksi",
+    class: "flex-none w-[170px] text-center px-3",
+  },
+  { key: "saldo", label: "Saldo", class: "flex-none w-[170px] text-center px-3" },
   { key: "edit", label: "Edit", class: "flex-none w-[40px] text-center px-5", isAction: true },
 ];
 
@@ -220,15 +224,34 @@ export default function BukuKasUmumPage() {
               <input
                 type="number"
                 placeholder="YYYY"
-                value={year}
+                value={year || ""} // Tetap kosong jika nilai year adalah null atau 0
                 min="1900"
                 max="2100"
                 onChange={(e) => {
-                  const y = Number(e.target.value || 0);
-                  if (Number.isFinite(y)) setYear(y);
+                  const value = e.target.value;
+                  if (value === "") {
+                    setYear(null); // Biarkan kosong jika input kosong
+                  } else {
+                    const y = Number(value);
+                    if (Number.isFinite(y)) setYear(y);
+                  }
+                }}
+                onBlur={() => {
+                  if (year === null || year === "") {
+                    setYear(0); // Set ke 0 hanya ketika blur dan input kosong
+                  }
                 }}
                 className="flex-1 border-none font-['Inter'] text-base leading-6 font-normal text-[#0f172a] outline-none"
               />
+              <button
+                className="rounded-lg bg-[#1d4ed8] px-4 py-2 font-medium text-white shadow-md hover:bg-[#1e40af]"
+                onClick={() => {
+                  // Tambahkan logika untuk tombol add filter di sini
+                  console.log("Add filter clicked");
+                }}
+              >
+                Add Filter
+              </button>
             </div>
           </div>
 
@@ -322,10 +345,7 @@ export default function BukuKasUmumPage() {
                       {/* Table Header */}
                       <div className="flex h-[47px] items-center border-b-[0.5px] border-black px-5 py-2.5">
                         {COLUMNS.map((col) => (
-                          <div
-                            key={col.key}
-                            className={`${headerColClass} ${col.class}`}
-                          >
+                          <div key={col.key} className={`${headerColClass} ${col.class}`}>
                             {col.label}
                           </div>
                         ))}
@@ -350,12 +370,19 @@ export default function BukuKasUmumPage() {
                               className="flex items-center border-b-[0.5px] border-black px-5 py-2.5"
                             >
                               {COLUMNS.map((col) => (
-                                <div
-                                  key={col.key}
-                                  className={`${rowColClass} ${col.class}`}
-                                >
+                                <div key={col.key} className={`${rowColClass} ${col.class}`}>
                                   {col.isAction ? (
-                                    <svg width="16" height="17" viewBox="0 0 16 17" fill="none" className="cursor-pointer">
+                                    <svg
+                                      width="16"
+                                      height="17"
+                                      viewBox="0 0 16 17"
+                                      fill="none"
+                                      className="cursor-pointer"
+                                      onClick={() => {
+                                        const queryString = `/Edit-form?data=${encodeURIComponent(JSON.stringify(row))}`;
+                                        router.push(queryString);
+                                      }}
+                                    >
                                       <path
                                         d="M8 13.8332H14M11 2.83316C11.2652 2.56794 11.6249 2.41895 12 2.41895C12.1857 2.41895 12.3696 2.45553 12.5412 2.5266C12.7128 2.59767 12.8687 2.70184 13 2.83316C13.1313 2.96448 13.2355 3.12038 13.3066 3.29196C13.3776 3.46354 13.4142 3.64744 13.4142 3.83316C13.4142 4.01888 13.3776 4.20277 13.3066 4.37436C13.2355 4.54594 13.1313 4.70184 13 4.83316L4.66667 13.1665L2 13.8332L2.66667 11.1665L11 2.83316Z"
                                         stroke="#121926"
@@ -365,8 +392,14 @@ export default function BukuKasUmumPage() {
                                     </svg>
                                   ) : col.key === "tanggal" ? (
                                     fmtDateID(row[col.key])
-                                  ) : col.key === "pemasukan" || col.key === "pengeluaran" || col.key === "netto_transaksi" || col.key === "saldo" ? (
-                                    fmtIDR(row[col.key] ?? (col.key === "netto_transaksi" ? row.nettoTransaksi : ""))
+                                  ) : col.key === "pemasukan" ||
+                                    col.key === "pengeluaran" ||
+                                    col.key === "netto_transaksi" ||
+                                    col.key === "saldo" ? (
+                                    fmtIDR(
+                                      row[col.key] ??
+                                        (col.key === "netto_transaksi" ? row.nettoTransaksi : "")
+                                    )
                                   ) : (
                                     row[col.key]
                                   )}
