@@ -41,6 +41,23 @@ const fmtDateID = (iso) => {
   }
 };
 
+// Table columns configuration
+const COLUMNS = [
+  { key: "no", label: "No", class: "flex-none w-[40px] text-center px-3"},
+  { key: "tanggal", label: "Tanggal", class: "flex-none w-[90px] text-center px-3"},
+  { key: "kode_rekening", label: "Kode Rekening", class: "flex-none w-[110px] text-center px-3"},
+  { key: "uraian", label: "Uraian", class: "flex-none w-[200px] text-center px-3"},
+  { key: "pemasukan", label: "Pemasukan", class: "flex-none w-[170px] text-center px-3"},
+  { key: "pengeluaran", label: "Pengeluaran", class: "flex-none w-[170px] text-center px-3"},
+  { key: "no_bukti", label: "No. Bukti", class: "flex-none w-[100px] text-center px-3"},
+  { key: "netto_transaksi", label: "Netto Transaksi", class: "flex-none w-[170px] text-center px-3" },
+  { key: "saldo", label: "Saldo", class: "flex-none w-[170px] text-center px-3"},
+  { key: "edit", label: "Edit", class: "flex-none w-[40px] text-center px-5", isAction: true },
+];
+
+const headerColClass = "font-['Poppins'] text-base leading-5 font-bold text-black";
+const rowColClass = "font-['Plus_Jakarta_Sans'] text-base leading-5 font-normal text-black";
+
 export default function BukuKasUmumPage() {
   const router = useRouter();
   const initialYear = 2024;
@@ -301,40 +318,20 @@ export default function BukuKasUmumPage() {
                   </div>
 
                   {isOpen && (
-                    <div className="flex flex-col items-start self-stretch">
-                      <div className="flex h-[47px] items-center self-stretch border-b-[0.5px] border-black px-5 py-2.5">
-                        <div className="w-[5%] text-left font-['Poppins'] text-base leading-6 font-bold text-black">
-                          No
-                        </div>
-                        <div className="w-[10%] text-left font-['Poppins'] text-base leading-6 font-bold text-black">
-                          Tanggal
-                        </div>
-                        <div className="w-[11%] text-left font-['Poppins'] text-base leading-6 font-bold text-black">
-                          Kode Rekening
-                        </div>
-                        <div className="w-[13%] text-left font-['Poppins'] text-base leading-6 font-bold text-black">
-                          Uraian
-                        </div>
-                        <div className="w-[11%] text-left font-['Poppins'] text-base leading-6 font-bold text-black">
-                          Pemasukan
-                        </div>
-                        <div className="w-[11%] text-left font-['Poppins'] text-base leading-6 font-bold text-black">
-                          Pengeluaran
-                        </div>
-                        <div className="w-[9%] text-left font-['Poppins'] text-base leading-6 font-bold text-black">
-                          No. Bukti
-                        </div>
-                        <div className="w-[13%] text-left font-['Poppins'] text-base leading-6 font-bold text-black">
-                          Netto Transaksi
-                        </div>
-                        <div className="w-[11%] text-left font-['Poppins'] text-base leading-6 font-bold text-black">
-                          Saldo
-                        </div>
-                        <div className="w-[6%] text-center font-['Poppins'] text-base leading-6 font-bold text-black">
-                          Edit
-                        </div>
+                    <div className="flex flex-col items-start self-stretch overflow-x-auto">
+                      {/* Table Header */}
+                      <div className="flex h-[47px] items-center border-b-[0.5px] border-black px-5 py-2.5">
+                        {COLUMNS.map((col) => (
+                          <div
+                            key={col.key}
+                            className={`${headerColClass} ${col.class}`}
+                          >
+                            {col.label}
+                          </div>
+                        ))}
                       </div>
 
+                      {/* Error State */}
                       {store[key]?.error && !store[key]?.loading && (
                         <div className="px-5 py-4 text-sm text-red-600">
                           Gagal memuat: {store[key]?.error}{" "}
@@ -344,50 +341,37 @@ export default function BukuKasUmumPage() {
                         </div>
                       )}
 
+                      {/* Data Rows */}
                       {!store[key]?.error &&
                         (store[key]?.rows?.length ? (
                           store[key].rows.map((row, i) => (
                             <div
                               key={`${key}-${row.no}-${row.no_bukti}-${i}`}
-                              className="flex h-[47px] items-center self-stretch border-b-[0.5px] border-black px-5 py-2.5"
+                              className="flex items-center border-b-[0.5px] border-black px-5 py-2.5"
                             >
-                              <div className="w-[5%] text-left font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
-                                {row.no}
-                              </div>
-                              <div className="w-[10%] text-left font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
-                                {fmtDateID(row.tanggal)}
-                              </div>
-                              <div className="w-[11%] text-left font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
-                                {row.kode_rekening}
-                              </div>
-                              <div className="w-[13%] text-left font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
-                                {row.uraian}
-                              </div>
-                              <div className="w-[11%] text-left font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
-                                {fmtIDR(row.pemasukan)}
-                              </div>
-                              <div className="w-[11%] text-left font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
-                                {fmtIDR(row.pengeluaran)}
-                              </div>
-                              <div className="w-[9%] text-left font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
-                                {row.no_bukti}
-                              </div>
-                              <div className="w-[13%] text-left font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
-                                {fmtIDR(row.netto_transaksi ?? row.nettoTransaksi)}
-                              </div>
-                              <div className="w-[11%] text-left font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
-                                {fmtIDR(row.saldo)}
-                              </div>
-                              <div className="flex w-[6%] cursor-pointer justify-center">
-                                <svg width="16" height="17" viewBox="0 0 16 17" fill="none">
-                                  <path
-                                    d="M8 13.8332H14M11 2.83316C11.2652 2.56794 11.6249 2.41895 12 2.41895C12.1857 2.41895 12.3696 2.45553 12.5412 2.5266C12.7128 2.59767 12.8687 2.70184 13 2.83316C13.1313 2.96448 13.2355 3.12038 13.3066 3.29196C13.3776 3.46354 13.4142 3.64744 13.4142 3.83316C13.4142 4.01888 13.3776 4.20277 13.3066 4.37436C13.2355 4.54594 13.1313 4.70184 13 4.83316L4.66667 13.1665L2 13.8332L2.66667 11.1665L11 2.83316Z"
-                                    stroke="#121926"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                              </div>
+                              {COLUMNS.map((col) => (
+                                <div
+                                  key={col.key}
+                                  className={`${rowColClass} ${col.class}`}
+                                >
+                                  {col.isAction ? (
+                                    <svg width="16" height="17" viewBox="0 0 16 17" fill="none" className="cursor-pointer">
+                                      <path
+                                        d="M8 13.8332H14M11 2.83316C11.2652 2.56794 11.6249 2.41895 12 2.41895C12.1857 2.41895 12.3696 2.45553 12.5412 2.5266C12.7128 2.59767 12.8687 2.70184 13 2.83316C13.1313 2.96448 13.2355 3.12038 13.3066 3.29196C13.3776 3.46354 13.4142 3.64744 13.4142 3.83316C13.4142 4.01888 13.3776 4.20277 13.3066 4.37436C13.2355 4.54594 13.1313 4.70184 13 4.83316L4.66667 13.1665L2 13.8332L2.66667 11.1665L11 2.83316Z"
+                                        stroke="#121926"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      />
+                                    </svg>
+                                  ) : col.key === "tanggal" ? (
+                                    fmtDateID(row[col.key])
+                                  ) : col.key === "pemasukan" || col.key === "pengeluaran" || col.key === "netto_transaksi" || col.key === "saldo" ? (
+                                    fmtIDR(row[col.key] ?? (col.key === "netto_transaksi" ? row.nettoTransaksi : ""))
+                                  ) : (
+                                    row[col.key]
+                                  )}
+                                </div>
+                              ))}
                             </div>
                           ))
                         ) : (
