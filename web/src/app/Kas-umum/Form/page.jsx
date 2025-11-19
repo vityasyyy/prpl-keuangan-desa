@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Breadcrumb from "@/components/Breadcrumb";
 import Button from "@/components/Button";
@@ -10,6 +10,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/a
 
 export default function FormInputKasUmum() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editId, setEditId] = useState(null);
   const [formData, setFormData] = useState({
     tanggal: "",
     kodeEko: "",
@@ -34,6 +37,32 @@ export default function FormInputKasUmum() {
 
   const [kodeRekError, setKodeRekError] = useState(""); // Error state (opsional ditampilkan di UI)
   const [kodeEkoError, setKodeEkoError] = useState("");
+
+  // Initialize edit mode from search params
+  useEffect(() => {
+    const dataParam = searchParams.get("data");
+    if (dataParam) {
+      try {
+        const editData = JSON.parse(dataParam);
+        setIsEditMode(true);
+        setEditId(editData.id);
+        
+        // Pre-fill form with edit data
+        setFormData((prev) => ({
+          ...prev,
+          tanggal: editData.tanggal ? editData.tanggal.split("T")[0] : "",
+          uraian: editData.uraian || "",
+          pemasukan: editData.pemasukan || "",
+          pengeluaran: editData.pengeluaran || "",
+          nomorBukti: editData.no_bukti || "",
+          kodeRAB: editData.rab_id || "",
+          kodeEko: editData.kode_rekening || "",
+        }));
+      } catch (e) {
+        console.error("Failed to parse edit data:", e);
+      }
+    }
+  }, [searchParams]);
 
   // Parse "5.3 5 3" → ["5","3","5","3"]
   const ekoParse = (s) =>
@@ -464,8 +493,12 @@ export default function FormInputKasUmum() {
       console.log("📤 Sending payload:", payload);
       console.log("📋 Current formData.objek:", formData.objek);
 
-      const res = await fetch(`${API_BASE_URL}/kas-umum`, {
-        method: "POST",
+      // Determine if creating or updating
+      const method = isEditMode ? "PUT" : "POST";
+      const endpoint = isEditMode ? `${API_BASE_URL}/kas-umum/${editId}` : `${API_BASE_URL}/kas-umum`;
+
+      const res = await fetch(endpoint, {
+        method: method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -493,8 +526,8 @@ export default function FormInputKasUmum() {
       console.log("✅ Success:", data);
       alert(data.message || "Data berhasil disimpan!");
 
-      // If user selected "Buat lagi", reset form for new entry
-      if (formData.buatLagi) {
+      // If user selected "Buat lagi", reset form for new entry (only in create mode)
+      if (formData.buatLagi && !isEditMode) {
         resetForm();
       } else {
         // Otherwise navigate back to Kas Umum page
@@ -711,7 +744,7 @@ export default function FormInputKasUmum() {
 
         <div className="flex w-[977px] flex-col items-start gap-5">
           <h1 className="m-0 self-stretch font-['Poppins'] text-base leading-6 font-bold text-black">
-            Input Data Kas Umum
+            {isEditMode ? "Edit Data Kas Umum" : "Input Data Kas Umum"}
           </h1>
 
           <div className="flex flex-col items-start gap-[29px] self-stretch">
@@ -1124,46 +1157,50 @@ export default function FormInputKasUmum() {
 
           {/* Form Actions */}
           <div className="flex items-center justify-between self-stretch">
-            <Button
-              variant="danger"
-              className="px-[18px] py-2.5"
-              onClick={handleCancel}
-              icon={
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path
-                    d="M2.5 5.00033H4.16667M4.16667 5.00033H17.5M4.16667 5.00033V16.667C4.16667 17.109 4.34226 17.5329 4.65482 17.8455C4.96738 18.1581 5.39131 18.3337 5.83333 18.3337H14.1667C14.6087 18.3337 15.0326 18.1581 15.3452 17.8455C15.6577 17.5329 15.8333 17.109 15.8333 16.667V5.00033H4.16667ZM6.66667 5.00033V3.33366C6.66667 2.89163 6.84226 2.46771 7.15482 2.15515C7.46738 1.84259 7.89131 1.66699 8.33333 1.66699H11.6667C12.1087 1.66699 12.5326 1.84259 12.8452 2.15515C13.1577 2.46771 13.3333 2.89163 13.3333 3.33366V5.00033M8.33333 9.16699V14.167M11.6667 9.16699V14.167"
-                    stroke="white"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              }
-            >
-              Hapus
-            </Button>
+            {!isEditMode && (
+              <Button
+                variant="danger"
+                className="px-[18px] py-2.5"
+                onClick={handleCancel}
+                icon={
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path
+                      d="M2.5 5.00033H4.16667M4.16667 5.00033H17.5M4.16667 5.00033V16.667C4.16667 17.109 4.34226 17.5329 4.65482 17.8455C4.96738 18.1581 5.39131 18.3337 5.83333 18.3337H14.1667C14.6087 18.3337 15.0326 18.1581 15.3452 17.8455C15.6577 17.5329 15.8333 17.109 15.8333 16.667V5.00033H4.16667ZM6.66667 5.00033V3.33366C6.66667 2.89163 6.84226 2.46771 7.15482 2.15515C7.46738 1.84259 7.89131 1.66699 8.33333 1.66699H11.6667C12.1087 1.66699 12.5326 1.84259 12.8452 2.15515C13.1577 2.46771 13.3333 2.89163 13.3333 3.33366V5.00033M8.33333 9.16699V14.167M11.6667 9.16699V14.167"
+                      stroke="white"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                }
+              >
+                Hapus
+              </Button>
+            )}
 
-            <div className="flex w-[304px] items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <span className="font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
-                  Buat lagi
-                </span>
-                <button
-                  onClick={handleToggle}
-                  className="relative flex h-6 w-12 cursor-pointer items-center rounded-full border-none transition-all duration-300"
-                  style={{
-                    backgroundColor: formData.buatLagi ? "#10B981" : "#D1D5DB",
-                    padding: "2px",
-                  }}
-                >
-                  {/* Animated Circle */}
-                  <div
-                    className="h-4 w-4 rounded-full bg-white transition-all duration-300"
+            <div className={`flex items-center ${isEditMode ? "w-full justify-end" : "w-[304px]"} justify-between`}>
+              {!isEditMode && (
+                <div className="flex items-center gap-2.5">
+                  <span className="font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
+                    Buat lagi
+                  </span>
+                  <button
+                    onClick={handleToggle}
+                    className="relative flex h-6 w-12 cursor-pointer items-center rounded-full border-none transition-all duration-300"
                     style={{
-                      marginLeft: formData.buatLagi ? "calc(100% - 1rem)" : "0",
+                      backgroundColor: formData.buatLagi ? "#10B981" : "#D1D5DB",
+                      padding: "2px",
                     }}
-                  />
-                </button>
-              </div>
+                  >
+                    {/* Animated Circle */}
+                    <div
+                      className="h-4 w-4 rounded-full bg-white transition-all duration-300"
+                      style={{
+                        marginLeft: formData.buatLagi ? "calc(100% - 1rem)" : "0",
+                      }}
+                    />
+                  </button>
+                </div>
+              )}
 
               <Button
                 variant="primary"

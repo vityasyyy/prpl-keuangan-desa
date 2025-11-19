@@ -379,7 +379,7 @@ export default function BukuKasUmumPage() {
                                       fill="none"
                                       className="cursor-pointer"
                                       onClick={() => {
-                                        const queryString = `/Edit-form?data=${encodeURIComponent(JSON.stringify(row))}`;
+                                        const queryString = `/Kas-umum/Form?data=${encodeURIComponent(JSON.stringify(row))}`;
                                         router.push(queryString);
                                       }}
                                     >

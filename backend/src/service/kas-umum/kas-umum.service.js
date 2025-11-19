@@ -249,6 +249,57 @@ export default function createKasUmumService(kasUmumRepo) {
     return { saldo };
   };
 
+  const updateBku = async (id, data) => {
+    const {
+      tanggal,
+      rab_id,
+      kode_ekonomi_id,
+      kegiatan_id,
+      uraian,
+      pemasukan,
+      pengeluaran,
+      nomor_bukti,
+    } = data;
+
+    if (!id) throw { status: 400, error: "id_required" };
+    if (!tanggal) throw { status: 400, error: "tanggal_required" };
+    if (!rab_id) throw { status: 400, error: "rab_id_required" };
+    if (!kode_ekonomi_id) throw { status: 400, error: "kode_ekonomi_id_required" };
+
+    const hasPemasukan = pemasukan && parseFloat(pemasukan) > 0;
+    const hasPengeluaran = pengeluaran && parseFloat(pengeluaran) > 0;
+
+    if (!hasPemasukan && !hasPengeluaran)
+      throw {
+        status: 400,
+        error: "amount_required",
+        hint: "Harus mengisi Pemasukan atau Pengeluaran",
+      };
+
+    if (hasPemasukan && hasPengeluaran)
+      throw {
+        status: 400,
+        error: "amount_conflict",
+        hint: "Tidak boleh mengisi Pemasukan dan Pengeluaran sekaligus",
+      };
+
+    const updatedBku = await kasUmumRepo.updateBku(id, {
+      tanggal,
+      rab_id,
+      kode_ekonomi_id,
+      kode_fungsi_id: kegiatan_id,
+      uraian: uraian || "",
+      penerimaan: hasPemasukan ? parseFloat(pemasukan) : 0,
+      pengeluaran: hasPengeluaran ? parseFloat(pengeluaran) : 0,
+      no_bukti: nomor_bukti || null,
+    });
+
+    return {
+      message: "Data Kas Umum berhasil diperbarui",
+      data: updatedBku,
+    };
+  };
+
   return {
     getRAB,
     getBku,
@@ -258,6 +309,7 @@ export default function createKasUmumService(kasUmumRepo) {
     getSubBidang,
     getKegiatan,
     createBku,
+    updateBku,
     getKodeEkonomi,
     getAkun,
     getJenis,

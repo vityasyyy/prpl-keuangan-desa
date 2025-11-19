@@ -398,6 +398,71 @@ export default function createKasUmumRepo(arg) {
     return row?.saldo_after ?? 0;
   };
 
+  const updateBku = async (id, data) => {
+    const {
+      tanggal,
+      rab_id,
+      kode_ekonomi_id,
+      uraian,
+      penerimaan = 0,
+      pengeluaran = 0,
+      no_bukti,
+    } = data;
+
+    const penerimaanNum = Number(penerimaan) || 0;
+    const pengeluaranNum = Number(pengeluaran) || 0;
+
+    if (penerimaanNum > 0 && pengeluaranNum > 0) {
+      throw new Error(
+        "Transaksi hanya boleh pemasukan ATAU pengeluaran, tidak keduanya"
+      );
+    }
+
+    // Get the old record to calculate the difference
+    const oldRecordQuery = `SELECT saldo_after, penerimaan, pengeluaran FROM buku_kas_umum WHERE id = $1`;
+    const { rows: [oldRecord] } = await db.query(oldRecordQuery, [id]);
+
+    if (!oldRecord) {
+      throw new Error("Record not found");
+    }
+
+    // Calculate new saldo_after based on difference
+    const oldNetto = (oldRecord.penerimaan || 0) - (oldRecord.pengeluaran || 0);
+    const newNetto = penerimaanNum - pengeluaranNum;
+    const nettoDiff = newNetto - oldNetto;
+    const newSaldoAfter = (oldRecord.saldo_after || 0) + nettoDiff;
+
+    const updateQuery = `
+      UPDATE buku_kas_umum
+      SET
+        tanggal = $1,
+        rab_id = $2,
+        kode_ekonomi_id = $3,
+        uraian = $4,
+        penerimaan = $5,
+        pengeluaran = $6,
+        no_bukti = $7,
+        saldo_after = $8,
+        updated_at = NOW()
+      WHERE id = $9
+      RETURNING *
+    `;
+
+    const { rows } = await db.query(updateQuery, [
+      tanggal,
+      rab_id,
+      kode_ekonomi_id,
+      uraian,
+      penerimaanNum,
+      pengeluaranNum,
+      no_bukti,
+      newSaldoAfter,
+      id,
+    ]);
+
+    return rows[0];
+  };
+
   return {
     listRAB,
     listBkuRows,
@@ -407,6 +472,7 @@ export default function createKasUmumRepo(arg) {
     listSubBidang,
     listKegiatan,
     insertBku,
+    updateBku,
     listKodeEkonomi,
     listAkun,
     listJenis,
