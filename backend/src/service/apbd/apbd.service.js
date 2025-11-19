@@ -22,19 +22,9 @@ export default function createApbdService(ApbdRepo) {
 
   const getBidang = async () => ApbdRepo.listBidang();
 
-  const getSubBidang = async (bidangId) => {
-    if (!bidangId) {
-      throw { status: 400, error: "bidangId_required" };
-    }
-    return ApbdRepo.listSubBidang(bidangId);
-  };
+  const getSubBidang = async () => ApbdRepo.listSubBidang();
 
-  const getKegiatan = async (subBidangId) => {
-    if (!subBidangId) {
-      throw { status: 400, error: "subBidangId_required" };
-    }
-    return ApbdRepo.listKegiatan(subBidangId);
-  };
+  const getKegiatan = async () => ApbdRepo.listKegiatan();
 
   const validateApbdesRincian = async (payload) => {
     ApbdRepo.validateApbdesRincian(payload);
@@ -61,26 +51,11 @@ export default function createApbdService(ApbdRepo) {
 
   const getAkun = async () => ApbdRepo.listAkun();
 
-  const getSumberDana = async (akunId) => {
-    if (!akunId) {
-      throw { status: 400, error: "akunId_required" };
-    }
-    return ApbdRepo.listSumberDana(akunId);
-  };
+  const getSumberDana = async () => ApbdRepo.listSumberDana(akunId);
 
-  const getUraian1 = async (sumberDanaId) => {
-    if (!sumberDanaId) {
-      throw { status: 400, error: "sumberDanaId_required" };
-    }
-    return ApbdRepo.listUraian1(sumberDanaId);
-  };
+  const getUraian1 = async () => ApbdRepo.listUraian1(sumberDanaId);
 
-  const getUraian2 = async (uraian1Id) => {
-    if (!uraian1Id) {
-      throw { status: 400, error: "uraian1Id_required" };
-    }
-    return ApbdRepo.listUraian2(uraian1Id);
-  };
+  const getUraian2 = async () => ApbdRepo.listUraian2(uraian1Id);
 
   const getApbdesStatus = async (id) => {
     if (!id) throw { status: 400, error: "id_required" };
@@ -276,6 +251,26 @@ export default function createApbdService(ApbdRepo) {
     throw { status: 400, error: "invalid_kode_rekening", message: "Kode rekening tidak ditemukan atau tidak valid." };
   };
 
+  const getAllDropdownOptions = async () => {
+    const bidang = await ApbdRepo.listBidang();
+    const subBidang = await ApbdRepo.listSubBidang();
+    const kegiatan = await ApbdRepo.listKegiatan();
+    const akun = await ApbdRepo.listAkun();
+    const sumberDana = await ApbdRepo.listSumberDana();
+    const uraian1 = await ApbdRepo.listUraian1();
+    const uraian2 = await ApbdRepo.listUraian2();
+
+    return {
+      bidang,
+      subBidang,
+      kegiatan,
+      akun,
+      sumberDana,
+      uraian1,
+      uraian2,
+    };
+  };
+
   return {
     //input form apbdes rincian
     getBidang,
@@ -316,5 +311,6 @@ export default function createApbdService(ApbdRepo) {
 
     //dropdown helper
     getDropdownOptionsByKodeRekening,
+    getAllDropdownOptions,
   };
 }

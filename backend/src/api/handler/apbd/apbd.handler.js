@@ -48,20 +48,18 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
-  const getSubBidang = async (req, res, next) => {
+  const getSubBidang = async (_req, res, next) => {
     try {
-      const { bidangId } = req.query;
-      const data = await ApbdService.getSubBidang(bidangId);
+      const data = await ApbdService.getSubBidang();
       res.json(data);
     } catch (e) {
       next(e);
     }
   };
 
-  const getKegiatan = async (req, res, next) => {
+  const getKegiatan = async (_req, res, next) => {
     try {
-      const { subBidangId } = req.query;
-      const data = await ApbdService.getKegiatan(subBidangId);
+      const data = await ApbdService.getKegiatan();
       res.json(data);
     } catch (e) {
       next(e);
@@ -86,30 +84,27 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
-  const getSumberDana = async (req, res, next) => {
+  const getSumberDana = async (_req, res, next) => {
     try {
-      const { akunId } = req.query;
-      const data = await ApbdService.getSumberDana(akunId);
+      const data = await ApbdService.getSumberDana();
       res.json(data);
     } catch (e) {
       next(e);
     }
   };
 
-  const getUraian1 = async (req, res, next) => {
+  const getUraian1 = async (_req, res, next) => {
     try {
-      const { sumberDanaId } = req.query;
-      const data = await ApbdService.getUraian1(sumberDanaId);
+      const data = await ApbdService.getUraian1();
       res.json(data);
     } catch (e) {
       next(e);
     }
   };
 
-  const getUraian2 = async (req, res, next) => {
+  const getUraian2 = async (_req, res, next) => {
     try {
-      const { uraian1Id } = req.query;
-      const data = await ApbdService.getUraian2(uraian1Id);
+      const data = await ApbdService.getUraian2();
       res.json(data);
     } catch (e) {
       next(e);
@@ -288,6 +283,16 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
+    const getAllDropdownOptions = async (_req, res, next) => {
+    try {
+      const data = await ApbdService.getAllDropdownOptions();
+      res.json({ success: true, data });
+    } catch (e) {
+      console.error("Error getAllDropdownOptions:", e);
+      res.status(e.status || 500).json({ success: false, message: e.message || "internal_error", error: e.error });
+    }
+  };
+
 
   return {
     //input form apbdes rincian
@@ -329,5 +334,6 @@ export default function createApbdHandler(ApbdService) {
 
     //dropdown helper
     getDropdownOptionsByKodeRekening,
+    getAllDropdownOptions,
   };
 }

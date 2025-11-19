@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 export default function FormDropdown({ label, options = [], value, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const [hasSelected, setHasSelected] = useState(false);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -18,16 +17,17 @@ export default function FormDropdown({ label, options = [], value, onChange }) {
 
   const handleSelect = (option) => {
     onChange(option);
-    setHasSelected(true);
     setIsOpen(false);
   };
+
+  const isValueSelected = value && value !== "";
 
   return (
     <div className="relative flex w-full flex-col" ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`text-leftfocus:ring-1 flex w-full items-center justify-between rounded-md border border-[#D4D4D8] bg-white px-3 py-2 focus:outline-none ${hasSelected ? "text-[#011829]" : "text-gray-400"}`}
+        className={`text-leftfocus:ring-1 flex w-full items-center justify-between rounded-md border border-[#D4D4D8] bg-white px-3 py-2 focus:outline-none ${isValueSelected ? "text-[#011829]" : "text-gray-400"}`}
       >
         <span>{value || `${label}`}</span>
         <svg

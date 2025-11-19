@@ -59,31 +59,31 @@ export default function createApbdRepo(arg) {
 
   const listBidang = async () => {
     const { rows } = await db.query(
-      `SELECT id, full_code, uraian FROM kode_fungsi WHERE level = $1 ORDER BY full_code`,
+      `SELECT id, full_code, uraian, parent_id FROM kode_fungsi WHERE level = $1 ORDER BY full_code`,
       ["bidang"]
     );
     return rows;
   };
 
-  const listSubBidang = async (bidangId) => {
+  const listSubBidang = async () => {
     const { rows } = await db.query(
-      `SELECT id, full_code, uraian FROM kode_fungsi WHERE level = $1 AND parent_id = $2 ORDER BY full_code`,
-      ["sub_bidang", bidangId]
+      `SELECT id, full_code, uraian, parent_id FROM kode_fungsi WHERE level = $1 ORDER BY full_code`,
+      ["sub_bidang"]
     );
     return rows;
   };
 
-  const listKegiatan = async (subBidangId) => {
+  const listKegiatan = async () => {
     const { rows } = await db.query(
-      `SELECT id, full_code, uraian FROM kode_fungsi WHERE level = $1 AND parent_id = $2 ORDER BY full_code`,
-      ["kegiatan", subBidangId]
+      `SELECT id, full_code, uraian, parent_id FROM kode_fungsi WHERE level = $1 ORDER BY full_code`,
+      ["kegiatan"]
     );
     return rows;
   };
 
   const listKodeEkonomi = async () => {
     const { rows } = await db.query(`
-      SELECT id, full_code, uraian 
+      SELECT id, full_code, uraian, level, parent_id
       FROM kode_ekonomi 
       ORDER BY full_code
     `);
@@ -92,7 +92,7 @@ export default function createApbdRepo(arg) {
 
   const listAkun = async () => {
     const { rows } = await db.query(
-      `SELECT id, full_code, uraian FROM kode_ekonomi WHERE level = 'akun' ORDER BY full_code`
+      `SELECT id, full_code, uraian, parent_id FROM kode_ekonomi WHERE level = 'akun' ORDER BY full_code`
     );
     return rows;
   };
@@ -104,26 +104,26 @@ export default function createApbdRepo(arg) {
     return rows;
   };
 
-  const listSumberDana = async (akunId) => {
+  const listSumberDana = async () => {
     const { rows } = await db.query(
-      `SELECT id, full_code, uraian AS sumber_dana FROM kode_ekonomi WHERE level = $1 AND parent_id = $2 ORDER BY full_code`,
-      ["kelompok", akunId]
+      `SELECT id, full_code, uraian, parent_id FROM kode_ekonomi WHERE level = $1 ORDER BY full_code`,
+      ["kelompok"]
     );
     return rows;
   };
 
-  const listUraian1 = async (sumberDanaId) => {
+  const listUraian1 = async () => {
     const { rows } = await db.query(
-      `SELECT id, full_code, uraian AS uraian1 FROM kode_ekonomi WHERE level = $1 AND parent_id = $2 ORDER BY full_code`,
-      ["jenis", sumberDanaId]
+      `SELECT id, full_code, uraian, parent_id FROM kode_ekonomi WHERE level = $1 ORDER BY full_code`,
+      ["jenis"]
     );
     return rows;
   };
 
-  const listUraian2 = async (uraian1Id) => {
+  const listUraian2 = async () => {
     const { rows } = await db.query(
-      `SELECT id, full_code, uraian AS uraian2 FROM kode_ekonomi WHERE level = $1 AND parent_id = $2 ORDER BY full_code`,
-      ["objek", uraian1Id]
+      `SELECT id, full_code, uraian, parent_id FROM kode_ekonomi WHERE level = $1 ORDER BY full_code`,
+      ["objek"]
     );
     return rows;
   };
@@ -480,7 +480,7 @@ export default function createApbdRepo(arg) {
 
   const getDraftPenjabaranApbdesById = async (id) => {
     const q = `
-      SELECT id, rincian_id, uraian, volume, satuan, jumlah_anggaran, sumber_dana
+      SELECT id AS penjabaran_id, rincian_id, uraian AS penjabaran_uraian, volume, satuan, jumlah_anggaran, sumber_dana
       FROM apbdes_rincian_penjabaran
       WHERE id = $1
       ORDER BY id
@@ -527,12 +527,12 @@ export default function createApbdRepo(arg) {
 
   const getApbdesStatus = async (id) => {
     const q = `
-      SELECT status
+      SELECT id AS apbdes_id, status AS apbdes_status
       FROM apbdes
       WHERE id = $1
     `;
     const { rows } = await db.query(q, [id]);
-    return rows[0]?.status || null;
+    return rows[0]?.apbdes_status || null;
   };
 
   const updatePenjabaranApbdesItem = async (id, data) => {

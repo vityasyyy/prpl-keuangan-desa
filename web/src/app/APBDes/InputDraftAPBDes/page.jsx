@@ -13,20 +13,37 @@ export default function InputDraftAPBDes() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id"); // Get id from query if editing
 
+  // States to hold the currently displayed options for dropdowns
   const [akunOptions, setAkunOptions] = useState([]);
-  const [uraian1Options, setUraian1Options] = useState([]); // New state for Uraian 1 options
-  const [uraian2Options, setUraian2Options] = useState([]); // New state for Uraian 2 options
-  const [sumberDanaOptions, setSumberDanaOptions] = useState([]); // New state for Sumber Dana options
+  const [uraian1Options, setUraian1Options] = useState([]);
+  const [uraian2Options, setUraian2Options] = useState([]);
+  const [sumberDanaOptions, setSumberDanaOptions] = useState([]);
   const [bidangOptions, setBidangOptions] = useState([]);
   const [subBidangOptions, setSubBidangOptions] = useState([]);
   const [kegiatanOptions, setKegiatanOptions] = useState([]);
 
+  // States to hold the FULL list of options fetched initially
+  const [allAkunOptions, setAllAkunOptions] = useState([]);
+  const [allUraian1Options, setAllUraian1Options] = useState([]);
+  const [allUraian2Options, setAllUraian2Options] = useState([]);
+  const [allSumberDanaOptions, setAllSumberDanaOptions] = useState([]);
+  const [allBidangOptions, setAllBidangOptions] = useState([]);
+  const [allSubBidangOptions, setAllSubBidangOptions] = useState([]);
+  const [allKegiatanOptions, setAllKegiatanOptions] = useState([]);
+
   const [bidangData, setBidangData] = useState([]); // To store full bidang objects
   const [subBidangData, setSubBidangData] = useState([]); // To store full subBidang objects
   const [kegiatanData, setKegiatanData] = useState([]); // To store full kegiatan objects
+  const [akunData, setAkunData] = useState([]);
+  const [sumberDanaData, setSumberDanaData] = useState([]);
+  const [uraian1Data, setUraian1Data] = useState([]);
+  const [uraian2Data, setUraian2Data] = useState([]);
 
   const [selectedBidangId, setSelectedBidangId] = useState(null);
   const [selectedSubBidangId, setSelectedSubBidangId] = useState(null);
+  const [selectedAkunId, setSelectedAkunId] = useState(null);
+  const [selectedSumberDanaId, setSelectedSumberDanaId] = useState(null);
+  const [selectedUraian1Id, setSelectedUraian1Id] = useState(null);
 
   const [formData, setFormData] = useState({
     id: Date.now(),
@@ -45,11 +62,14 @@ export default function InputDraftAPBDes() {
   // Helper to format kode rekening with dots based on type
   const formatKodeRekening = (value, type) => {
     if (!value) return "";
-
+  
     // Remove any non-digit characters first
     let cleanedValue = value.replace(/[^0-9]/g, "");
-
+  
     if (type === "ekonomi") {
+      if (cleanedValue.length > 5) {
+        cleanedValue = cleanedValue.slice(0, 5);
+      }
       // Format for Kode Ekonomi: X.X.X.XX (e.g., 4.2.1.01)
       if (cleanedValue.length > 1) {
         cleanedValue = cleanedValue.slice(0, 1) + "." + cleanedValue.slice(1);
@@ -61,6 +81,9 @@ export default function InputDraftAPBDes() {
         cleanedValue = cleanedValue.slice(0, 5) + "." + cleanedValue.slice(5);
       }
     } else if (type === "bidang") {
+      if (cleanedValue.length > 4) {
+        cleanedValue = cleanedValue.slice(0, 4);
+      }
       // Format for Kode Fungsi (Bidang Kegiatan): X.X.XX (e.g., 1.1.01)
       if (cleanedValue.length > 1) {
         cleanedValue = cleanedValue.slice(0, 1) + "." + cleanedValue.slice(1);
@@ -82,94 +105,106 @@ export default function InputDraftAPBDes() {
     };
   };
 
-  // Fetch dropdown options for Akun
+  // Fetch all dropdown options on component mount
   useEffect(() => {
-    async function fetchAkunOptions() {
+    async function fetchAllDropdownOptions() {
       try {
-        const response = await fetch("http://localhost:8081/api/apbd/akun");
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/all-dropdown-options`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const data = await response.json();
-        const options = data.map((item) => item.uraian);
-        setAkunOptions(options);
+        const { data } = await response.json();
+
+        // Set initial full lists
+        setAllAkunOptions(data.akun.map((item) => item.uraian));
+        setAllUraian1Options(data.uraian1.map((item) => item.uraian));
+        setAllUraian2Options(data.uraian2.map((item) => item.uraian));
+        setAllSumberDanaOptions(data.sumberDana.map((item) => item.uraian));
+        setAllBidangOptions(data.bidang.map((item) => item.uraian));
+        setAllSubBidangOptions(data.subBidang.map((item) => item.uraian));
+        setAllKegiatanOptions(data.kegiatan.map((item) => item.uraian));
+
+        // Also set the current options to the full lists initially
+        setAkunOptions(data.akun.map((item) => item.uraian));
+        setUraian1Options(data.uraian1.map((item) => item.uraian));
+        setUraian2Options(data.uraian2.map((item) => item.uraian));
+        setSumberDanaOptions(data.sumberDana.map((item) => item.uraian));
+        setBidangOptions(data.bidang.map((item) => item.uraian));
+        setSubBidangOptions(data.subBidang.map((item) => item.uraian));
+        setKegiatanOptions(data.kegiatan.map((item) => item.uraian));
+
+        setBidangData(data.bidang);
+        setSubBidangData(data.subBidang);
+        setKegiatanData(data.kegiatan);
+        setAkunData(data.akun);
+        setSumberDanaData(data.sumberDana);
+        setUraian1Data(data.uraian1);
+        setUraian2Data(data.uraian2);
       } catch (error) {
-        console.error("Failed to fetch akun options:", error);
+        console.error("Failed to fetch all dropdown options:", error);
       }
     }
-    fetchAkunOptions();
+    fetchAllDropdownOptions();
   }, []);
 
-  // Fetch dropdown options for Bidang
+  // Filter Sub-Bidang options when a Bidang is selected
   useEffect(() => {
-    async function fetchBidangOptions() {
-      try {
-        const response = await fetch("http://localhost:8081/api/apbd/bidang");
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        setBidangData(data); // Store full data
-        const options = data.map((item) => item.uraian);
-        setBidangOptions(options);
-      } catch (error) {
-        console.error("Failed to fetch bidang options:", error);
-      }
+    if (selectedBidangId && subBidangData.length > 0) {
+      const filtered = subBidangData.filter((item) => item.parent_id === selectedBidangId);
+      setSubBidangOptions(filtered.map((item) => item.uraian));
+    } else {
+      setSubBidangOptions(allSubBidangOptions); // Reset if no Bidang is selected
     }
-    fetchBidangOptions();
-  }, []);
+    handleOnChange("subBidang", ""); // Reset sub-bidang selection
+    handleOnChange("kegiatan", ""); // Reset kegiatan selection
+  }, [selectedBidangId, subBidangData, allSubBidangOptions]);
 
-  // Fetch dropdown options for Sub-Bidang based on selectedBidangId
+  // Filter Kegiatan options when a Sub-Bidang is selected
   useEffect(() => {
-    async function fetchSubBidangOptions() {
-      if (!selectedBidangId) {
-        setSubBidangOptions([]);
-        setSubBidangData([]);
-        return;
-      }
-      try {
-        const response = await fetch(
-          `http://localhost:8081/api/apbd/sub-bidang?bidangId=${selectedBidangId}`
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        setSubBidangData(data); // Store full data
-        const options = data.map((item) => item.uraian);
-        setSubBidangOptions(options);
-      } catch (error) {
-        console.error("Failed to fetch sub bidang options:", error);
-      }
+    if (selectedSubBidangId && kegiatanData.length > 0) {
+      const filtered = kegiatanData.filter((item) => item.parent_id === selectedSubBidangId);
+      setKegiatanOptions(filtered.map((item) => item.uraian));
+    } else {
+      setKegiatanOptions(allKegiatanOptions); // Reset if no Sub-Bidang is selected
     }
-    fetchSubBidangOptions();
-  }, [selectedBidangId]);
+    handleOnChange("kegiatan", ""); // Reset kegiatan selection
+  }, [selectedSubBidangId, kegiatanData, allKegiatanOptions]);
 
-  // Fetch dropdown options for Kegiatan based on selectedSubBidangId
+  // Filter Sumber Dana options when an Akun is selected
   useEffect(() => {
-    async function fetchKegiatanOptions() {
-      if (!selectedSubBidangId) {
-        setKegiatanOptions([]);
-        setKegiatanData([]);
-        return;
-      }
-      try {
-        const response = await fetch(
-          `http://localhost:8081/api/apbd/kegiatan?subBidangId=${selectedSubBidangId}`
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        setKegiatanData(data); // Store full data
-        const options = data.map((item) => item.uraian);
-        setKegiatanOptions(options);
-      } catch (error) {
-        console.error("Failed to fetch kegiatan options:", error);
-      }
+    if (selectedAkunId && sumberDanaData.length > 0) {
+      const filtered = sumberDanaData.filter((item) => item.parent_id === selectedAkunId);
+      setSumberDanaOptions(filtered.map((item) => item.uraian));
+    } else {
+      setSumberDanaOptions(allSumberDanaOptions);
     }
-    fetchKegiatanOptions();
-  }, [selectedSubBidangId]);
+    handleOnChange("sumberDana", "");
+    handleOnChange("uraian1", "");
+    handleOnChange("uraian2", "");
+  }, [selectedAkunId, sumberDanaData, allSumberDanaOptions]);
+
+  // Filter Uraian 1 options when a Sumber Dana is selected
+  useEffect(() => {
+    if (selectedSumberDanaId && uraian1Data.length > 0) {
+      const filtered = uraian1Data.filter((item) => item.parent_id === selectedSumberDanaId);
+      setUraian1Options(filtered.map((item) => item.uraian));
+    } else {
+      setUraian1Options(allUraian1Options);
+    }
+    handleOnChange("uraian1", "");
+    handleOnChange("uraian2", "");
+  }, [selectedSumberDanaId, uraian1Data, allUraian1Options]);
+
+  // Filter Uraian 2 options when an Uraian 1 is selected
+  useEffect(() => {
+    if (selectedUraian1Id && uraian2Data.length > 0) {
+      const filtered = uraian2Data.filter((item) => item.parent_id === selectedUraian1Id);
+      setUraian2Options(filtered.map((item) => item.uraian));
+    } else {
+      setUraian2Options(allUraian2Options);
+    }
+    handleOnChange("uraian2", "");
+  }, [selectedUraian1Id, uraian2Data, allUraian2Options]);
 
   // Helpers: sanitize number and normalize kategori
   const sanitizeNumber = (val) => {
@@ -290,7 +325,12 @@ export default function InputDraftAPBDes() {
     []
   );
 
-  // Debounced API call for Kode Rek Bidang
+  const handleKodeRekEkonomiChange = (value) => {
+    const formattedValue = formatKodeRekening(value, "ekonomi");
+    handleOnChange("kodeRekEkonomi", formattedValue);
+    fetchEkonomiOptionsDebounced(formattedValue);
+  };
+
   const fetchBidangOptionsDebounced = useCallback(
     debounce(async (kodeRekening) => {
       if (!kodeRekening) {
@@ -372,11 +412,6 @@ export default function InputDraftAPBDes() {
     []
   );
 
-  const handleKodeRekEkonomiChange = (value) => {
-    const formattedValue = formatKodeRekening(value, "ekonomi");
-    handleOnChange("kodeRekEkonomi", formattedValue);
-    fetchEkonomiOptionsDebounced(formattedValue);
-  };
 
   const handleKodeRekBidangChange = (value) => {
     const formattedValue = formatKodeRekening(value, "bidang");
@@ -502,7 +537,11 @@ export default function InputDraftAPBDes() {
                 label="Pendapatan / Belanja / Pembiayaan"
                 options={akunOptions}
                 value={formData.pendapatanBelanja}
-                onChange={(val) => handleOnChange("pendapatanBelanja", val)}
+                onChange={(val) => {
+                  handleOnChange("pendapatanBelanja", val);
+                  const selected = akunData.find((item) => item.uraian === val);
+                  setSelectedAkunId(selected ? selected.id : null);
+                }}
               />
             </div>
             <div className="w-[27.5%] min-w-[180px]">
@@ -510,8 +549,18 @@ export default function InputDraftAPBDes() {
                 label="Uraian 1"
                 options={uraian1Options}
                 value={formData.uraian1}
-                onChange={(val) => handleOnChange("uraian1", val)}
+                onChange={(val) => {
+                  handleOnChange("uraian1", val);
+                  const selected = uraian1Data.find(
+                    (item) => item.uraian === val && item.parent_id === selectedSumberDanaId
+                  );
+                  setSelectedUraian1Id(selected ? selected.id : null);
+                }}
+                disabled={!selectedSumberDanaId}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Pilih Sumber Dana terlebih dahulu.
+              </p>
             </div>
             <div className="w-[27.5%] min-w-[180px]">
               <FormDropdown
@@ -519,6 +568,7 @@ export default function InputDraftAPBDes() {
                 options={uraian2Options}
                 value={formData.uraian2}
                 onChange={(val) => handleOnChange("uraian2", val)}
+                disabled={!selectedUraian1Id}
               />
             </div>
           </div>
@@ -546,8 +596,6 @@ export default function InputDraftAPBDes() {
                   handleOnChange("bidang", val);
                   const selected = bidangData.find((item) => item.uraian === val);
                   setSelectedBidangId(selected ? selected.id : null);
-                  // reset sub-bidang & kegiatan saat bidang berubah
-                  setSelectedSubBidangId(null);
                   handleOnChange("subBidang", "");
                   handleOnChange("kegiatan", "");
                 }}
@@ -560,9 +608,10 @@ export default function InputDraftAPBDes() {
                 value={formData.subBidang}
                 onChange={(val) => {
                   handleOnChange("subBidang", val);
-                  const selected = subBidangData.find((item) => item.uraian === val);
+                  const selected = subBidangData.find(
+                    (item) => item.uraian === val && item.parent_id === selectedBidangId
+                  );
                   setSelectedSubBidangId(selected ? selected.id : null);
-                  handleOnChange("kegiatan", "");
                 }}
               />
             </div>
@@ -604,7 +653,14 @@ export default function InputDraftAPBDes() {
             label="PBH / DDS / ADD / DLL / PBP"
             options={sumberDanaOptions}
             value={formData.sumberDana}
-            onChange={(val) => handleOnChange("sumberDana", val)}
+            onChange={(val) => {
+              handleOnChange("sumberDana", val);
+              const selected = sumberDanaData.find(
+                (item) => item.uraian === val && item.parent_id === selectedAkunId
+              );
+              setSelectedSumberDanaId(selected ? selected.id : null);
+            }}
+            disabled={!selectedAkunId}
           />
         </div>
       </div>
