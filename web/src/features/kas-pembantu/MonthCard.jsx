@@ -91,7 +91,8 @@ export default function MonthCard({
                   {transactions.map((transaction, idx) => (
                     <tr
                       key={transaction.id || idx}
-                      className="border-b border-gray-100 hover:bg-gray-50"
+                      className="cursor-pointer border-b border-gray-100 hover:bg-gray-50"
+                      onClick={() => router.push(`${formPath}?id=${transaction.id}`)}
                     >
                       {columns.map((col) => (
                         <td

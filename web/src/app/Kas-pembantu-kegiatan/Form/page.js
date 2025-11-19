@@ -1,12 +1,15 @@
 "use client";
 import { useRef, useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Sidebar from "@/features/kas-pembantu/Sidebar";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { Calendar } from "lucide-react";
 import Footer from "@/features/kas-pembantu/Footer";
 import {
   createKegiatan,
+  getKegiatanById,
+  updateKegiatan,
+  deleteKegiatan,
   getBidang,
   getSubBidang,
   getKegiatan as getKegiatanOptions,
@@ -15,7 +18,9 @@ import { parseCurrency, formatCurrency } from "@/lib/format";
 
 export default function Page() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dateInputRef = useRef(null);
+  const editId = searchParams.get("id");
 
   // Form state
   const [tanggal, setTanggal] = useState("");
@@ -40,6 +45,41 @@ export default function Page() {
   const [bidangOptions, setBidangOptions] = useState([]);
   const [subBidangOptions, setSubBidangOptions] = useState([]);
   const [kegiatanOptions, setKegiatanOptions] = useState([]);
+
+  // Fetch data if in edit mode
+  useEffect(() => {
+    async function fetchKegiatanData() {
+      if (editId) {
+        try {
+          setLoading(true);
+          const response = await getKegiatanById(editId);
+          const data = response;
+          
+          setTanggal(data.tanggal || "");
+          setUraian(data.uraian || "");
+          
+          // For kegiatan, penerimaan and pengeluaran come from API
+          // We need to split them back to the form fields
+          // Since we don't know the exact breakdown, we'll put them in the first field
+          if (data.penerimaan && data.penerimaan > 0) {
+            setDariBendahara(String(data.penerimaan));
+          }
+          if (data.pengeluaran && data.pengeluaran > 0) {
+            setBelanjaBarang(String(data.pengeluaran));
+          }
+          
+          // Set type_enum to kegiatan dropdown if available
+          setKegiatan(data.type_enum || "");
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchKegiatanData();
+  }, [editId]);
 
   // Fetch initial bidang options
   useEffect(() => {
@@ -86,8 +126,38 @@ export default function Page() {
     return `${day}/${month}/${year}`;
   };
 
-  const handleDelete = () => {
-    console.log("hapus diklik");
+  const handleDelete = async () => {
+    if (editId) {
+      // Edit mode: delete the entry
+      if (confirm("Apakah Anda yakin ingin menghapus data ini?")) {
+        try {
+          setLoading(true);
+          setError(null);
+          await deleteKegiatan(editId);
+          // Redirect to list after successful deletion
+          router.push("/Kas-pembantu-kegiatan");
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      }
+    } else {
+      // Create mode: clear all form inputs
+      setTanggal("");
+      setKodeRek("");
+      setBidang("");
+      setSubBidang("");
+      setKegiatan("");
+      setUraian("");
+      setDariBendahara("");
+      setSwadaya("");
+      setBelanjaBarang("");
+      setBelanjaModal("");
+      setNomorBukti("");
+      setJumlahPengembalian("");
+      setError(null);
+    }
   };
 
   const handleCreate = () => {
@@ -138,11 +208,15 @@ export default function Page() {
         pengeluaran: pengeluaran,
       };
 
-      // Submit to API
-      await createKegiatan(payload);
+      // Submit to API - use update if editId exists, otherwise create
+      if (editId) {
+        await updateKegiatan(editId, payload);
+      } else {
+        await createKegiatan(payload);
+      }
 
       // Success - check if "buat lagi" is enabled
-      if (buatLagi) {
+      if (buatLagi && !editId) {
         handleCreate();
       } else {
         // Redirect to list
@@ -205,10 +279,16 @@ export default function Page() {
         <BreadcrumbHeader items={["Penatausahaan", "Buku Pembantu Kegiatan"]} />
 
         <h1 className="mt-2 mb-6 text-[20px] font-semibold text-gray-800">
-          Input Data Pembantu Kegiatan
+          {editId ? "Edit Data Pembantu Kegiatan" : "Input Data Pembantu Kegiatan"}
         </h1>
 
-        <form className="space-y-5" onSubmit={handleSave}>
+        {/* Show loading state when fetching data in edit mode */}
+        {editId && loading ? (
+          <div className="rounded-md border border-gray-200 bg-white p-8 text-center">
+            <p className="text-gray-600">Memuat data...</p>
+          </div>
+        ) : (
+          <form className="space-y-5" onSubmit={handleSave}>
           {/* Error Alert */}
           {error && (
             <div className="rounded-md border border-red-200 bg-red-50 p-4">
@@ -393,6 +473,7 @@ export default function Page() {
             isLoading={loading}
           />
         </form>
+        )}
       </div>
     </div>
   );

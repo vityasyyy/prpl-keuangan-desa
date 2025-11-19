@@ -1,16 +1,18 @@
 "use client";
-import { useRef, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRef, useState, useCallback, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Sidebar from "@/features/kas-pembantu/Sidebar";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { Calendar } from "lucide-react";
 import Footer from "@/features/kas-pembantu/Footer";
-import { createPanjar } from "@/services/kas-pembantu";
+import { createPanjar, getPanjarById, updatePanjar, deletePanjar } from "@/services/kas-pembantu";
 import { parseCurrency } from "@/lib/format";
 
 export default function Page() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dateInputRef = useRef(null);
+  const editId = searchParams.get("id");
 
   // Form state
   const [tanggal, setTanggal] = useState("");
@@ -23,14 +25,60 @@ export default function Page() {
   const [error, setError] = useState(null);
   const [buatLagi, setBuatLagi] = useState(false);
 
+  // Fetch data if in edit mode
+  useEffect(() => {
+    async function fetchPanjar() {
+      if (editId) {
+        try {
+          setLoading(true);
+          const response = await getPanjarById(editId);
+          const data = response.data;
+          
+          setTanggal(data.tanggal);
+          setUraian(data.uraian);
+          setPemberian(data.pemberian ? String(data.pemberian) : "");
+          setPertanggungjawaban(data.pertanggungjawaban ? String(data.pertanggungjawaban) : "");
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchPanjar();
+  }, [editId]);
+
   const formatTanggal = (value) => {
     if (!value) return "";
     const [year, month, day] = value.split("-");
     return `${day}/${month}/${year}`;
   };
 
-  const handleDelete = () => {
-    console.log("hapus diklik");
+  const handleDelete = async () => {
+    if (editId) {
+      // Edit mode: delete the entry
+      if (confirm("Apakah Anda yakin ingin menghapus data ini?")) {
+        try {
+          setLoading(true);
+          setError(null);
+          await deletePanjar(editId);
+          // Redirect to list after successful deletion
+          router.push("/Kas-pembantu-panjar");
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      }
+    } else {
+      // Create mode: clear all form inputs
+      setTanggal("");
+      setUraian("");
+      setPemberian("");
+      setPertanggungjawaban("");
+      setError(null);
+    }
   };
 
   const handleCreate = () => {
@@ -57,8 +105,8 @@ export default function Page() {
       setError(null);
 
       // Parse currency values - convert to number directly
-      const pemberianAmount = pemberian ? parseInt(pemberian) : 0;
-      const pertanggungjawabanAmount = pertanggungjawaban ? parseInt(pertanggungjawaban) : 0;
+      const pemberianAmount = pemberian ? parseFloat(pemberian) : 0;
+      const pertanggungjawabanAmount = pertanggungjawaban ? parseFloat(pertanggungjawaban) : 0;
 
       // Prepare payload
       const payload = {
@@ -69,11 +117,15 @@ export default function Page() {
         pertanggungjawaban: pertanggungjawabanAmount,
       };
 
-      // Submit to API
-      await createPanjar(payload);
+      // Submit to API - use update if editId exists, otherwise create
+      if (editId) {
+        await updatePanjar(editId, payload);
+      } else {
+        await createPanjar(payload);
+      }
 
       // Success - check if "buat lagi" is enabled
-      if (buatLagi) {
+      if (buatLagi && !editId) {
         handleCreate();
       } else {
         // Redirect to list
@@ -119,7 +171,7 @@ export default function Page() {
         <BreadcrumbHeader items={["Penatausahaan", "Buku Pembantu Panjar"]} />
 
         <h1 className="mt-2 mb-6 text-[20px] font-semibold text-gray-800">
-          Input Data Pembantu Panjar
+          {editId ? "Edit Data Pembantu Panjar" : "Input Data Pembantu Panjar"}
         </h1>
 
         <form className="space-y-5" onSubmit={handleSave}>
