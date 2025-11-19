@@ -1,6 +1,7 @@
 // This page fetches data on the server and renders the list view.
 import Link from 'next/link';
 import ReverseButton from '@/features/bank-desa/components/ReverseButton.jsx';
+import DownloadButton from '@/features/bank-desa/components/DownloadButton.jsx';
 
 /**
  * Fetches transaction data directly from our Backend API endpoint.
@@ -131,9 +132,7 @@ export default async function BukuBankPage({ searchParams }) {
           >
             {hideReversals ? 'Tampilkan Reversal' : 'Sembunyikan Reversal'}
           </Link>
-          <button className="bg-yellow-500 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-yellow-600 transition-colors">
-            Unduh File
-          </button>
+          <DownloadButton latestMonth={sortedMonthKeys[0]} />
           <Link
             href="/buku-bank/input"
             className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-green-700 transition-colors"
