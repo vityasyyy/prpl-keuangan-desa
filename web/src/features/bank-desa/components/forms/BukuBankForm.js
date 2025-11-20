@@ -1,23 +1,116 @@
 "use client"; // REQUIRED for client-side interactivity
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+
+// Icons
+const MailIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
+    <rect width="20" height="16" x="2" y="4" rx="2" />
+    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 6h18" />
+    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+  </svg>
+);
+
+const SaveIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+    <polyline points="17 21 17 13 7 13 7 21" />
+    <polyline points="7 3 7 8 15 8" />
+  </svg>
+);
+
+const LockIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const ToggleLeftIcon = ({ checked }) => (
+  <svg width="44" height="24" viewBox="0 0 44 24" fill="none" className="cursor-pointer">
+    <rect width="44" height="24" rx="12" fill={checked ? "#2563EB" : "#4B5563"} className="transition-colors duration-200" />
+    <circle cx={checked ? 32 : 12} cy="12" r="10" fill="white" className="transition-all duration-200" />
+  </svg>
+);
+
+// Helper to format currency input
+const formatCurrencyInput = (val) => {
+  if (!val) return '';
+  const num = val.replace(/\D/g, '');
+  if (!num) return '';
+  return new Intl.NumberFormat('id-ID').format(num);
+};
+
+// Helper to parse currency input back to number
+const parseCurrencyInput = (val) => {
+  if (!val) return 0;
+  return Number(val.replace(/\./g, '').replace(/,/g, '.'));
+};
 
 /**
- * Reusable Input Field Component
+ * Reusable Input Field Component matching Figma design
  */
-const InputField = ({ label, id, type, value, onChange, placeholder = '', required = false, disabled = false, min }) => (
-  <div className="mb-4">
-    <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-      {label} {required && <span className="text-red-500">*</span>}
-    </label>
-    <input
-      type={type} id={id} name={id} value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder} required={required} disabled={disabled}
-      className={`block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white ${disabled ? 'bg-gray-100 dark:bg-gray-600 cursor-not-allowed' : ''}`}
-      min={min}
-    />
+const InputField = ({ label, id, type, value, onChange, placeholder = '', required = false, disabled = false, min, prefix, icon, isCurrency = false }) => {
+  const handleChange = (e) => {
+    let val = e.target.value;
+    if (isCurrency) {
+      val = formatCurrencyInput(val);
+    }
+    onChange(val);
+  };
+
+  return (
+    <div className="flex flex-col gap-[8px] w-full">
+      <label htmlFor={id} className="font-[var(--font-inter)] font-bold text-[16px] md:text-[18px] leading-[24px] text-black">
+        {label} {required && <span className="text-red-600">*</span>}
+      </label>
+      <div className={`bg-white border border-solid border-gray-600 rounded-[8px] w-full overflow-hidden ${disabled ? 'bg-gray-200 cursor-not-allowed' : ''}`}>
+        <div className="flex items-center px-[14px] py-[12px] gap-[8px]">
+          {prefix && (
+            <span className="font-[var(--font-inter)] font-semibold text-[16px] md:text-[18px] leading-[24px] text-black border-r border-gray-600 pr-3 mr-1">
+              {prefix}
+            </span>
+          )}
+          {icon && (
+            <div className="shrink-0 text-black">
+              {icon}
+            </div>
+          )}
+          <input
+            type={isCurrency ? "text" : type}
+            id={id}
+            name={id}
+            value={value}
+            onChange={handleChange}
+            placeholder={placeholder}
+            required={required}
+            disabled={disabled}
+            min={min}
+            className="w-full font-[var(--font-inter)] font-medium text-[16px] md:text-[18px] leading-[24px] text-black placeholder-gray-700 outline-none bg-transparent disabled:text-black disabled:cursor-not-allowed"
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Section Container Component
+ */
+const FormSection = ({ title, children }) => (
+  <div className="border-[#4b5565] border-[0.5px] border-solid rounded-[30px] px-[20px] py-[30px] flex flex-col gap-[20px] w-full bg-white">
+    <p className="font-[var(--font-plus-jakarta-sans)] font-normal text-[16px] md:text-[18px] leading-[24px] text-black">
+      {title}
+    </p>
+    {children}
   </div>
 );
 
@@ -26,22 +119,32 @@ const InputField = ({ label, id, type, value, onChange, placeholder = '', requir
  */
 export default function BukuBankForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [makeAgain, setMakeAgain] = useState(false);
 
   // Form state
-  const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
+  const [tanggal, setTanggal] = useState('');
   const [nomorRekening] = useState('1234-56-789012-3'); // Placeholder
   const [cabangBank] = useState('Cabang Sleman');   // Placeholder
   const [uraian, setUraian] = useState('');
   const [setoran, setSetoran] = useState('');
+
+  useEffect(() => {
+    const dateParam = searchParams.get('date');
+    if (dateParam) {
+      setTanggal(dateParam);
+    } else {
+      setTanggal(new Date().toISOString().split('T')[0]);
+    }
+  }, [searchParams]);
   const [penerimaanBunga, setPenerimaanBunga] = useState('');
   const [penarikan, setPenarikan] = useState('');
   const [pajak, setPajak] = useState('');
   const [biayaAdmin, setBiayaAdmin] = useState('');
   const [buktiTransaksi, setBuktiTransaksi] = useState('');
-  const [saldo] = useState('Auto-calculated'); // Placeholder
+  const [saldo] = useState('100.000.000,00'); // Placeholder
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,26 +153,24 @@ export default function BukuBankForm() {
 
     const formData = {
       tanggal, uraian, bukti_transaksi: buktiTransaksi,
-      setoran: Number(setoran) || 0, penerimaan_bunga: Number(penerimaanBunga) || 0,
-      penarikan: Number(penarikan) || 0, pajak: Number(pajak) || 0,
-      biaya_admin: Number(biayaAdmin) || 0,
+      setoran: parseCurrencyInput(setoran), 
+      penerimaan_bunga: parseCurrencyInput(penerimaanBunga),
+      penarikan: parseCurrencyInput(penarikan), 
+      pajak: parseCurrencyInput(pajak),
+      biaya_admin: parseCurrencyInput(biayaAdmin),
     };
     console.log('(Client-side) Submitting to /api/bank-desa:', formData);
 
     try {
-      // Client-side fetch automatically includes cookies (usually).
-      // Use relative path '/api/bank-desa'
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8081';
       const response = await fetch(`${backendUrl}/api/bank-desa`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
-        // credentials: 'include', // Uncomment if needed for CORS/cookie issues
       });
 
       if (response.status === 401) { throw new Error('Unauthorized. Sesi Anda mungkin telah berakhir.'); }
       if (!response.ok) {
-        // Read body ONCE, then try JSON parse from text to avoid double-read errors
         const raw = await response.text();
         let errorMsg = `HTTP error ${response.status}`;
         try { const errData = JSON.parse(raw); errorMsg = errData.message || JSON.stringify(errData); }
@@ -79,7 +180,6 @@ export default function BukuBankForm() {
 
       console.log('Form submitted successfully!');
       if (makeAgain) {
-        // Stay on page and clear numeric fields for fast next entry
         setSetoran('');
         setPenerimaanBunga('');
         setPenarikan('');
@@ -87,9 +187,9 @@ export default function BukuBankForm() {
         setBiayaAdmin('');
         setBuktiTransaksi('');
         setIsLoading(false);
-        return; // do not navigate
+        return;
       }
-      router.push('/buku-bank'); // Redirect back to list
+      router.push('/buku-bank');
 
     } catch (err) {
       console.error('Form submission error:', err);
@@ -99,65 +199,201 @@ export default function BukuBankForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 bg-background dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md border dark:border-gray-700">
-      {/* Section 1: Detail & Bank Detail */}
-      <fieldset className="space-y-4 p-4 border dark:border-gray-600 rounded-lg">
-        <legend className="text-base font-semibold px-2 text-gray-700 dark:text-gray-300">Detail Transaksi</legend>
-        <InputField label="Tanggal" id="tanggal" type="date" value={tanggal} onChange={setTanggal} required />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <InputField label="Nomor Rekening" id="nomorRekening" type="text" value={nomorRekening} onChange={() => {}} disabled />
-          <InputField label="Cabang Bank" id="cabangBank" type="text" value={cabangBank} onChange={() => {}} disabled />
+    <form onSubmit={handleSubmit} className="flex flex-col gap-[29px] w-full max-w-4xl mx-auto pb-10">
+      
+      {/* Section 1: Detail */}
+      <FormSection title="Detail">
+        <div className="flex flex-col md:flex-row gap-[20px] w-full">
+          <InputField 
+            label="Tanggal" 
+            id="tanggal" 
+            type="date" 
+            value={tanggal} 
+            onChange={setTanggal} 
+            required 
+            icon={<MailIcon />}
+          />
+          <InputField 
+            label="Uraian" 
+            id="uraian" 
+            type="text" 
+            value={uraian} 
+            onChange={setUraian} 
+            placeholder="Uraian Transaksi" 
+            required 
+          />
         </div>
-        <InputField label="Uraian Transaksi" id="uraian" type="text" value={uraian} onChange={setUraian} placeholder="Mis: Setoran Dana Desa Tahap 1" required />
-      </fieldset>
+        
+        <div className="flex flex-col gap-[6px] w-full">
+          <label className="font-[var(--font-inter)] font-medium text-[14px] md:text-[16px] leading-[20px] text-[#011829]">
+            Bank Detail
+          </label>
+          <div className="flex flex-col md:flex-row gap-[20px] w-full">
+            <div className="w-full md:w-1/2">
+              <div className="bg-white border border-solid border-gray-600 rounded-[8px] overflow-hidden bg-gray-200">
+                <div className="flex items-center px-[14px] py-[12px] gap-[8px]">
+                  <input
+                    type="text"
+                    value={nomorRekening}
+                    disabled
+                    className="w-full font-[var(--font-inter)] font-medium text-[16px] leading-[24px] text-black bg-transparent outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="w-full md:w-1/2">
+              <div className="bg-white border border-solid border-gray-600 rounded-[8px] overflow-hidden bg-gray-200">
+                <div className="flex items-center px-[14px] py-[12px] gap-[8px]">
+                  <input
+                    type="text"
+                    value={cabangBank}
+                    disabled
+                    className="w-full font-[var(--font-inter)] font-medium text-[16px] leading-[24px] text-black bg-transparent outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </FormSection>
 
       {/* Section 2: Pemasukan */}
-      <fieldset className="space-y-4 p-4 border dark:border-gray-600 rounded-lg">
-        <legend className="text-base font-semibold px-2 text-gray-700 dark:text-gray-300">Pemasukan</legend>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <InputField label="Setoran" id="setoran" type="number" value={setoran} onChange={setSetoran} placeholder="Rp 0" min="0"/>
-          <InputField label="Bunga Bank" id="penerimaanBunga" type="number" value={penerimaanBunga} onChange={setPenerimaanBunga} placeholder="Rp 0" min="0"/>
+      <FormSection title="Pemasukan">
+        <div className="flex flex-col md:flex-row gap-[20px] w-full">
+          <InputField 
+            label="Setoran" 
+            id="setoran" 
+            type="text" 
+            value={setoran} 
+            onChange={setSetoran} 
+            placeholder="0" 
+            min="0"
+            prefix="Rp"
+            isCurrency={true}
+          />
+          <InputField 
+            label="Bunga Bank" 
+            id="penerimaanBunga" 
+            type="text" 
+            value={penerimaanBunga} 
+            onChange={setPenerimaanBunga} 
+            placeholder="0" 
+            min="0"
+            prefix="Rp"
+            isCurrency={true}
+          />
         </div>
-      </fieldset>
+      </FormSection>
 
       {/* Section 3: Pengeluaran */}
-      <fieldset className="space-y-4 p-4 border dark:border-gray-600 rounded-lg">
-         <legend className="text-base font-semibold px-2 text-gray-700 dark:text-gray-300">Pengeluaran</legend>
-         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <InputField label="Penarikan" id="penarikan" type="number" value={penarikan} onChange={setPenarikan} placeholder="Rp 0" min="0"/>
-            <InputField label="Pajak" id="pajak" type="number" value={pajak} onChange={setPajak} placeholder="Rp 0" min="0"/>
-            <InputField label="Biaya Administrasi" id="biayaAdmin" type="number" value={biayaAdmin} onChange={setBiayaAdmin} placeholder="Rp 0" min="0"/>
-         </div>
-      </fieldset>
+      <FormSection title="Pengeluaran">
+        <div className="flex flex-col md:flex-row gap-[20px] w-full">
+          <InputField 
+            label="Penarikan" 
+            id="penarikan" 
+            type="text" 
+            value={penarikan} 
+            onChange={setPenarikan} 
+            placeholder="0" 
+            min="0"
+            prefix="Rp"
+            isCurrency={true}
+          />
+          <InputField 
+            label="Pajak" 
+            id="pajak" 
+            type="text" 
+            value={pajak} 
+            onChange={setPajak} 
+            placeholder="0" 
+            min="0"
+            prefix="Rp"
+            isCurrency={true}
+          />
+          <InputField 
+            label="Biaya Administrasi" 
+            id="biayaAdmin" 
+            type="text" 
+            value={biayaAdmin} 
+            onChange={setBiayaAdmin} 
+            placeholder="0" 
+            min="0"
+            prefix="Rp"
+            isCurrency={true}
+          />
+        </div>
+      </FormSection>
 
       {/* Section 4: Bukti dan Kumulatif */}
-      <fieldset className="space-y-4 p-4 border dark:border-gray-600 rounded-lg">
-        <legend className="text-base font-semibold px-2 text-gray-700 dark:text-gray-300">Bukti dan Kumulatif</legend>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <InputField label="Bukti Transaksi" id="buktiTransaksi" type="text" value={buktiTransaksi} onChange={setBuktiTransaksi} placeholder="No. 12345" />
-          <InputField label="Saldo (Kumulatif)" id="saldo" type="text" value={saldo} onChange={() => {}} disabled />
+      <FormSection title="Bukti dan Kumulatif">
+        <div className="flex flex-col md:flex-row gap-[20px] w-full">
+          <InputField 
+            label="Bukti Transaksi" 
+            id="buktiTransaksi" 
+            type="text" 
+            value={buktiTransaksi} 
+            onChange={setBuktiTransaksi} 
+            placeholder="12345" 
+            prefix="No"
+          />
+          <InputField 
+            label="Saldo" 
+            id="saldo" 
+            type="text" 
+            value={saldo} 
+            onChange={() => {}} 
+            disabled 
+            prefix="Rp"
+            icon={<LockIcon />}
+          />
         </div>
-      </fieldset>
+      </FormSection>
 
       {/* Error Display */}
       {error && (
-        <div className="my-4 text-center text-red-600 dark:text-red-400 text-sm p-3 bg-red-100 dark:bg-red-900 border border-red-300 dark:border-red-700 rounded-lg">
+        <div className="text-center text-red-600 text-sm p-3 bg-red-100 border border-red-300 rounded-lg">
           <strong>Gagal menyimpan:</strong> {error}
         </div>
       )}
 
       {/* Action Buttons */}
-      <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-600">
-        <label className="flex items-center gap-2 mr-auto text-sm">
-          <input type="checkbox" checked={makeAgain} onChange={(e) => setMakeAgain(e.target.checked)} />
-          <span>Tetap di form (Make again)</span>
-        </label>
-        <button type="button" onClick={() => router.back()} className="bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200 px-4 py-2 rounded-lg font-medium text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">
-          Cancel
+      <div className="flex items-center justify-between w-full mt-4">
+        {/* Left: Delete/Reset Button */}
+        <button 
+          type="button" 
+          onClick={() => router.back()} 
+          className="bg-red-600 border border-red-600 rounded-[8px] px-[18px] py-[10px] flex items-center gap-[8px] hover:bg-red-700 transition-colors"
+        >
+          <span className="font-[var(--font-inter)] font-medium text-[16px] leading-[24px] text-white">Hapus</span>
+          <TrashIcon />
         </button>
-        <button type="submit" disabled={isLoading} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-          {isLoading ? 'Menyimpan...' : 'Simpan'}
-        </button>
+
+        {/* Right: Toggle & Save */}
+        <div className="flex items-center gap-[20px]">
+          <label className="flex items-center gap-[10px] cursor-pointer select-none">
+            <span className="font-[var(--font-plus-jakarta-sans)] font-normal text-[16px] leading-[24px] text-black">Buat lagi</span>
+            <div>
+              <ToggleLeftIcon checked={makeAgain} />
+            </div>
+            <input 
+              type="checkbox" 
+              checked={makeAgain} 
+              onChange={(e) => setMakeAgain(e.target.checked)} 
+              className="hidden" 
+            />
+          </label>
+
+          <button 
+            type="submit" 
+            disabled={isLoading} 
+            className="bg-[#0479ce] border border-[#0479ce] rounded-[8px] px-[18px] py-[10px] flex items-center gap-[8px] min-w-[170px] justify-center hover:bg-[#0360a4] transition-colors disabled:opacity-50"
+          >
+            <span className="font-[var(--font-inter)] font-medium text-[16px] leading-[24px] text-white">
+              {isLoading ? 'Menyimpan...' : 'Simpan'}
+            </span>
+            <SaveIcon />
+          </button>
+        </div>
       </div>
     </form>
   );

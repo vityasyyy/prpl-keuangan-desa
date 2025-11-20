@@ -50,9 +50,12 @@ export default function DownloadButton({ latestMonth }) {
     <button 
       onClick={handleDownload}
       disabled={isLoading}
-      className="bg-yellow-500 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+      className="bg-[#FF9500] text-white rounded-[8px] px-[14px] py-[8px] flex items-center gap-2 font-medium text-[14px] hover:bg-[#e68600] transition-colors disabled:opacity-50"
     >
-      {isLoading ? 'Memuat...' : 'Unduh File'}
+      <span>{isLoading ? 'Loading...' : 'Unduh File'}</span>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M7.5 10.5l4.5 4.5m0 0 4.5-4.5m-4.5 4.5V3" />
+      </svg>
     </button>
   );
 }

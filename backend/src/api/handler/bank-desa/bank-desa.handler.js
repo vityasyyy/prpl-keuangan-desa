@@ -117,7 +117,29 @@ export async function getBukuBankEntries(db, req, res, next) {
     log.info('Handling request to get all bank entries');
     // Fetch data using the repository, passing the pool directly
     const entries = await repo.findAllEntries(db);
-    res.status(200).json(entries);
+
+    // Recalculate running balance on the fly to ensure correctness
+    // regardless of insertion order or backdated entries.
+    let runningBalance = 0;
+    const recalculatedEntries = entries.map(entry => {
+        const setoran = Number(entry.setoran) || 0;
+        const bunga = Number(entry.penerimaan_bunga) || 0;
+        const penarikan = Number(entry.penarikan) || 0;
+        const pajak = Number(entry.pajak) || 0;
+        const admin = Number(entry.biaya_admin) || 0;
+
+        const totalMasuk = setoran + bunga;
+        const totalKeluar = penarikan + pajak + admin;
+
+        runningBalance = runningBalance + totalMasuk - totalKeluar;
+
+        return {
+            ...entry,
+            saldo_after: runningBalance
+        };
+    });
+
+    res.status(200).json(recalculatedEntries);
   } catch (error) {
     log.error({ err: error }, 'Error during getBukuBankEntries handling');
     next(error); // Pass error to the central error handler
