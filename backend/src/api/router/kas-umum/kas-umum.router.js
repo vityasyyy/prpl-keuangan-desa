@@ -7,7 +7,6 @@ export default function createKasUmumRouter(kasUmumHandler) {
   r.get("/rab", kasUmumHandler.getRAB);
   r.get("/", kasUmumHandler.getBku);
   r.post("/", kasUmumHandler.createBku);
-  r.put("/:id", kasUmumHandler.updateBku);
   r.get("/monthly-saldo", kasUmumHandler.getMonthlySaldo);
   r.get("/export", kasUmumHandler.exportBku);
   r.get("/bidang", kasUmumHandler.getBidang);
@@ -18,6 +17,8 @@ export default function createKasUmumRouter(kasUmumHandler) {
   r.get("/akun", kasUmumHandler.getAkun);
   r.get("/jenis", kasUmumHandler.getJenis);
   r.get("/objek", kasUmumHandler.getObjek);
+  r.get("/:id", kasUmumHandler.getBkuById);
+  r.put("/:id", kasUmumHandler.updateBku);
 
   return r;
 }

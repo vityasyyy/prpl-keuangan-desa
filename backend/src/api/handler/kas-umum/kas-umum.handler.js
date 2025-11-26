@@ -89,16 +89,6 @@ export default function createKasUmumHandler(kasUmumService) {
     }
   };
 
-  const updateBku = async (req, res, next) => {
-    try {
-      const { id } = req.params;
-      const result = await kasUmumService.updateBku(id, req.body);
-      res.json(result);
-    } catch (e) {
-      next(e);
-    }
-  };
-
   const getSaldo = async (req, res, next) => {
     try {
       const { rabId } = req.query;
@@ -146,6 +136,26 @@ export default function createKasUmumHandler(kasUmumService) {
     }
   };
 
+  const getBkuById = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const row = await kasUmumService.getBkuById(id);
+      res.json(row);
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  const updateBku = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const result = await kasUmumService.updateBku(id, req.body);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  };
+
   return {
     getRAB,
     getBku,
@@ -155,11 +165,12 @@ export default function createKasUmumHandler(kasUmumService) {
     getSubBidang,
     getKegiatan,
     createBku,
-    updateBku,
     getKodeEkonomi,
     getAkun,
     getJenis,
     getObjek,
     getSaldo,
+    getBkuById,
+    updateBku,
   };
 }

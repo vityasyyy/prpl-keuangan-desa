@@ -1,10 +1,8 @@
-// src/service/kas-umum/kas-umum.service.js
 import ExcelJS from "exceljs";
+
 const normalizeMonth = (m) => (m?.length === 7 ? `${m}-01` : m);
 
 export default function createKasUmumService(kasUmumRepo) {
-  // Service
-
   // helper sederhana; samakan gaya dengan normalizeMonth kamu
   function normalizeYear(year) {
     if (typeof year === "number") year = String(year);
@@ -15,12 +13,10 @@ export default function createKasUmumService(kasUmumRepo) {
         hint: "YYYY",
       };
     }
-    // pakai awal tahun agar index tanggal tetap ke-pick (range di repo pakai date_trunc)
     return new Date(`${year}-01-01`);
   }
 
   const getBku = async ({ month, year }) => {
-    // Minimal harus ada month ATAU year
     if (!month && !year) {
       throw {
         status: 400,
@@ -29,13 +25,12 @@ export default function createKasUmumService(kasUmumRepo) {
       };
     }
 
-    // Normalisasi input
-    const monthDate = month ? normalizeMonth(month) : undefined;
-    const yearDate = year ? normalizeYear(year) : undefined;
+    const monthDateStr = month ? normalizeMonth(month) : undefined; // string
+    const yearDate = year ? normalizeYear(year) : undefined; // Date
 
     // Jika keduanya ada, pastikan konsisten (tahun di month == year)
-    if (monthDate && yearDate) {
-      const yFromMonth = monthDate.getUTCFullYear();
+    if (monthDateStr && yearDate) {
+      const yFromMonth = new Date(monthDateStr).getUTCFullYear();
       const yFromYear = yearDate.getUTCFullYear();
       if (yFromMonth !== yFromYear) {
         throw {
@@ -47,23 +42,16 @@ export default function createKasUmumService(kasUmumRepo) {
     }
 
     const [rows, summary] = await Promise.all([
-      kasUmumRepo.listBkuRows({ monthDate, yearDate }),
-      kasUmumRepo.getBkuSummary({ monthDate, yearDate }),
+      kasUmumRepo.listBkuRows({ monthDate: monthDateStr, yearDate }),
+      kasUmumRepo.getBkuSummary({ monthDate: monthDateStr, yearDate }),
     ]);
 
-    // meta rapi: isi yang tersedia saja
     const meta = {};
     if (year) meta.year = String(year).slice(0, 4);
     if (month) meta.month = month.slice(0, 7); // YYYY-MM
 
     return { meta, summary, rows };
   };
-  function normalizeYear(year) {
-    if (typeof year === "number") year = String(year);
-    if (!/^\d{4}$/.test(year))
-      throw { status: 400, error: "year_invalid", hint: "YYYY" };
-    return new Date(`${year}-01-01`);
-  }
 
   async function getMonthlySaldo({ year }) {
     if (!year) throw { status: 400, error: "year_required", hint: "YYYY" };
@@ -85,10 +73,13 @@ export default function createKasUmumService(kasUmumRepo) {
       };
     }
 
-    const monthDate = month ? normalizeMonth(month) : undefined;
+    const monthDateStr = month ? normalizeMonth(month) : undefined;
     const yearDate = year ? normalizeYear(year) : undefined;
 
-    const rows = await kasUmumRepo.listBkuRows({ monthDate, yearDate });
+    const rows = await kasUmumRepo.listBkuRows({
+      monthDate: monthDateStr,
+      yearDate,
+    });
 
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("BKU");
@@ -114,12 +105,10 @@ export default function createKasUmumService(kasUmumRepo) {
         pemasukan: r.pemasukan,
         pengeluaran: r.pengeluaran,
         no_bukti: r.no_bukti,
-
         netto_transaksi:
           r.netto_transaksi < 0
             ? `(${Math.abs(r.netto_transaksi)})`
             : r.netto_transaksi,
-
         saldo: r.saldo,
       });
     });
@@ -132,6 +121,59 @@ export default function createKasUmumService(kasUmumRepo) {
 
     return { filename, buffer };
   }
+
+  // ⬇⬇ DIDEFINISIKAN DI SINI, BUKAN DI DALAM exportBku
+  const getBkuById = async (id) => {
+    if (!id) throw { status: 400, error: "id_required" };
+
+    const row = await kasUmumRepo.getBkuById(id);
+    if (!row) throw { status: 404, error: "not_found" };
+
+    return row;
+  };
+
+  const updateBku = async (id, payload) => {
+    const {
+      tanggal,
+      rab_id,
+      kode_ekonomi_id,
+      kegiatan_id,
+      uraian,
+      pemasukan,
+      pengeluaran,
+      nomor_bukti,
+    } = payload;
+
+    if (!tanggal) throw { status: 400, error: "tanggal_required" };
+    if (!rab_id) throw { status: 400, error: "rab_id_required" };
+    if (!kode_ekonomi_id) throw { status: 400, error: "kode_ekonomi_required" };
+    if (!kegiatan_id) throw { status: 400, error: "kegiatan_required" };
+
+    const hasPemasukan = pemasukan && parseFloat(pemasukan) > 0;
+    const hasPengeluaran = pengeluaran && parseFloat(pengeluaran) > 0;
+
+    if (!hasPemasukan && !hasPengeluaran)
+      throw { status: 400, error: "amount_required" };
+    if (hasPemasukan && hasPengeluaran)
+      throw { status: 400, error: "amount_conflict" };
+
+    const updated = await kasUmumRepo.updateBku(id, {
+      tanggal,
+      rab_id,
+      kode_ekonomi_id,
+      kode_fungsi_id: kegiatan_id,
+      uraian,
+      penerimaan: hasPemasukan ? Number(pemasukan) : 0,
+      pengeluaran: hasPengeluaran ? Number(pengeluaran) : 0,
+      no_bukti: nomor_bukti || null,
+    });
+
+    return {
+      message: "Data Kas Umum berhasil diperbarui",
+      data: updated,
+    };
+  };
+
   const getRAB = async () => kasUmumRepo.listRAB();
   const getBidang = async () => kasUmumRepo.listBidang();
 
@@ -226,7 +268,6 @@ export default function createKasUmumService(kasUmumRepo) {
   };
 
   const getKodeEkonomi = async () => kasUmumRepo.listKodeEkonomi();
-
   const getAkun = async () => kasUmumRepo.listAkun();
 
   const getJenis = async (akunID) => {
@@ -244,60 +285,8 @@ export default function createKasUmumService(kasUmumRepo) {
   };
 
   const getLastSaldo = async (rabId) => {
-    // rabId optional
     const saldo = await kasUmumRepo.getLastSaldo(rabId);
     return { saldo };
-  };
-
-  const updateBku = async (id, data) => {
-    const {
-      tanggal,
-      rab_id,
-      kode_ekonomi_id,
-      kegiatan_id,
-      uraian,
-      pemasukan,
-      pengeluaran,
-      nomor_bukti,
-    } = data;
-
-    if (!id) throw { status: 400, error: "id_required" };
-    if (!tanggal) throw { status: 400, error: "tanggal_required" };
-    if (!rab_id) throw { status: 400, error: "rab_id_required" };
-    if (!kode_ekonomi_id) throw { status: 400, error: "kode_ekonomi_id_required" };
-
-    const hasPemasukan = pemasukan && parseFloat(pemasukan) > 0;
-    const hasPengeluaran = pengeluaran && parseFloat(pengeluaran) > 0;
-
-    if (!hasPemasukan && !hasPengeluaran)
-      throw {
-        status: 400,
-        error: "amount_required",
-        hint: "Harus mengisi Pemasukan atau Pengeluaran",
-      };
-
-    if (hasPemasukan && hasPengeluaran)
-      throw {
-        status: 400,
-        error: "amount_conflict",
-        hint: "Tidak boleh mengisi Pemasukan dan Pengeluaran sekaligus",
-      };
-
-    const updatedBku = await kasUmumRepo.updateBku(id, {
-      tanggal,
-      rab_id,
-      kode_ekonomi_id,
-      kode_fungsi_id: kegiatan_id,
-      uraian: uraian || "",
-      penerimaan: hasPemasukan ? parseFloat(pemasukan) : 0,
-      pengeluaran: hasPengeluaran ? parseFloat(pengeluaran) : 0,
-      no_bukti: nomor_bukti || null,
-    });
-
-    return {
-      message: "Data Kas Umum berhasil diperbarui",
-      data: updatedBku,
-    };
   };
 
   return {
@@ -309,11 +298,12 @@ export default function createKasUmumService(kasUmumRepo) {
     getSubBidang,
     getKegiatan,
     createBku,
-    updateBku,
     getKodeEkonomi,
     getAkun,
     getJenis,
     getObjek,
     getLastSaldo,
+    updateBku,
+    getBkuById,
   };
 }
