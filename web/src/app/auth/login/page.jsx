@@ -47,7 +47,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="min-h-screen flex items-center justify-center ">
       <form onSubmit={handleSubmit} className="w-[420px] p-6 border rounded">
         <h2 className="text-xl font-bold mb-4">Login</h2>
         {error && <div className="text-red-600 mb-2">{error}</div>}
@@ -60,7 +60,7 @@ export default function LoginPage() {
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border px-3 py-2" />
         </div>
         <div className="flex items-center justify-between">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded" disabled={loading}>
+          <button className="px-4 py-2 bg-blue-600 rounded" disabled={loading}>
             {loading ? "Logging..." : "Login"}
           </button>
           <a className="text-sm text-blue-600" href="/auth/register">Register</a>
