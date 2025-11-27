@@ -144,7 +144,9 @@ CREATE TABLE buku_kas_umum (
     no_bukti TEXT,
     penerimaan NUMERIC(18,2) DEFAULT 0,
     pengeluaran NUMERIC(18,2) DEFAULT 0,
-    saldo_after NUMERIC(18,2) DEFAULT 0
+    saldo_after NUMERIC(18,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE buku_kas_pembantu (
@@ -155,7 +157,9 @@ CREATE TABLE buku_kas_pembantu (
     uraian TEXT,
     penerimaan NUMERIC(18,2) DEFAULT 0,
     pengeluaran NUMERIC(18,2) DEFAULT 0,
-    saldo_after NUMERIC(18,2) DEFAULT 0
+    saldo_after NUMERIC(18,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE buku_kas_pajak (
@@ -165,7 +169,9 @@ CREATE TABLE buku_kas_pajak (
     uraian TEXT,
     pemotongan NUMERIC(18,2) DEFAULT 0,
     penyetoran NUMERIC(18,2) DEFAULT 0,
-    saldo_after NUMERIC(18,2) DEFAULT 0
+    saldo_after NUMERIC(18,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE buku_bank (
@@ -179,7 +185,9 @@ CREATE TABLE buku_bank (
     penarikan NUMERIC(18,2) DEFAULT 0,
     pajak NUMERIC(18,2) DEFAULT 0,
     biaya_admin NUMERIC(18,2) DEFAULT 0,
-    saldo_after NUMERIC(18,2) DEFAULT 0
+    saldo_after NUMERIC(18,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE buku_pembantu_panjar (
@@ -189,7 +197,9 @@ CREATE TABLE buku_pembantu_panjar (
     uraian TEXT,
     pemberian NUMERIC(18,2) DEFAULT 0,
     pertanggungjawaban NUMERIC(18,2) DEFAULT 0,
-    saldo_after NUMERIC(18,2) DEFAULT 0
+    saldo_after NUMERIC(18,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE users (
