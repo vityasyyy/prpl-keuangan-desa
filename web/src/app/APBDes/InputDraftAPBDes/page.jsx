@@ -45,6 +45,8 @@ export default function InputDraftAPBDes() {
   const [selectedSumberDanaId, setSelectedSumberDanaId] = useState(null);
   const [selectedUraian1Id, setSelectedUraian1Id] = useState(null);
 
+  const [isLoadingEditData, setIsLoadingEditData] = useState(false);
+
   const [formData, setFormData] = useState({
     id: Date.now(),
     kodeRekEkonomi: "",
@@ -155,8 +157,10 @@ export default function InputDraftAPBDes() {
     } else {
       setSubBidangOptions(allSubBidangOptions); // Reset if no Bidang is selected
     }
-    handleOnChange("subBidang", ""); // Reset sub-bidang selection
-    handleOnChange("kegiatan", ""); // Reset kegiatan selection
+    if (!isLoadingEditData) {
+      handleOnChange("subBidang", ""); // Reset sub-bidang selection
+      handleOnChange("kegiatan", ""); // Reset kegiatan selection
+    }
   }, [selectedBidangId, subBidangData, allSubBidangOptions]);
 
   // Filter Kegiatan options when a Sub-Bidang is selected
@@ -167,7 +171,9 @@ export default function InputDraftAPBDes() {
     } else {
       setKegiatanOptions(allKegiatanOptions); // Reset if no Sub-Bidang is selected
     }
-    handleOnChange("kegiatan", ""); // Reset kegiatan selection
+    if (!isLoadingEditData) {
+      handleOnChange("kegiatan", ""); // Reset kegiatan selection
+    }
   }, [selectedSubBidangId, kegiatanData, allKegiatanOptions]);
 
   // Filter Sumber Dana options when an Akun is selected
@@ -178,9 +184,11 @@ export default function InputDraftAPBDes() {
     } else {
       setSumberDanaOptions(allSumberDanaOptions);
     }
-    handleOnChange("sumberDana", "");
-    handleOnChange("uraian1", "");
-    handleOnChange("uraian2", "");
+    if (!isLoadingEditData) {
+      handleOnChange("sumberDana", "");
+      handleOnChange("uraian1", "");
+      handleOnChange("uraian2", "");
+    }
   }, [selectedAkunId, sumberDanaData, allSumberDanaOptions]);
 
   // Filter Uraian 1 options when a Sumber Dana is selected
@@ -191,8 +199,10 @@ export default function InputDraftAPBDes() {
     } else {
       setUraian1Options(allUraian1Options);
     }
-    handleOnChange("uraian1", "");
-    handleOnChange("uraian2", "");
+    if (!isLoadingEditData) {
+      handleOnChange("uraian1", "");
+      handleOnChange("uraian2", "");
+    }
   }, [selectedSumberDanaId, uraian1Data, allUraian1Options]);
 
   // Filter Uraian 2 options when an Uraian 1 is selected
@@ -203,7 +213,9 @@ export default function InputDraftAPBDes() {
     } else {
       setUraian2Options(allUraian2Options);
     }
-    handleOnChange("uraian2", "");
+    if (!isLoadingEditData) {
+      handleOnChange("uraian2", "");
+    }
   }, [selectedUraian1Id, uraian2Data, allUraian2Options]);
 
   // Helpers: sanitize number and normalize kategori
@@ -248,12 +260,87 @@ export default function InputDraftAPBDes() {
 
   // Load data kalau sedang edit
   useEffect(() => {
-    if (id) {
+    if (id && akunData.length > 0 && bidangData.length > 0 && subBidangData.length > 0 && 
+        sumberDanaData.length > 0 && uraian1Data.length > 0) {
       const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
       const existing = allData.find((item) => item.id == id);
-      if (existing) setFormData(existing);
+      if (existing) {
+        setIsLoadingEditData(true);
+        setFormData(existing);
+        
+        // Set selected IDs berdasarkan data yang dimuat
+        // 1. Set Akun ID untuk filter Sumber Dana
+        const selectedAkun = akunData.find((item) => item.uraian === existing.pendapatanBelanja);
+        if (selectedAkun) {
+          setSelectedAkunId(selectedAkun.id);
+        }
+        
+        // 2. Set Bidang ID untuk filter Sub-Bidang
+        const selectedBidang = bidangData.find((item) => item.uraian === existing.bidang);
+        if (selectedBidang) {
+          setSelectedBidangId(selectedBidang.id);
+        }
+      }
     }
-  }, [id]);
+  }, [id, akunData, bidangData, subBidangData, sumberDanaData, uraian1Data]);
+
+  // Set Sub-Bidang ID setelah subBidangOptions ter-update
+  useEffect(() => {
+    if (isLoadingEditData && id && subBidangOptions.length > 0) {
+      const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+      const existing = allData.find((item) => item.id == id);
+      if (existing && existing.subBidang) {
+        const selectedSubBidang = subBidangData.find(
+          (item) => item.uraian === existing.subBidang
+        );
+        if (selectedSubBidang) {
+          setSelectedSubBidangId(selectedSubBidang.id);
+        }
+      }
+    }
+  }, [isLoadingEditData, subBidangOptions, id]);
+
+  // Set Sumber Dana ID setelah sumberDanaOptions ter-update
+  useEffect(() => {
+    if (isLoadingEditData && id && sumberDanaOptions.length > 0) {
+      const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+      const existing = allData.find((item) => item.id == id);
+      if (existing && existing.sumberDana) {
+        const selectedSumberDana = sumberDanaData.find(
+          (item) => item.uraian === existing.sumberDana
+        );
+        if (selectedSumberDana) {
+          setSelectedSumberDanaId(selectedSumberDana.id);
+        }
+      }
+    }
+  }, [isLoadingEditData, sumberDanaOptions, id]);
+
+  // Set Uraian1 ID setelah uraian1Options ter-update
+  useEffect(() => {
+    if (isLoadingEditData && id && uraian1Options.length > 0) {
+      const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+      const existing = allData.find((item) => item.id == id);
+      if (existing && existing.uraian1) {
+        const selectedUraian1 = uraian1Data.find(
+          (item) => item.uraian === existing.uraian1
+        );
+        if (selectedUraian1) {
+          setSelectedUraian1Id(selectedUraian1.id);
+        }
+      }
+    }
+  }, [isLoadingEditData, uraian1Options, id]);
+
+  // Selesai loading edit data setelah semua options ter-update
+  useEffect(() => {
+    if (isLoadingEditData && uraian2Options.length > 0 && kegiatanOptions.length > 0) {
+      // Beri sedikit delay untuk memastikan semua state sudah ter-update
+      setTimeout(() => {
+        setIsLoadingEditData(false);
+      }, 100);
+    }
+  }, [isLoadingEditData, uraian2Options, kegiatanOptions]);
 
   const handleOnChange = (field, value) => {
     setFormData((prev) => ({
