@@ -12,7 +12,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/a
 export default function FormEditKasUmum() {
   const router = useRouter();
   const { id } = useParams(); // id dari URL
-  const { token } = useAuth() || {};
+  const { token, user } = useAuth() || {};
 
   // ================== STATE UTAMA ==================
   const [formData, setFormData] = useState({
@@ -49,6 +49,7 @@ export default function FormEditKasUmum() {
   const [jenisList, setJenisList] = useState([]);
   const [objekList, setObjekList] = useState([]);
   const [saldoAutomated, setSaldoAutomated] = useState(null);
+  const [persetujuan, setPersetujuan] = useState(null);
 
   // ================== HELPER KODE EKONOMI ==================
   // Parse "5.3 5 3" → ["5","3","5","3"]
@@ -191,6 +192,7 @@ export default function FormEditKasUmum() {
           nomorBukti: data.no_bukti || data.nomor_bukti || "",
           // kalau backend kirim bidang/subBidang/akun/jenis, bisa di-mapping juga di sini
         }));
+        setPersetujuan(data.persetujuan || null);
       } catch (err) {
         console.error("Gagal fetch detail:", err);
         alert("Gagal mengambil data kas umum");
@@ -462,6 +464,28 @@ export default function FormEditKasUmum() {
       } else {
         setFormData((prev) => ({ ...prev, [name]: value }));
       }
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!confirm("Setujui data ini?")) return;
+    try {
+      const headers = token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : { "Content-Type": "application/json" };
+      const res = await fetch(`${API_BASE_URL}/kas-umum/${id}/approve`, {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({ status: "approved" }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Approve failed");
+      }
+      setPersetujuan("approved");
+      alert("Data berhasil disetujui");
+    } catch (e) {
+      console.error("Approve error", e);
+      alert(e.message || "Approve failed");
     }
   };
 
@@ -1197,8 +1221,24 @@ export default function FormEditKasUmum() {
               Hapus
             </Button>
 
-            <div className="flex w-[304px] items-center justify-between">
-              <div className="flex items-center gap-2.5"></div>
+              <div className="flex w-1/2 items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                {persetujuan === "approved" ? (
+                  <span className="text-green-600">✅ Disetujui</span>
+                ) : (
+                  <span className="text-yellow-600">⏳ Menunggu Persetujuan</span>
+                )}
+
+                {user?.role === "kepala_desa" && persetujuan !== "approved" && (
+                  <Button
+                    variant="green"
+                    className="px-3 py-1 text-sm"
+                    onClick={handleApprove}
+                  >
+                    Setuju
+                  </Button>
+                )}
+              </div>
 
               <Button
                 variant="primary"

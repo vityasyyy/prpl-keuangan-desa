@@ -239,9 +239,7 @@ export default function createKasUmumHandler(kasUmumService) {
     getSaldo,
     getBkuById,
     updateBku,
-<<<<<<< HEAD
     deleteBku,
     approveBku,
->>>>>>> 4c67659 (Feat (Auth) : Impelent auth)
   };
 }

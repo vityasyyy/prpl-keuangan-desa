@@ -414,33 +414,7 @@ export default function BukuKasUmumPage() {
                                     row.persetujuan === "approved" ? (
                                       <span title="Disetujui" className="text-green-600">✅</span>
                                     ) : (
-                                      <div className="flex items-center gap-2 justify-center">
-                                        <span className="text-zinc-500">{row.persetujuan || "-"}</span>
-                                        {user?.role === "kepala_desa" && (
-                                          <button
-                                            className="px-2 py-1 bg-green-600 text-white rounded text-sm"
-                                            onClick={async () => {
-                                              try {
-                                                const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
-                                                const res = await fetch(`${API_BASE_URL}/kas-umum/${row.id}/approve`, {
-                                                  method: "POST",
-                                                  headers: { "Content-Type": "application/json" },
-                                                  credentials: "include",
-                                                  body: JSON.stringify({ status: "approved" }),
-                                                });
-                                                if (!res.ok) throw new Error("Approve failed");
-                                                // refresh month data
-                                                fetchMonth(key);
-                                              } catch (e) {
-                                                // silenced for now
-                                                alert(e.message || "Approve failed");
-                                              }
-                                            }}
-                                          >
-                                            Setuju
-                                          </button>
-                                        )}
-                                      </div>
+                                      <span className="text-zinc-500">-</span>
                                     )
                                   ) : col.key === "pemasukan" ||
                                     col.key === "pengeluaran" ||

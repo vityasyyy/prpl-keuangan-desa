@@ -10,7 +10,6 @@ import {
 export default function createKasUmumRouter(kasUmumHandler) {
   const r = Router();
 
-<<<<<<< HEAD
   // Public routes: some resources like RAB and dropdowns could be public or protected depending on app policy.
   r.get("/rab", verifyAccessToken, canViewKasUmum, kasUmumHandler.getRAB);
   r.get("/", verifyAccessToken, canViewKasUmum, kasUmumHandler.getBku);
@@ -35,7 +34,6 @@ export default function createKasUmumRouter(kasUmumHandler) {
     canApproveKasUmum,
     kasUmumHandler.approveBku
   );
->>>>>>> 4c67659 (Feat (Auth) : Impelent auth)
 
   return r;
 }
