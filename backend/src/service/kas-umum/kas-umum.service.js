@@ -174,6 +174,19 @@ export default function createKasUmumService(kasUmumRepo) {
     };
   };
 
+  const approveBku = async (id, { status = "approved" } = {}) => {
+    if (!id) throw { status: 400, error: "id_required" };
+
+    // status expected: 'approved' or 'rejected' or 'pending'
+    const updated = await kasUmumRepo.setPersetujuan(id, status);
+    if (!updated) throw { status: 404, error: "not_found" };
+
+    return {
+      message: `BKU ${id} status updated to ${status}`,
+      data: updated,
+    };
+  };
+
   const getRAB = async () => kasUmumRepo.listRAB();
   const getBidang = async () => kasUmumRepo.listBidang();
 
@@ -312,6 +325,9 @@ export default function createKasUmumService(kasUmumRepo) {
     getLastSaldo,
     updateBku,
     getBkuById,
+<<<<<<< HEAD
     deleteBku,
+    approveBku,
+>>>>>>> 4c67659 (Feat (Auth) : Impelent auth)
   };
 }

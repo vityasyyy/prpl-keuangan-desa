@@ -5,12 +5,14 @@ import { useRouter, useParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Breadcrumb from "@/components/Breadcrumb";
 import Button from "@/components/Button";
+import { useAuth } from "@/lib/auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 export default function FormEditKasUmum() {
   const router = useRouter();
   const { id } = useParams(); // id dari URL
+  const { token } = useAuth() || {};
 
   // ================== STATE UTAMA ==================
   const [formData, setFormData] = useState({
@@ -148,7 +150,12 @@ export default function FormEditKasUmum() {
         return;
       }
       const q = `?rabId=${encodeURIComponent(kodeRAB)}`;
-      const res = await fetch(`${API_BASE_URL}/kas-umum/saldo${q}`);
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${API_BASE_URL}/kas-umum/saldo${q}`, {
+        credentials: "include",
+        headers,
+        cache: "no-store",
+      });
       if (!res.ok) throw new Error(`Gagal ambil saldo (HTTP ${res.status})`);
       const data = await res.json();
       setSaldoAutomated(data?.saldo ?? 0);
@@ -162,7 +169,12 @@ export default function FormEditKasUmum() {
   useEffect(() => {
     async function fetchDetail() {
       try {
-        const res = await fetch(`${API_BASE_URL}/kas-umum/${id}`);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE_URL}/kas-umum/${id}`, {
+            credentials: "include",
+            headers,
+            cache: "no-store",
+          });
         if (!res.ok) throw new Error("Gagal mengambil data kas umum");
 
         const data = await res.json();
@@ -525,9 +537,11 @@ export default function FormEditKasUmum() {
 
       console.log("Sending payload (EDIT):", payload);
 
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
       const res = await fetch(`${API_BASE_URL}/kas-umum/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
 
@@ -565,7 +579,12 @@ export default function FormEditKasUmum() {
   useEffect(() => {
     async function fetchAkun() {
       try {
-        const res = await fetch(`${API_BASE_URL}/kas-umum/akun`);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE_URL}/kas-umum/akun`, {
+          credentials: "include",
+          headers,
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Gagal ambil data akun");
         const data = await res.json();
         setAkunList(data);
@@ -580,8 +599,13 @@ export default function FormEditKasUmum() {
   useEffect(() => {
     if (!formData.akun) return;
     async function fetchJenis() {
-      try {
-        const res = await fetch(`${API_BASE_URL}/kas-umum/jenis?akunId=${formData.akun}`);
+        try {
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE_URL}/kas-umum/jenis?akunId=${formData.akun}`, {
+          credentials: "include",
+          headers,
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Gagal ambil data jenis");
         const data = await res.json();
         setJenisList(data);
@@ -609,7 +633,12 @@ export default function FormEditKasUmum() {
 
     async function fetchObjek() {
       try {
-        const res = await fetch(`${API_BASE_URL}/kas-umum/objek?jenisId=${formData.jenis}`);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE_URL}/kas-umum/objek?jenisId=${formData.jenis}`, {
+          credentials: "include",
+          headers,
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Gagal ambil data objek");
         const data = await res.json();
         setObjekList(data);
@@ -625,7 +654,12 @@ export default function FormEditKasUmum() {
   useEffect(() => {
     async function fetchBidang() {
       try {
-        const res = await fetch(`${API_BASE_URL}/kas-umum/bidang`);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE_URL}/kas-umum/bidang`, {
+          credentials: "include",
+          headers,
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Gagal ambil data bidang");
         const data = await res.json();
         setBidangList(data);
@@ -641,7 +675,12 @@ export default function FormEditKasUmum() {
     if (!formData.bidang) return;
     async function fetchSubBidang() {
       try {
-        const res = await fetch(`${API_BASE_URL}/kas-umum/sub-bidang?bidangId=${formData.bidang}`);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE_URL}/kas-umum/sub-bidang?bidangId=${formData.bidang}`, {
+          credentials: "include",
+          headers,
+          cache: "no-store",
+        });
         const data = await res.json();
         setSubBidangList(data);
       } catch (err) {
@@ -667,8 +706,10 @@ export default function FormEditKasUmum() {
 
     const fetchKegiatan = async () => {
       try {
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const res = await fetch(
-          `${API_BASE_URL}/kas-umum/kegiatan?subBidangId=${formData.subBidang}`
+          `${API_BASE_URL}/kas-umum/kegiatan?subBidangId=${formData.subBidang}`,
+          { credentials: "include", headers, cache: "no-store" }
         );
         const data = await res.json();
         setKegiatanList(data);
@@ -694,7 +735,12 @@ export default function FormEditKasUmum() {
   useEffect(() => {
     const fetchRAB = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/kas-umum/rab`);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE_URL}/kas-umum/rab`, {
+          credentials: "include",
+          headers,
+          cache: "no-store",
+        });
         const data = await res.json();
         setRabList(data);
       } catch (err) {

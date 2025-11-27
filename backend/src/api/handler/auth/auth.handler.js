@@ -31,6 +31,20 @@ export class AuthHandler {
     }
   }
 
+  // POST /register
+  async register(req, res) {
+    const { username, password, full_name, role } = req.body;
+    try {
+      const log = req.log;
+      const user = await this.authService.registerUser({ username, password, full_name, role }, log);
+      logInfo("User registered", { username, layer: "handler", route: "POST /register" }, 5, req.log);
+      return res.status(201).json({ message: "User created", user });
+    } catch (err) {
+      logError(err, "User registration failed", { username, layer: "handler", route: "POST /register" }, req.log);
+      return res.status(400).json({ error: err.message || "Registration failed" });
+    }
+  }
+
   // POST /refresh
   async refresh(req, res) {
     const refreshToken = req.cookies.refresh_token;

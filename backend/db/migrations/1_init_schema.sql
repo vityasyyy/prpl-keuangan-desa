@@ -146,7 +146,8 @@ CREATE TABLE buku_kas_umum (
     pengeluaran NUMERIC(18,2) DEFAULT 0,
     saldo_after NUMERIC(18,2) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    persetujuan TEXT DEFAULT 'pending'
 );
 
 CREATE TABLE buku_kas_pembantu (

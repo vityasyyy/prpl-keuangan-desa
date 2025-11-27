@@ -77,6 +77,7 @@ export default function createKasUmumRepo(arg) {
       bku.tanggal,
       ke.full_code AS kode_rekening,
       bku.uraian,
+      bku.persetujuan,
       bku.penerimaan AS pemasukan,
       bku.pengeluaran,
       bku.no_bukti,
@@ -177,6 +178,7 @@ export default function createKasUmumRepo(arg) {
         sub.id AS sub_bidang_id,
         bid.id AS bidang_id,
         bku.uraian,
+        bku.persetujuan,
         bku.penerimaan,
         bku.pengeluaran,
         bku.no_bukti,
@@ -343,6 +345,17 @@ export default function createKasUmumRepo(arg) {
     } = await db.query(detailQuery, [newRow.id]);
     return detailRow;
   };
+  
+  async function setPersetujuan(id, status) {
+    const sql = `
+      UPDATE buku_kas_umum
+      SET persetujuan = $1
+      WHERE id = $2
+      RETURNING *
+    `;
+    const { rows } = await db.query(sql, [status, id]);
+    return rows[0];
+  }
   async function updateBku(id, data) {
     const {
       tanggal,
@@ -523,6 +536,7 @@ export default function createKasUmumRepo(arg) {
     listObjek,
     getLastSaldo,
     getBkuById,
+    setPersetujuan,
     updateBku,
     deleteBku,
   };

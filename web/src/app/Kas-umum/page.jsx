@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -56,6 +57,7 @@ const COLUMNS = [
     class: "flex-none w-[170px] text-center px-3",
   },
   { key: "saldo", label: "Saldo", class: "flex-none w-[170px] text-center px-3" },
+  { key: "persetujuan", label: "Persetujuan", class: "flex-none w-[90px] text-center px-3" },
   { key: "edit", label: "Edit", class: "flex-none w-[40px] text-center px-5", isAction: true },
 ];
 
@@ -69,6 +71,7 @@ export default function BukuKasUmumPage() {
   const [expanded, setExpanded] = useState({ [toMonthKey(initialYear, 0)]: true });
   const [store, setStore] = useState({});
   const [headerSaldo, setHeaderSaldo] = useState({});
+  const { user, token } = useAuth() || {};
 
   const breadcrumbItems = useMemo(
     () => [
@@ -86,7 +89,8 @@ export default function BukuKasUmumPage() {
     });
     try {
       const url = `${API_BASE_URL}/kas-umum/?month=${key}`;
-      const res = await fetch(url, { cache: "no-store" });
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(url, { cache: "no-store", credentials: "include", headers });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err?.error || `HTTP ${res.status}`);
@@ -119,7 +123,8 @@ export default function BukuKasUmumPage() {
 
   const fetchMonthlySaldo = async (y) => {
     const url = `${API_BASE_URL}/kas-umum/monthly-saldo?year=${y}`;
-    const res = await fetch(url, { cache: "no-store" });
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const res = await fetch(url, { cache: "no-store", credentials: "include", headers });
     if (!res.ok) {
       setHeaderSaldo({});
       return;
@@ -187,23 +192,32 @@ export default function BukuKasUmumPage() {
               >
                 Unduh File
               </Button>
-              <Button
-                variant="green"
-                icon={
-                  <svg width="25" height="21" viewBox="0 0 15 21" fill="none">
-                    <path
-                      d="M10 4.6665V16.3332M4.16669 10.4998H15.8334"
-                      stroke="white"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                }
-                onClick={() => router.push("/Kas-umum/Form")}
-              >
-                Input Data
-              </Button>
+              {/** Only show input button for roles that can edit */}
+              {(() => {
+                const rolesCanEdit = ["kaur_keuangan", "kepala_desa", "sekretaris_desa"];
+                const canEdit = (user && rolesCanEdit.includes(user.role));
+                return (
+                  canEdit && (
+                    <Button
+                      variant="green"
+                      icon={
+                        <svg width="25" height="21" viewBox="0 0 15 21" fill="none">
+                          <path
+                            d="M10 4.6665V16.3332M4.16669 10.4998H15.8334"
+                            stroke="white"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      }
+                      onClick={() => router.push("/Kas-umum/Form")}
+                    >
+                      Input Data
+                    </Button>
+                  )
+                );
+              })()}
             </div>
           </div>
 
@@ -372,25 +386,62 @@ export default function BukuKasUmumPage() {
                               {COLUMNS.map((col) => (
                                 <div key={col.key} className={`${rowColClass} ${col.class}`}>
                                   {col.isAction ? (
-                                    <svg
-                                      width="16"
-                                      height="17"
-                                      viewBox="0 0 16 17"
-                                      fill="none"
-                                      className="cursor-pointer"
-                                      onClick={() => {
-                                        router.push(`/Kas-umum/Form/${row.id}`);
-                                      }}
-                                    >
-                                      <path
-                                        d="M8 13.8332H14M11 2.83316C11.2652 2.56794 11.6249 2.41895 12 2.41895C12.1857 2.41895 12.3696 2.45553 12.5412 2.5266C12.7128 2.59767 12.8687 2.70184 13 2.83316C13.1313 2.96448 13.2355 3.12038 13.3066 3.29196C13.3776 3.46354 13.4142 3.64744 13.4142 3.83316C13.4142 4.01888 13.3776 4.20277 13.3066 4.37436C13.2355 4.54594 13.1313 4.70184 13 4.83316L4.66667 13.1665L2 13.8332L2.66667 11.1665L11 2.83316Z"
-                                        stroke="#121926"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                      />
-                                    </svg>
+                                    // show edit icon only if user can edit
+                                    (user && ["kaur_keuangan", "kepala_desa", "sekretaris_desa"].includes(user.role)) ? (
+                                      <svg
+                                        width="16"
+                                        height="17"
+                                        viewBox="0 0 16 17"
+                                        fill="none"
+                                        className="cursor-pointer"
+                                        onClick={() => {
+                                          router.push(`/Kas-umum/Form/${row.id}`);
+                                        }}
+                                      >
+                                        <path
+                                          d="M8 13.8332H14M11 2.83316C11.2652 2.56794 11.6249 2.41895 12 2.41895C12.1857 2.41895 12.3696 2.45553 12.5412 2.5266C12.7128 2.59767 12.8687 2.70184 13 2.83316C13.1313 2.96448 13.2355 3.12038 13.3066 3.29196C13.3776 3.46354 13.4142 3.64744 13.4142 3.83316C13.4142 4.01888 13.3776 4.20277 13.3066 4.37436C13.2355 4.54594 13.1313 4.70184 13 4.83316L4.66667 13.1665L2 13.8332L2.66667 11.1665L11 2.83316Z"
+                                          stroke="#121926"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        />
+                                      </svg>
+                                    ) : (
+                                      <span>-</span>
+                                    )
                                   ) : col.key === "tanggal" ? (
                                     fmtDateID(row[col.key])
+                                  ) : col.key === "persetujuan" ? (
+                                    row.persetujuan === "approved" ? (
+                                      <span title="Disetujui" className="text-green-600">✅</span>
+                                    ) : (
+                                      <div className="flex items-center gap-2 justify-center">
+                                        <span className="text-zinc-500">{row.persetujuan || "-"}</span>
+                                        {user?.role === "kepala_desa" && (
+                                          <button
+                                            className="px-2 py-1 bg-green-600 text-white rounded text-sm"
+                                            onClick={async () => {
+                                              try {
+                                                const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+                                                const res = await fetch(`${API_BASE_URL}/kas-umum/${row.id}/approve`, {
+                                                  method: "POST",
+                                                  headers: { "Content-Type": "application/json" },
+                                                  credentials: "include",
+                                                  body: JSON.stringify({ status: "approved" }),
+                                                });
+                                                if (!res.ok) throw new Error("Approve failed");
+                                                // refresh month data
+                                                fetchMonth(key);
+                                              } catch (e) {
+                                                // silenced for now
+                                                alert(e.message || "Approve failed");
+                                              }
+                                            }}
+                                          >
+                                            Setuju
+                                          </button>
+                                        )}
+                                      </div>
+                                    )
                                   ) : col.key === "pemasukan" ||
                                     col.key === "pengeluaran" ||
                                     col.key === "netto_transaksi" ||

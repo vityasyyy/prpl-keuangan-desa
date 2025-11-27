@@ -1,8 +1,14 @@
 // src/api/middleware/kas-umum.middleware.js
 
-const VIEW_ROLES = ["kepala_desa", "kaur_keuangan"];
+// Roles allowed to view BKU list/details
+const VIEW_ROLES = ["kepala_desa", "kaur_keuangan", "sekretaris_desa"];
 
-const EDIT_ROLES = ["kaur_keuangan"];
+// Roles allowed to create/update BKU rows (add/edit)
+// Allow kepala_desa, sekretaris_desa and kaur_keuangan to add/edit
+const EDIT_ROLES = ["kaur_keuangan", "kepala_desa", "sekretaris_desa"];
+
+// Only kepala_desa may approve records
+const APPROVE_ROLES = ["kepala_desa"];
 
 function checkRole(allowedRoles, actionName) {
   return (req, res, next) => {
@@ -33,3 +39,4 @@ function checkRole(allowedRoles, actionName) {
 
 export const canViewKasUmum = checkRole(VIEW_ROLES, "view");
 export const canEditKasUmum = checkRole(EDIT_ROLES, "edit");
+export const canApproveKasUmum = checkRole(APPROVE_ROLES, "approve");
