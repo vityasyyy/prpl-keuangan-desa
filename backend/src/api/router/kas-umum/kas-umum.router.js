@@ -19,6 +19,7 @@ export default function createKasUmumRouter(kasUmumHandler) {
   r.get("/objek", kasUmumHandler.getObjek);
   r.get("/:id", kasUmumHandler.getBkuById);
   r.put("/:id", kasUmumHandler.updateBku);
+  r.delete("/:id", kasUmumHandler.deleteBku);
 
   return r;
 }

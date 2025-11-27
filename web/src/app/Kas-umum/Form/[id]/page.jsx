@@ -475,8 +475,39 @@ export default function FormEditKasUmum() {
     });
   };
 
-  const handleCancel = () => {
-    router.push("/Kas-umum");
+  const handleDelete = async () => {
+    if (!confirm("Apakah yakin ingin menghapus data ini?")) return;
+
+    try {
+      console.log("Sending DELETE request for id:", id);
+
+      const res = await fetch(`${API_BASE_URL}/kas-umum/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const text = await res.text();
+      console.log("Status:", res.status);
+      console.log("Raw response:", text);
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Respon bukan JSON: ${text.slice(0, 100)}...`);
+      }
+
+      if (!res.ok) {
+        const errorMsg = data.hint || data.error || "Terjadi kesalahan";
+        throw new Error(errorMsg);
+      }
+
+      alert(data.message || "Data berhasil dihapus!");
+      router.push("/Kas-umum");
+    } catch (error) {
+      console.error("Caught error:", error);
+      alert(`Terjadi kesalahan: ${error.message || JSON.stringify(error)}`);
+    }
   };
 
   const handleSubmit = async () => {
@@ -492,7 +523,7 @@ export default function FormEditKasUmum() {
         nomor_bukti: formData.nomorBukti,
       };
 
-      console.log("📤 Sending payload (EDIT):", payload);
+      console.log("Sending payload (EDIT):", payload);
 
       const res = await fetch(`${API_BASE_URL}/kas-umum/${id}`, {
         method: "PUT",
@@ -501,8 +532,8 @@ export default function FormEditKasUmum() {
       });
 
       const text = await res.text();
-      console.log("🛰️ Status:", res.status);
-      console.log("📩 Raw response:", text);
+      console.log("Status:", res.status);
+      console.log("Raw response:", text);
 
       let data;
       try {
@@ -519,7 +550,7 @@ export default function FormEditKasUmum() {
       alert(data.message || "Data berhasil diperbarui!");
       router.push("/Kas-umum");
     } catch (error) {
-      console.error("🚨 Caught error:", error);
+      console.error("Caught error:", error);
       alert(`Terjadi kesalahan: ${error.message || JSON.stringify(error)}`);
     }
   };
@@ -1105,7 +1136,7 @@ export default function FormEditKasUmum() {
             <Button
               variant="danger"
               className="px-[18px] py-2.5"
-              onClick={handleCancel}
+              onClick={handleDelete}
               icon={
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path

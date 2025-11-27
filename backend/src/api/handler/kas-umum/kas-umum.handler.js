@@ -156,6 +156,16 @@ export default function createKasUmumHandler(kasUmumService) {
     }
   };
 
+  const deleteBku = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const result = await kasUmumService.deleteBku(id);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  };
+
   return {
     getRAB,
     getBku,
@@ -172,5 +182,6 @@ export default function createKasUmumHandler(kasUmumService) {
     getSaldo,
     getBkuById,
     updateBku,
+    deleteBku,
   };
 }

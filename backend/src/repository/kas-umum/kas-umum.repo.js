@@ -483,6 +483,31 @@ export default function createKasUmumRepo(arg) {
     return row?.saldo_after ?? 0;
   };
 
+  async function deleteBku(id) {
+    // Ambil row yang akan dihapus dulu (optional)
+    const {
+      rows: [rowToDelete],
+    } = await db.query(`SELECT * FROM buku_kas_umum WHERE id = $1`, [id]);
+
+    if (!rowToDelete) {
+      throw new Error(`BKU dengan id ${id} tidak ditemukan`);
+    }
+
+    // Hapus row
+    const {
+      rows: [deletedRow],
+    } = await db.query(
+      `
+    DELETE FROM buku_kas_umum
+    WHERE id = $1
+    RETURNING *
+  `,
+      [id]
+    );
+
+    return deletedRow; // kembalikan row yang dihapus
+  }
+
   return {
     listRAB,
     listBkuRows,
@@ -499,5 +524,6 @@ export default function createKasUmumRepo(arg) {
     getLastSaldo,
     getBkuById,
     updateBku,
+    deleteBku,
   };
 }

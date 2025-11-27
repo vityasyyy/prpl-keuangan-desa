@@ -267,6 +267,13 @@ export default function createKasUmumService(kasUmumRepo) {
     };
   };
 
+  const deleteBku = async (id) => {
+    if (!id) throw { status: 400, error: "id_required" };
+    const deleted = await kasUmumRepo.deleteBku(id);
+    if (!deleted) throw { status: 404, error: "not_found" };
+    return { message: "Data Kas Umum berhasil dihapus", data: deleted };
+  };
+
   const getKodeEkonomi = async () => kasUmumRepo.listKodeEkonomi();
   const getAkun = async () => kasUmumRepo.listAkun();
 
@@ -305,5 +312,6 @@ export default function createKasUmumService(kasUmumRepo) {
     getLastSaldo,
     updateBku,
     getBkuById,
+    deleteBku,
   };
 }
