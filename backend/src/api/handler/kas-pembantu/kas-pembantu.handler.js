@@ -5,8 +5,22 @@ export default function createKasPembantuHandler(service) {
 
   const kegiatan = async (req, res, next) => {
     try {
+
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
+      const limit = parseInt(req.query.limit) || 20;
+
+      if(req.query.showAll === "true"){
+        const result = await service.getKegiatan({
+          bulan: undefined,
+          tahun: undefined,
+          type_enum: undefined,
+          search: undefined,
+          page,
+          limit,
+        });
+        return res.json(result);
+      }
+      
       const now = new Date();
       // Only use bulan if explicitly provided in query
       const bulan = req.query.bulan ? parseInt(req.query.bulan) : null;
@@ -24,7 +38,7 @@ export default function createKasPembantuHandler(service) {
         page,
         limit,
       });
-      res.json(result);
+      return res.json(result);
     } catch (err) {
       next(err);
     }

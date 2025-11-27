@@ -8,7 +8,7 @@ export default function createKasPembantuService(repo) {
       type_enum,
       search,
       page = 1,
-      limit = 10,
+      limit = 20,
     }) {
       // Ambil data dari repo
       let data = await repo.listKegiatanTransaksi({
