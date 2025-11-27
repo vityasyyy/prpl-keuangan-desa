@@ -5,6 +5,7 @@ jest.unstable_mockModule("../../../utils/auth.js", () => ({
   comparePasswords: jest.fn(),
   generateAccessToken: jest.fn(),
   generateRefreshToken: jest.fn(),
+  hashPassword: jest.fn(),
 }));
 
 const { AuthService } = await import("./auth.service.js");

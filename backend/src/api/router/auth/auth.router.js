@@ -8,6 +8,7 @@ export default function createAuthRouter(authHandler) {
 
   // Public routes
   router.post("/login", authHandler.login.bind(authHandler));
+  router.post("/register", authHandler.register.bind(authHandler));
   router.post("/refresh", authHandler.refresh.bind(authHandler));
 
   // Protected routes
