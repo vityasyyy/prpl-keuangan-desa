@@ -52,7 +52,11 @@ export default function createRabRouter(rabHandler) {
     rabHandler.getKodeEkonomiAkun.bind(rabHandler)
   );
   router.get(
-    "/kode-ekonomi/akun/:akunId/jenis",
+    "/kode-ekonomi/akun/:akunId/kelompok",
+    rabHandler.getKodeEkonomiKelompok.bind(rabHandler)
+  );
+  router.get(
+    "/kode-ekonomi/kelompok/:kelompokId/jenis",
     rabHandler.getKodeEkonomiJenis.bind(rabHandler)
   );
   router.get(

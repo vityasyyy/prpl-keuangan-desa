@@ -336,17 +336,44 @@ export default function createRabHandler(rabService) {
       }
     },
 
-    async getKodeEkonomiJenis(req, res) {
+    async getKodeEkonomiKelompok(req, res) {
       try {
         const { akunId } = req.params;
-        const jenisList = await rabService.getKodeEkonomiJenisService(akunId);
+        const kelompokList = await rabService.getKodeEkonomiKelompokService(
+          akunId
+        );
+
+        res.json({
+          success: true,
+          data: kelompokList,
+          message: "Data kelompok berhasil diambil",
+          metadata: {
+            akun_id: akunId,
+            count: kelompokList.length,
+          },
+        });
+      } catch (err) {
+        console.error("HANDLER ERROR getKodeEkonomiKelompok:", err);
+        res.status(400).json({
+          success: false,
+          error: err.message,
+        });
+      }
+    },
+
+    async getKodeEkonomiJenis(req, res) {
+      try {
+        const { kelompokId } = req.params;
+        const jenisList = await rabService.getKodeEkonomiJenisService(
+          kelompokId
+        );
 
         res.json({
           success: true,
           data: jenisList,
           message: "Data jenis berhasil diambil",
           metadata: {
-            akun_id: akunId,
+            kelompok_id: kelompokId,
             count: jenisList.length,
           },
         });

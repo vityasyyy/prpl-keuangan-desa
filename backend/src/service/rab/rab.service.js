@@ -395,14 +395,30 @@ export default function createRabService(rabRepo) {
       throw new Error("Gagal mengambil data akun");
     }
   }
-
-  async function getKodeEkonomiJenisService(akunId) {
+  async function getKodeEkonomiKelompokService(akunId) {
     if (!akunId) {
       throw new Error("akunId harus diisi");
     }
 
     try {
-      const jenisList = await rabRepo.getKodeEkonomiJenis(akunId);
+      const kelompokList = await rabRepo.getKodeEkonomiKelompok(akunId);
+      return kelompokList.map((kelompok) => ({
+        ...kelompok,
+        label: `${kelompok.kode} - ${kelompok.uraian}`,
+      }));
+    } catch (err) {
+      console.error("SERVICE ERROR getKodeEkonomiKelompokService:", err);
+      throw new Error("Gagal mengambil data kelompok");
+    }
+  }
+
+  async function getKodeEkonomiJenisService(kelompokId) {
+    if (!kelompokId) {
+      throw new Error("kelompokId harus diisi");
+    }
+
+    try {
+      const jenisList = await rabRepo.getKodeEkonomiJenis(kelompokId);
       return jenisList.map((jenis) => ({
         ...jenis,
         label: `${jenis.kode} - ${jenis.uraian}`,
@@ -546,6 +562,7 @@ export default function createRabService(rabRepo) {
     getKodeRekeningSubBidangService,
     getKodeRekeningKegiatanService,
     getKodeEkonomiAkunService,
+    getKodeEkonomiKelompokService,
     getKodeEkonomiJenisService,
     getKodeEkonomiObjekService,
 

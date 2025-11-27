@@ -65,6 +65,24 @@ export default function createRabRepo(db) {
     }
   }
 
+  async function getKodeEkonomiKelompok(akunId) {
+    try {
+      const { rows } = await db.query(
+        `
+        SELECT id, full_code AS kode, uraian
+        FROM kode_ekonomi
+        WHERE level = 'kelompok' AND parent_id = $1
+        ORDER BY full_code
+      `,
+        [akunId]
+      );
+      return rows;
+    } catch (err) {
+      console.error("ERROR getKodeEkonomiKelompok:", err);
+      throw err;
+    }
+  }
+
   async function getKodeEkonomiJenis(akunId) {
     try {
       const { rows } = await db.query(
@@ -506,6 +524,7 @@ export default function createRabRepo(db) {
     getKodeRekeningSubBidang,
     getKodeRekeningKegiatan,
     getKodeEkonomiAkun,
+    getKodeEkonomiKelompok,
     getKodeEkonomiJenis,
     getKodeEkonomiObjek,
 
