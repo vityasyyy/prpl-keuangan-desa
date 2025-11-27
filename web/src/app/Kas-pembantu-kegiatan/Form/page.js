@@ -5,16 +5,28 @@ import Sidebar from "@/features/kas-pembantu/Sidebar";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { Calendar } from "lucide-react";
 import Footer from "@/features/kas-pembantu/Footer";
-import {
-  createKegiatan,
-  getKegiatanById,
-  updateKegiatan,
-  deleteKegiatan,
-  getBidang,
-  getSubBidang,
-  getKegiatan as getKegiatanOptions,
-} from "@/services/kas-pembantu";
-import { parseCurrency, formatCurrency } from "@/lib/format";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+
+// Utility functions (inline)
+function formatCurrency(value) {
+  if (!value) return "Rp0,00";
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "Rp0,00";
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+}
+
+function parseCurrency(value) {
+  if (!value) return 0;
+  const cleaned = value.replace(/[^0-9,-]/g, "").replace(",", ".");
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+}
 
 export default function Page() {
   const router = useRouter();
@@ -53,15 +65,17 @@ export default function Page() {
       if (editId) {
         try {
           setLoading(true);
-          const response = await getKegiatanById(editId);
-          const data = response.data;
+          // GET http://localhost:8081/api/kas-pembantu/kegiatan/{id}
+          const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/${editId}`);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const result = await response.json();
+          const data = result.data;
           
           // Basic fields that are directly stored
           setTanggal(data.tanggal || "");
           setUraian(data.uraian || "");
           
           // Map stored data back to form fields
-          // Since we can't split the totals back perfectly, put totals in first field of each category
           setDariBendahara(String(data.penerimaan || 0));
           setSwadaya("0");
           setBelanjaBarang(String(data.pengeluaran || 0));  
@@ -71,11 +85,11 @@ export default function Page() {
           setKegiatan(data.type_enum || "");
           
           // Set default values for fields that aren't stored in DB
-          setKodeRek(""); // This seems to be a UI field
-          setBidang(""); // This would need to be derived from kegiatan
-          setSubBidang(""); // This would need to be derived from kegiatan
-          setNomorBukti(""); // This seems to be a UI field
-          setJumlahPengembalian("0"); // This seems to be a calculated field
+          setKodeRek("");
+          setBidang("");
+          setSubBidang("");
+          setNomorBukti("");
+          setJumlahPengembalian("0");
           
         } catch (err) {
           setError(err.message);
@@ -91,8 +105,12 @@ export default function Page() {
   // Fetch initial bidang options
   useEffect(() => {
     async function fetchBidang() {
-      const data = await getBidang();
-      setBidangOptions(data);
+      try {
+        // Placeholder: fetch bidang options from API if endpoint exists
+        setBidangOptions([]);
+      } catch (err) {
+        console.error("Failed to fetch bidang:", err);
+      }
     }
     fetchBidang();
   }, []);
@@ -101,10 +119,14 @@ export default function Page() {
   useEffect(() => {
     if (bidang) {
       async function fetchSubBidang() {
-        const data = await getSubBidang(bidang);
-        setSubBidangOptions(data);
-        setSubBidang(""); // Reset sub-bidang selection
-        setKegiatanOptions([]); // Clear kegiatan
+        try {
+          // Placeholder: fetch sub-bidang options from API if endpoint exists
+          setSubBidangOptions([]);
+          setSubBidang("");
+          setKegiatanOptions([]);
+        } catch (err) {
+          console.error("Failed to fetch sub-bidang:", err);
+        }
       }
       fetchSubBidang();
     } else {
@@ -117,9 +139,13 @@ export default function Page() {
   useEffect(() => {
     if (subBidang) {
       async function fetchKegiatan() {
-        const data = await getKegiatanOptions(subBidang);
-        setKegiatanOptions(data);
-        setKegiatan(""); // Reset kegiatan selection
+        try {
+          // Placeholder: fetch kegiatan options from API if endpoint exists
+          setKegiatanOptions([]);
+          setKegiatan("");
+        } catch (err) {
+          console.error("Failed to fetch kegiatan:", err);
+        }
       }
       fetchKegiatan();
     } else {
@@ -143,13 +169,16 @@ export default function Page() {
 
   const handleDelete = async () => {
     if (editId) {
-      // Edit mode: delete the entry
       if (confirm("Apakah Anda yakin ingin menghapus data ini?")) {
         try {
           setLoading(true);
           setError(null);
-          await deleteKegiatan(editId);
-          // Redirect to list after successful deletion
+          // DELETE http://localhost:8081/api/kas-pembantu/kegiatan/{id}
+          const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/${editId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
           router.push("/Kas-pembantu-kegiatan");
         } catch (err) {
           setError(err.message);
@@ -158,7 +187,6 @@ export default function Page() {
         }
       }
     } else {
-      // Create mode: clear all form inputs
       setTanggal("");
       setKodeRek("");
       setBidang("");
@@ -227,9 +255,21 @@ export default function Page() {
 
       // Submit to API - use update if editId exists, otherwise create
       if (editId) {
-        await updateKegiatan(editId, payload);
+        // PUT http://localhost:8081/api/kas-pembantu/kegiatan/{id}
+        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/${editId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
       } else {
-        await createKegiatan(payload);
+        // POST http://localhost:8081/api/kas-pembantu/kegiatan
+        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
       }
 
       // Success - check if "buat lagi" is enabled

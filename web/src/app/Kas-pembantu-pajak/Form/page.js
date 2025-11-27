@@ -5,8 +5,28 @@ import Sidebar from "@/features/kas-pembantu/Sidebar";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { Calendar } from "lucide-react";
 import Footer from "@/features/kas-pembantu/Footer";
-import { createPajak, getPajakById, updatePajak, deletePajak } from "@/services/kas-pembantu";
-import { parseCurrency, formatCurrency } from "@/lib/format";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+
+// Utility functions (inline)
+function formatCurrency(value) {
+  if (!value) return "Rp0,00";
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "Rp0,00";
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+}
+
+function parseCurrency(value) {
+  if (!value) return 0;
+  const cleaned = value.replace(/[^0-9,-]/g, "").replace(",", ".");
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+}
 
 export default function Page() {
   const router = useRouter();
@@ -32,8 +52,11 @@ export default function Page() {
       if (editId) {
         try {
           setLoading(true);
-          const response = await getPajakById(editId);
-          const data = response.data;
+          // GET http://localhost:8081/api/kas-pembantu/pajak/{id}
+          const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/pajak/${editId}`);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const result = await response.json();
+          const data = result.data;
           
           setTanggal(data.tanggal);
           setUraian(data.uraian);
@@ -66,13 +89,16 @@ export default function Page() {
 
   const handleDelete = async () => {
     if (editId) {
-      // Edit mode: delete the entry
       if (confirm("Apakah Anda yakin ingin menghapus data ini?")) {
         try {
           setLoading(true);
           setError(null);
-          await deletePajak(editId);
-          // Redirect to list after successful deletion
+          // DELETE http://localhost:8081/api/kas-pembantu/pajak/{id}
+          const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/pajak/${editId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
           router.push("/Kas-pembantu-pajak");
         } catch (err) {
           setError(err.message);
@@ -81,7 +107,6 @@ export default function Page() {
         }
       }
     } else {
-      // Create mode: clear all form inputs
       setTanggal("");
       setUraian("");
       setPemotongan("");
@@ -130,9 +155,21 @@ export default function Page() {
 
       // Submit to API - use update if editId exists, otherwise create
       if (editId) {
-        await updatePajak(editId, payload);
+        // PUT http://localhost:8081/api/kas-pembantu/pajak/{id}
+        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/pajak/${editId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
       } else {
-        await createPajak(payload);
+        // POST http://localhost:8081/api/kas-pembantu/pajak
+        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/pajak`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
       }
 
       // Success - check if "buat lagi" is enabled

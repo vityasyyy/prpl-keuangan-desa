@@ -2,8 +2,63 @@
 import { ChevronDown, ChevronRight, Download, Plus } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { formatCurrency, formatDate } from "@/lib/format";
-import { MODULE_FIELDS } from "@/lib/constants";
+
+// Utility functions (inline)
+function formatCurrency(value) {
+  if (!value) return "Rp0,00";
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "Rp0,00";
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+}
+
+function formatDate(isoString) {
+  if (!isoString) return "";
+  try {
+    const date = new Date(isoString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return "";
+  }
+}
+
+// Define column configurations for each module type
+const MODULE_FIELDS = {
+  kegiatan: {
+    columns: [
+      { key: "tanggal", label: "Tanggal", width: "100px" },
+      { key: "uraian", label: "Uraian", width: "auto" },
+      { key: "penerimaan", label: "Penerimaan", width: "120px" },
+      { key: "pengeluaran", label: "Pengeluaran", width: "120px" },
+      { key: "saldo_after", label: "Saldo", width: "120px" },
+    ],
+  },
+  panjar: {
+    columns: [
+      { key: "tanggal", label: "Tanggal", width: "100px" },
+      { key: "uraian", label: "Uraian", width: "auto" },
+      { key: "pemberian", label: "Pemberian", width: "120px" },
+      { key: "pertanggungjawaban", label: "Pertanggungjawaban", width: "140px" },
+      { key: "saldo_after", label: "Saldo", width: "120px" },
+    ],
+  },
+  pajak: {
+    columns: [
+      { key: "tanggal", label: "Tanggal", width: "100px" },
+      { key: "uraian", label: "Uraian", width: "auto" },
+      { key: "pemotongan", label: "Pemotongan", width: "120px" },
+      { key: "penyetoran", label: "Penyetoran", width: "120px" },
+      { key: "saldo_after", label: "Saldo", width: "120px" },
+    ],
+  },
+};
 
 export default function MonthCard({
   bulan,

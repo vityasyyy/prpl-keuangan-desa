@@ -6,8 +6,25 @@ import Header from "@/features/kas-pembantu/Header";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { ChevronDown, ChevronRight, Download, Plus } from "lucide-react";
 import MonthCard from "@/features/kas-pembantu/MonthCard";
-import { getPajakList } from "@/services/kas-pembantu";
-import { formatCurrency, formatMonthDisplay } from "@/lib/format";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+
+// Utility functions (inline)
+function formatCurrency(value) {
+  if (!value) return "Rp0,00";
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "Rp0,00";
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+}
+
+function formatMonthDisplay(monthNumber) {
+  return `Bulan ${monthNumber}`;
+}
 
 export default function KasPembantuPajak() {
   const [open, setOpen] = useState(null);
@@ -25,12 +42,10 @@ export default function KasPembantuPajak() {
     async function fetchData() {
       try {
         setLoading(true);
-        const result = await getPajakList({
-          page: 1,
-          per_page: 50,
-          sort_by: "tanggal",
-          order: "desc",
-        });
+        // GET http://localhost:8081/api/kas-pembantu/pajak (assuming same pattern)
+        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/pajak`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const result = await response.json();
 
         // Transform API response to match UI data structure
         const transformed = transformToMonthCards(result);

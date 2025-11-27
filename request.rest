@@ -1,0 +1,69 @@
+### get semua kegiatan kas pembantu
+GET http://localhost:8081/api/kas-pembantu/kegiatan?showAll=true
+
+
+###
+GET http://localhost:8081/api/kas-pembantu/kegiatan/bkp001
+
+### buat sebuah kegiatan
+POST http://localhost:8081/api/kas-pembantu/kegiatan
+Content-Type: application/json
+
+{
+  "bku_id": "bku010",
+  "type_enum": "dummy: operasional",
+  "tanggal": "2024-10-01",
+  "uraian": "dummy: beli sprei prabowo",
+  "penerimaan": 123123.0,
+  "pengeluaran": 0.0
+}
+
+### hapus sebuah kegiatan by id
+DELETE http://localhost:8081/api/kas-pembantu/kegiatan/bkp1762747883120
+
+### edit 
+PUT http://localhost:8081/api/kas-pembantu/kegiatan/bkp1762748063745
+Content-Type: application/json
+
+{
+  "uraian": "edited: beli alat bersih-bersih",
+  "pengeluaran": 280200,
+  "penerimaan": 0,
+  "type_enum": "edited: operasional test test",
+  "tanggal": "2025-10-05"
+}
+
+
+### get panjar entry list
+GET http://localhost:8081/api/kas-pembantu/panjar
+
+### get panjar entry by id
+GET http://localhost:8081/api/kas-pembantu/panjar/panjar1762791230156
+
+### delete panjar entry by id
+DELETE http://localhost:8081/api/kas-pembantu/panjar/panjar004
+
+### create panjar entry
+POST http://localhost:8081/api/kas-pembantu/panjar
+Content-Type: application/json
+
+{
+  "bku_id": "bku001",
+  "tanggal": "2025-11-10",
+  "uraian": "panjar baru: Panjar contoh",
+  "pemberian": 1000000,
+  "pertanggungjawaban": 0
+}
+
+### edit panjar entry by id
+PUT http://localhost:8081/api/kas-pembantu/panjar/panjar1762791230156
+Content-Type: application/json
+
+{
+  "bku_id": "bku009",
+  "tanggal": "2024-05-02",
+  "uraian": "edited: Pertanggungjawaban Panjar Pelatihan (revisi uraian)",
+  "pemberian": 0.00,
+  "pertanggungjawaban": 151234.00,
+  "saldo_after": 0.00
+}
