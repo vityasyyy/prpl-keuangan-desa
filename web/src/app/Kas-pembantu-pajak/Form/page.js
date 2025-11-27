@@ -6,7 +6,7 @@ import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { Calendar } from "lucide-react";
 import Footer from "@/features/kas-pembantu/Footer";
 import { createPajak, getPajakById, updatePajak, deletePajak } from "@/services/kas-pembantu";
-import { parseCurrency } from "@/lib/format";
+import { parseCurrency, formatCurrency } from "@/lib/format";
 
 export default function Page() {
   const router = useRouter();
@@ -24,6 +24,7 @@ export default function Page() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [buatLagi, setBuatLagi] = useState(false);
+  const [calculatedSaldo, setCalculatedSaldo] = useState(0);
 
   // Fetch data if in edit mode
   useEffect(() => {
@@ -48,6 +49,14 @@ export default function Page() {
 
     fetchPajak();
   }, [editId]);
+
+  // Calculate saldo automatically when input values change
+  useEffect(() => {
+    const pemotonganAmount = parseFloat(pemotongan || 0);
+    const penyetoranAmount = parseFloat(penyetoran || 0);
+    const saldo = pemotonganAmount - penyetoranAmount;
+    setCalculatedSaldo(saldo);
+  }, [pemotongan, penyetoran]);
 
   const formatTanggal = (value) => {
     if (!value) return "";
@@ -78,6 +87,7 @@ export default function Page() {
       setPemotongan("");
       setPenyetoran("");
       setError(null);
+      setCalculatedSaldo(0);
     }
   };
 
@@ -89,6 +99,7 @@ export default function Page() {
     setPemotongan("");
     setPenyetoran("");
     setError(null);
+    setCalculatedSaldo(0);
   };
 
   const handleSave = async (e) => {
@@ -276,7 +287,7 @@ export default function Page() {
                 </span>
                 <input
                   type="text"
-                  value="100.000.000,00"
+                  value={formatCurrency(calculatedSaldo)}
                   readOnly
                   className="w-full bg-white py-1.5 pr-3 pl-9 text-sm text-gray-800 focus:outline-none"
                 />

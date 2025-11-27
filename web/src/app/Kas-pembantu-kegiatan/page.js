@@ -116,7 +116,7 @@ export default function KasPembantuKegiatan() {
               key={index}
               bulan={item.bulan}
               total={item.total}
-              isCurrentMonth={item.isCurrentMonth}
+              saldo={item.isCurrentMonth}
               formPath={formPath}
               moduleType="kegiatan"
               month={item.month}

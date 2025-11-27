@@ -40,6 +40,7 @@ export default function Page() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [buatLagi, setBuatLagi] = useState(false);
+  const [calculatedSaldo, setCalculatedSaldo] = useState(0);
 
   // Category dropdown data
   const [bidangOptions, setBidangOptions] = useState([]);
@@ -53,23 +54,29 @@ export default function Page() {
         try {
           setLoading(true);
           const response = await getKegiatanById(editId);
-          const data = response;
+          const data = response.data;
           
+          // Basic fields that are directly stored
           setTanggal(data.tanggal || "");
           setUraian(data.uraian || "");
           
-          // For kegiatan, penerimaan and pengeluaran come from API
-          // We need to split them back to the form fields
-          // Since we don't know the exact breakdown, we'll put them in the first field
-          if (data.penerimaan && data.penerimaan > 0) {
-            setDariBendahara(String(data.penerimaan));
-          }
-          if (data.pengeluaran && data.pengeluaran > 0) {
-            setBelanjaBarang(String(data.pengeluaran));
-          }
+          // Map stored data back to form fields
+          // Since we can't split the totals back perfectly, put totals in first field of each category
+          setDariBendahara(String(data.penerimaan || 0));
+          setSwadaya("0");
+          setBelanjaBarang(String(data.pengeluaran || 0));  
+          setBelanjaModal("0");
           
           // Set type_enum to kegiatan dropdown if available
           setKegiatan(data.type_enum || "");
+          
+          // Set default values for fields that aren't stored in DB
+          setKodeRek(""); // This seems to be a UI field
+          setBidang(""); // This would need to be derived from kegiatan
+          setSubBidang(""); // This would need to be derived from kegiatan
+          setNomorBukti(""); // This seems to be a UI field
+          setJumlahPengembalian("0"); // This seems to be a calculated field
+          
         } catch (err) {
           setError(err.message);
         } finally {
@@ -120,6 +127,14 @@ export default function Page() {
     }
   }, [subBidang]);
 
+  // Calculate saldo automatically when input values change
+  useEffect(() => {
+    const penerimaan = parseFloat(dariBendahara || 0) + parseFloat(swadaya || 0);
+    const pengeluaran = parseFloat(belanjaBarang || 0) + parseFloat(belanjaModal || 0);
+    const saldo = penerimaan - pengeluaran;
+    setCalculatedSaldo(saldo);
+  }, [dariBendahara, swadaya, belanjaBarang, belanjaModal]);
+
   const formatTanggal = (value) => {
     if (!value) return "";
     const [year, month, day] = value.split("-");
@@ -157,6 +172,7 @@ export default function Page() {
       setNomorBukti("");
       setJumlahPengembalian("");
       setError(null);
+      setCalculatedSaldo(0);
     }
   };
 
@@ -176,6 +192,7 @@ export default function Page() {
     setNomorBukti("");
     setJumlahPengembalian(""); // Reset Jumlah Pengembalian
     setError(null);
+    setCalculatedSaldo(0);
   };
 
   const handleSave = async (e) => {
@@ -447,9 +464,9 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Saldo Kas */}
+          {/* Saldo Kas (Automated) */}
           <div>
-            <h2 className="mb-2 font-semibold text-gray-800">Saldo Kas</h2>
+            <h2 className="mb-2 font-semibold text-gray-800">Saldo Kas (Automated)</h2>
             <div className="rounded-md border border-gray-300 bg-white px-3 py-2">
               <div className="relative flex items-center">
                 <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm text-gray-400">
@@ -457,7 +474,7 @@ export default function Page() {
                 </span>
                 <input
                   type="text"
-                  value="100.000.000,00"
+                  value={formatCurrency(calculatedSaldo)}
                   readOnly
                   className="w-full bg-white py-1.5 pr-3 pl-9 text-sm text-gray-800 focus:outline-none"
                 />
