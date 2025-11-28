@@ -128,64 +128,6 @@ export default function createApbdRepo(arg) {
     return rows;
   };
 
-  const validateApbdesRincian = (data) => {
-    const {
-      uraian,
-      jumlah_anggaran,
-      sumber_dana,
-      kode_fungsi_id,
-      kode_ekonomi_id,
-      kegiatan_id,
-    } = data;
-
-    if (!uraian) {
-      throw {
-        status: 400,
-        error: "uraian_required",
-        message: "Uraian tidak boleh kosong",
-      };
-    }
-    if (
-      jumlah_anggaran === undefined ||
-      jumlah_anggaran === null ||
-      parseFloat(jumlah_anggaran) <= 0
-    ) {
-      throw {
-        status: 400,
-        error: "jumlah_anggaran_invalid",
-        message: "Jumlah anggaran harus lebih dari 0",
-      };
-    }
-    if (!sumber_dana) {
-      throw {
-        status: 400,
-        error: "sumber_dana_required",
-        message: "Sumber dana tidak boleh kosong",
-      };
-    }
-    if (!kegiatan_id) {
-      throw {
-        status: 400,
-        error: "kegiatan_required",
-        hint: "Kegiatan harus dipilih dari dropdown",
-      };
-    }
-    if (!kode_fungsi_id) {
-      throw {
-        status: 400,
-        error: "kode_fungsi_required",
-        hint: "Kode fungsi harus dipilih",
-      };
-    }
-    if (!kode_ekonomi_id) {
-      throw {
-        status: 400,
-        error: "kode_ekonomi_required",
-        hint: "Kode ekonomi harus dipilih",
-      };
-    }
-  };
-
   const createApbdesRincian = async (data) => {
     const {
       id,
@@ -347,88 +289,6 @@ export default function createApbdRepo(arg) {
       acc[cur.uraian] = parseFloat(cur.total_anggaran) || 0;
       return acc;
     }, {});
-  };
-
-  const validateApbdesRincianPenjabaran = (data) => {
-    const {
-      rincian_id,
-      uraian,
-      volume,
-      satuan,
-      jumlah_anggaran,
-      sumber_dana,
-      kode_fungsi_id,
-      kode_ekonomi_id,
-      kegiatan_id,
-    } = data;
-
-    if (!rincian_id) {
-      throw {
-        status: 400,
-        error: "rincian_id_required",
-        message: "ID rincian APBDes tidak ditemukan",
-      };
-    }
-    if (!volume) {
-      throw {
-        status: 400,
-        error: "volume_required",
-        message: "Volume tidak boleh kosong",
-      };
-    }
-    if (!satuan) {
-      throw {
-        status: 400,
-        error: "satuan_required",
-        message: "Satuan tidak boleh kosong",
-      };
-    }
-    if (!uraian) {
-      throw {
-        status: 400,
-        error: "uraian_required",
-        message: "Uraian tidak boleh kosong",
-      };
-    }
-    if (
-      jumlah_anggaran === undefined ||
-      jumlah_anggaran === null ||
-      parseFloat(jumlah_anggaran) <= 0
-    ) {
-      throw {
-        status: 400,
-        error: "jumlah_anggaran_invalid",
-        message: "Jumlah anggaran harus lebih dari 0",
-      };
-    }
-    if (!sumber_dana) {
-      throw {
-        status: 400,
-        error: "sumber_dana_required",
-        message: "Sumber dana tidak boleh kosong",
-      };
-    }
-    if (!kegiatan_id) {
-      throw {
-        status: 400,
-        error: "kegiatan_required",
-        hint: "Kegiatan harus dipilih dari dropdown",
-      };
-    }
-    if (!kode_fungsi_id) {
-      throw {
-        status: 400,
-        error: "kode_fungsi_required",
-        hint: "Kode fungsi harus dipilih",
-      };
-    }
-    if (!kode_ekonomi_id) {
-      throw {
-        status: 400,
-        error: "kode_ekonomi_required",
-        hint: "Kode ekonomi harus dipilih",
-      };
-    }
   };
 
   const createApbdesRincianPenjabaran = async (data) => {
@@ -660,7 +520,6 @@ export default function createApbdRepo(arg) {
     listKelompok,
     listJenis,
     listObjek,
-    validateApbdesRincian,
     createApbdesRincian,
     getApbdesIdByKegiatanId,
 
@@ -675,7 +534,6 @@ export default function createApbdRepo(arg) {
     postDraftApbdes,
 
     //input form apbdes rincian penjabaran
-    validateApbdesRincianPenjabaran,
     createApbdesRincianPenjabaran,
     getApbdesIdByRincianId,
 

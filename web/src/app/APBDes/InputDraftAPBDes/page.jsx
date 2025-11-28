@@ -12,21 +12,22 @@ export default function InputDraftAPBDes() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id"); // Get id from query if editing
+  const sumberDanaOptions = ["PBH", "DDS", "ADD", "DLL", "PBP"];
 
   // States to hold the currently displayed options for dropdowns
   const [akunOptions, setAkunOptions] = useState([]);
-  const [uraian1Options, setUraian1Options] = useState([]);
-  const [uraian2Options, setUraian2Options] = useState([]);
-  const [sumberDanaOptions, setSumberDanaOptions] = useState([]);
+  const [jenisOptions, setJenisOptions] = useState([]);
+  const [objekOptions, setObjekOptions] = useState([]);
+  const [kelompokOptions, setKelompokOptions] = useState([]);
   const [bidangOptions, setBidangOptions] = useState([]);
   const [subBidangOptions, setSubBidangOptions] = useState([]);
   const [kegiatanOptions, setKegiatanOptions] = useState([]);
 
   // States to hold the FULL list of options fetched initially
   const [allAkunOptions, setAllAkunOptions] = useState([]);
-  const [allUraian1Options, setAllUraian1Options] = useState([]);
-  const [allUraian2Options, setAllUraian2Options] = useState([]);
-  const [allSumberDanaOptions, setAllSumberDanaOptions] = useState([]);
+  const [allJenisOptions, setAllJenisOptions] = useState([]);
+  const [allObjekOptions, setAllObjekOptions] = useState([]);
+  const [allKelompokOptions, setAllKelompokOptions] = useState([]);
   const [allBidangOptions, setAllBidangOptions] = useState([]);
   const [allSubBidangOptions, setAllSubBidangOptions] = useState([]);
   const [allKegiatanOptions, setAllKegiatanOptions] = useState([]);
@@ -35,15 +36,15 @@ export default function InputDraftAPBDes() {
   const [subBidangData, setSubBidangData] = useState([]); // To store full subBidang objects
   const [kegiatanData, setKegiatanData] = useState([]); // To store full kegiatan objects
   const [akunData, setAkunData] = useState([]);
-  const [sumberDanaData, setSumberDanaData] = useState([]);
-  const [uraian1Data, setUraian1Data] = useState([]);
-  const [uraian2Data, setUraian2Data] = useState([]);
+  const [kelompokData, setKelompokData] = useState([]);
+  const [jenisData, setJenisData] = useState([]);
+  const [objekData, setObjekData] = useState([]);
 
   const [selectedBidangId, setSelectedBidangId] = useState(null);
   const [selectedSubBidangId, setSelectedSubBidangId] = useState(null);
   const [selectedAkunId, setSelectedAkunId] = useState(null);
-  const [selectedSumberDanaId, setSelectedSumberDanaId] = useState(null);
-  const [selectedUraian1Id, setSelectedUraian1Id] = useState(null);
+  const [selectedKelompokId, setSelectedKelompokId] = useState(null);
+  const [selectedJenisId, setSelectedJenisId] = useState(null);
 
   const [isLoadingEditData, setIsLoadingEditData] = useState(false);
 
@@ -51,14 +52,14 @@ export default function InputDraftAPBDes() {
     id: Date.now(),
     kodeRekEkonomi: "",
     pendapatanBelanja: "",
-    uraian1: "",
-    uraian2: "",
+    jenis: "",
+    objek: "",
     kodeRekBidang: "",
     bidang: "",
     subBidang: "",
     kegiatan: "",
     anggaran: "",
-    sumberDana: "",
+    kelompok: "",
   });
 
   // Helper to format kode rekening with dots based on type
@@ -119,18 +120,18 @@ export default function InputDraftAPBDes() {
 
         // Set initial full lists
         setAllAkunOptions(data.akun.map((item) => item.uraian));
-        setAllUraian1Options(data.uraian1.map((item) => item.uraian));
-        setAllUraian2Options(data.uraian2.map((item) => item.uraian));
-        setAllSumberDanaOptions(data.sumberDana.map((item) => item.uraian));
+        setAllJenisOptions(data.jenis.map((item) => item.uraian));
+        setAllObjekOptions(data.objek.map((item) => item.uraian));
+        setAllKelompokOptions(data.kelompok.map((item) => item.uraian));
         setAllBidangOptions(data.bidang.map((item) => item.uraian));
         setAllSubBidangOptions(data.subBidang.map((item) => item.uraian));
         setAllKegiatanOptions(data.kegiatan.map((item) => item.uraian));
 
         // Also set the current options to the full lists initially
         setAkunOptions(data.akun.map((item) => item.uraian));
-        setUraian1Options(data.uraian1.map((item) => item.uraian));
-        setUraian2Options(data.uraian2.map((item) => item.uraian));
-        setSumberDanaOptions(data.sumberDana.map((item) => item.uraian));
+        setJenisOptions(data.jenis.map((item) => item.uraian));
+        setObjekOptions(data.objek.map((item) => item.uraian));
+        setKelompokOptions(data.kelompok.map((item) => item.uraian));
         setBidangOptions(data.bidang.map((item) => item.uraian));
         setSubBidangOptions(data.subBidang.map((item) => item.uraian));
         setKegiatanOptions(data.kegiatan.map((item) => item.uraian));
@@ -139,9 +140,9 @@ export default function InputDraftAPBDes() {
         setSubBidangData(data.subBidang);
         setKegiatanData(data.kegiatan);
         setAkunData(data.akun);
-        setSumberDanaData(data.sumberDana);
-        setUraian1Data(data.uraian1);
-        setUraian2Data(data.uraian2);
+        setKelompokData(data.kelompok);
+        setJenisData(data.jenis);
+        setObjekData(data.objek);
       } catch (error) {
         console.error("Failed to fetch all dropdown options:", error);
       }
@@ -178,45 +179,44 @@ export default function InputDraftAPBDes() {
 
   // Filter Sumber Dana options when an Akun is selected
   useEffect(() => {
-    if (selectedAkunId && sumberDanaData.length > 0) {
-      const filtered = sumberDanaData.filter((item) => item.parent_id === selectedAkunId);
-      setSumberDanaOptions(filtered.map((item) => item.uraian));
+    if (selectedAkunId && kelompokData.length > 0) {
+      const filtered = kelompokData.filter((item) => item.parent_id === selectedAkunId);
+      setKelompokOptions(filtered.map((item) => item.uraian));
     } else {
-      setSumberDanaOptions(allSumberDanaOptions);
+      setKelompokOptions(allKelompokOptions);
     }
     if (!isLoadingEditData) {
-      handleOnChange("sumberDana", "");
-      handleOnChange("uraian1", "");
-      handleOnChange("uraian2", "");
+      handleOnChange("kelompok", "");
+      handleOnChange("jenis", "");
+      handleOnChange("objek", "");
     }
-  }, [selectedAkunId, sumberDanaData, allSumberDanaOptions]);
-
-  // Filter Uraian 1 options when a Sumber Dana is selected
+  }, [selectedAkunId, kelompokData, allKelompokOptions]);
+  // Filter Uraian 1 options when a Kelompok is selected
   useEffect(() => {
-    if (selectedSumberDanaId && uraian1Data.length > 0) {
-      const filtered = uraian1Data.filter((item) => item.parent_id === selectedSumberDanaId);
-      setUraian1Options(filtered.map((item) => item.uraian));
+    if (selectedKelompokId && jenisData.length > 0) {
+      const filtered = jenisData.filter((item) => item.parent_id === selectedKelompokId);
+      setJenisOptions(filtered.map((item) => item.uraian));
     } else {
-      setUraian1Options(allUraian1Options);
+      setJenisOptions(allJenisOptions);
     }
     if (!isLoadingEditData) {
-      handleOnChange("uraian1", "");
-      handleOnChange("uraian2", "");
+      handleOnChange("jenis", "");
+      handleOnChange("objek", "");
     }
-  }, [selectedSumberDanaId, uraian1Data, allUraian1Options]);
+  }, [selectedKelompokId, jenisData, allJenisOptions]);
 
-  // Filter Uraian 2 options when an Uraian 1 is selected
+  // Filter Objek options when a Jenis is selected
   useEffect(() => {
-    if (selectedUraian1Id && uraian2Data.length > 0) {
-      const filtered = uraian2Data.filter((item) => item.parent_id === selectedUraian1Id);
-      setUraian2Options(filtered.map((item) => item.uraian));
+    if (selectedJenisId && objekData.length > 0) {
+      const filtered = objekData.filter((item) => item.parent_id === selectedJenisId);
+      setObjekOptions(filtered.map((item) => item.uraian));
     } else {
-      setUraian2Options(allUraian2Options);
+      setObjekOptions(allObjekOptions);
     }
     if (!isLoadingEditData) {
-      handleOnChange("uraian2", "");
+      handleOnChange("objek", "");
     }
-  }, [selectedUraian1Id, uraian2Data, allUraian2Options]);
+  }, [selectedJenisId, objekData, allObjekOptions]);
 
   // Helpers: sanitize number and normalize kategori
   const sanitizeNumber = (val) => {
@@ -261,7 +261,7 @@ export default function InputDraftAPBDes() {
   // Load data kalau sedang edit
   useEffect(() => {
     if (id && akunData.length > 0 && bidangData.length > 0 && subBidangData.length > 0 && 
-        sumberDanaData.length > 0 && uraian1Data.length > 0) {
+        kelompokData.length > 0 && jenisData.length > 0) {
       const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
       const existing = allData.find((item) => item.id == id);
       if (existing) {
@@ -282,7 +282,7 @@ export default function InputDraftAPBDes() {
         }
       }
     }
-  }, [id, akunData, bidangData, subBidangData, sumberDanaData, uraian1Data]);
+  }, [id, akunData, bidangData, subBidangData, kelompokData, jenisData]);
 
   // Set Sub-Bidang ID setelah subBidangOptions ter-update
   useEffect(() => {
@@ -300,47 +300,45 @@ export default function InputDraftAPBDes() {
     }
   }, [isLoadingEditData, subBidangOptions, id]);
 
-  // Set Sumber Dana ID setelah sumberDanaOptions ter-update
+  // Set Kelompok ID setelah kelompokOptions ter-update
   useEffect(() => {
-    if (isLoadingEditData && id && sumberDanaOptions.length > 0) {
+    if (isLoadingEditData && id && kelompokOptions.length > 0) {
       const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
       const existing = allData.find((item) => item.id == id);
-      if (existing && existing.sumberDana) {
-        const selectedSumberDana = sumberDanaData.find(
-          (item) => item.uraian === existing.sumberDana
+      if (existing && existing.kelompok) {
+        const selectedKelompok = kelompokData.find(
+          (item) => item.uraian === existing.kelompok
         );
-        if (selectedSumberDana) {
-          setSelectedSumberDanaId(selectedSumberDana.id);
+        if (selectedKelompok) {
+          setSelectedKelompokId(selectedKelompok.id);
         }
       }
     }
-  }, [isLoadingEditData, sumberDanaOptions, id]);
-
-  // Set Uraian1 ID setelah uraian1Options ter-update
+  }, [isLoadingEditData, kelompokOptions, id]);
+  // Set Jenis ID setelah jenisOptions ter-update
   useEffect(() => {
-    if (isLoadingEditData && id && uraian1Options.length > 0) {
+    if (isLoadingEditData && id && jenisOptions.length > 0) {
       const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
       const existing = allData.find((item) => item.id == id);
-      if (existing && existing.uraian1) {
-        const selectedUraian1 = uraian1Data.find(
-          (item) => item.uraian === existing.uraian1
+      if (existing && existing.jenis) {
+        const selectedJenis = jenisData.find(
+          (item) => item.uraian === existing.jenis
         );
-        if (selectedUraian1) {
-          setSelectedUraian1Id(selectedUraian1.id);
+        if (selectedJenis) {
+          setSelectedJenisId(selectedJenis.id);
         }
       }
     }
-  }, [isLoadingEditData, uraian1Options, id]);
-
+  }, [isLoadingEditData, jenisOptions, id]);
   // Selesai loading edit data setelah semua options ter-update
   useEffect(() => {
-    if (isLoadingEditData && uraian2Options.length > 0 && kegiatanOptions.length > 0) {
+    if (isLoadingEditData && objekOptions.length > 0 && kegiatanOptions.length > 0) {
       // Beri sedikit delay untuk memastikan semua state sudah ter-update
       setTimeout(() => {
         setIsLoadingEditData(false);
       }, 100);
     }
-  }, [isLoadingEditData, uraian2Options, kegiatanOptions]);
+  }, [isLoadingEditData, objekOptions, kegiatanOptions]);
 
   const handleOnChange = (field, value) => {
     setFormData((prev) => ({
@@ -354,12 +352,12 @@ export default function InputDraftAPBDes() {
     debounce(async (kodeRekening) => {
       if (!kodeRekening) {
         handleOnChange("pendapatanBelanja", "");
-        handleOnChange("uraian1", "");
-        handleOnChange("uraian2", "");
+        handleOnChange("jenis", "");
+        handleOnChange("objek", "");
         setAkunOptions([]);
-        setUraian1Options([]);
-        setUraian2Options([]);
-        setSumberDanaOptions([]);
+        setJenisOptions([]);
+        setObjekOptions([]);
+        setKelompokOptions([]);
         return;
       }
       try {
@@ -371,42 +369,41 @@ export default function InputDraftAPBDes() {
         }
         const result = await response.json();
         if (result.success && result.data.type === "kode_ekonomi") {
-          const { akun, kelompok, jenis, objek, sumberDana, uraian1, uraian2 } = result.data;
+          const { akun, kelompok, jenis, objek, allKelompok, allJenis, allObjek } = result.data;
 
           // Update Akun dropdown
           setAkunOptions([akun.uraian]);
           handleOnChange("pendapatanBelanja", akun.uraian);
 
-          // Update Uraian 1 dropdown
-          setUraian1Options(uraian1.map(item => item.uraian));
-          handleOnChange("uraian1", jenis.uraian); // Assuming 'kelompok' is the selected value for Uraian 1
+          // Update Jenis dropdown
+          setJenisOptions(allJenis.map(item => item.uraian));
+          handleOnChange("jenis", jenis.uraian); // Assuming 'jenis' is the selected value for Jenis
 
-          // Update Uraian 2 dropdown
-          setUraian2Options(uraian2.map(item => item.uraian));
-          handleOnChange("uraian2", objek.uraian); // Assuming 'jenis' is the selected value for Uraian 2
-
+          // Update Objek dropdown
+          setObjekOptions(allObjek.map(item => item.uraian));
+          handleOnChange("objek", objek.uraian); // Assuming 'objek' is the selected value for Objek
           // Update Sumber Dana dropdown
-          setSumberDanaOptions(sumberDana.map(item => item.uraian));
-          handleOnChange("sumberDana", kelompok.uraian); // Assuming 'kelompok' is the selected value for Sumber Dana
+          setKelompokOptions(allKelompok.map(item => item.uraian));
+          handleOnChange("kelompok", kelompok.uraian); // Assuming 'kelompok' is the selected value for Kelompok
 
         } else {
           handleOnChange("pendapatanBelanja", "");
-          handleOnChange("uraian1", "");
-          handleOnChange("uraian2", "");
+          handleOnChange("jenis", "");
+          handleOnChange("objek", "");
           setAkunOptions([]);
-          setUraian1Options([]);
-          setUraian2Options([]);
-          setSumberDanaOptions([]);
+          setJenisOptions([]);
+          setObjekOptions([]);
+          setKelompokOptions([]);
         }
       } catch (error) {
         console.error("Failed to fetch ekonomi options:", error);
         handleOnChange("pendapatanBelanja", "");
-        handleOnChange("uraian1", "");
-        handleOnChange("uraian2", "");
+        handleOnChange("jenis", "");
+        handleOnChange("objek", "");
         setAkunOptions([]);
-        setUraian1Options([]);
-        setUraian2Options([]);
-        setSumberDanaOptions([]);
+        setJenisOptions([]);
+        setObjekOptions([]);
+        setKelompokOptions([]);
       }
     }, 500),
     []
@@ -547,8 +544,9 @@ export default function InputDraftAPBDes() {
         id: Date.now(),
         kodeRekEkonomi: "",
         pendapatanBelanja: "",
-        uraian1: "",
-        uraian2: "",
+        kelompok: "",
+        jenis: "",
+        objek: "",
         kodeRekBidang: "",
         bidang: "",
         subBidang: "",
@@ -579,8 +577,9 @@ export default function InputDraftAPBDes() {
         id: Date.now(),
         kodeRekEkonomi: "",
         pendapatanBelanja: "",
-        uraian1: "",
-        uraian2: "",
+        kelompok: "",
+        jenis: "",
+        objek: "",
         kodeRekBidang: "",
         bidang: "",
         subBidang: "",
@@ -631,31 +630,40 @@ export default function InputDraftAPBDes() {
                 }}
               />
             </div>
-            <div className="w-[27.5%] min-w-[180px]">
+            <div className="w-[3%] min-w-[200px]">
               <FormDropdown
-                label="Uraian 1"
-                options={uraian1Options}
-                value={formData.uraian1}
+                label="Kelompok"
+                options={kelompokOptions}
+                value={formData.kelompok}
                 onChange={(val) => {
-                  handleOnChange("uraian1", val);
-                  const selected = uraian1Data.find(
-                    (item) => item.uraian === val && item.parent_id === selectedSumberDanaId
-                  );
-                  setSelectedUraian1Id(selected ? selected.id : null);
+                  handleOnChange("kelompok", val);
+                  const selected = kelompokData.find((item) => item.uraian === val);
+                  setSelectedKelompokId(selected ? selected.id : null);
                 }}
-                disabled={!selectedSumberDanaId}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Pilih Sumber Dana terlebih dahulu.
-              </p>
             </div>
             <div className="w-[27.5%] min-w-[180px]">
               <FormDropdown
-                label="Uraian 2"
-                options={uraian2Options}
-                value={formData.uraian2}
-                onChange={(val) => handleOnChange("uraian2", val)}
-                disabled={!selectedUraian1Id}
+                label="Jenis"
+                options={jenisOptions}
+                value={formData.jenis}
+                onChange={(val) => {
+                  handleOnChange("jenis", val);
+                  const selected = jenisData.find(
+                    (item) => item.uraian === val && item.parent_id === selectedKelompokId
+                  );
+                  setSelectedJenisId(selected ? selected.id : null);
+                }}
+                disabled={!selectedKelompokId}
+              />
+            </div>
+            <div className="w-[27.5%] min-w-[180px]">
+              <FormDropdown
+                label="Objek"
+                options={objekOptions}
+                value={formData.objek}
+                onChange={(val) => handleOnChange("objek", val)}
+                disabled={!selectedJenisId}
               />
             </div>
           </div>

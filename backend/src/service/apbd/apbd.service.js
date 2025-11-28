@@ -26,13 +26,7 @@ export default function createApbdService(ApbdRepo) {
 
   const getKegiatan = async () => ApbdRepo.listKegiatan();
 
-  const validateApbdesRincian = async (payload) => {
-    ApbdRepo.validateApbdesRincian(payload);
-    return { message: "Validasi berhasil" };
-  };
-
   const createApbdesRincian = async (payload) => {
-    ApbdRepo.validateApbdesRincian(payload);
     const newItem = await ApbdRepo.createApbdesRincian(payload);
     const apbdesId = await ApbdRepo.getApbdesIdByKegiatanId(
       payload.kegiatan_id
@@ -51,11 +45,11 @@ export default function createApbdService(ApbdRepo) {
 
   const getAkun = async () => ApbdRepo.listAkun();
 
-  const getKelompok = async () => ApbdRepo.listKelompok(akunId);
+  const getKelompok = async () => ApbdRepo.listKelompok();
 
-  const getJenis = async () => ApbdRepo.listJenis(KelompokId);
+  const getJenis = async () => ApbdRepo.listJenis();
 
-  const getObjek = async () => ApbdRepo.listObjek(JenisId);
+  const getObjek = async () => ApbdRepo.listObjek();
 
   const getApbdesStatus = async (id) => {
     if (!id) throw { status: 400, error: "id_required" };
@@ -83,7 +77,6 @@ export default function createApbdService(ApbdRepo) {
   };
 
   const updateDraftApbdesItem = async (id, data) => {
-    ApbdRepo.validateApbdesRincian(data);
     const updatedItem = await ApbdRepo.updateDraftApbdesItem(id, data);
     const q = `
       SELECT k.apbdes_id
@@ -123,13 +116,7 @@ export default function createApbdService(ApbdRepo) {
     };
   };
 
-  const validateApbdesRincianPenjabaran = async (payload) => {
-    ApbdRepo.validateApbdesRincianPenjabaran(payload);
-    return { message: "Validasi berhasil" };
-  };
-
   const createApbdesRincianPenjabaran = async (payload) => {
-    ApbdRepo.validateApbdesRincianPenjabaran(payload);
     const newItem = await ApbdRepo.createApbdesRincianPenjabaran(payload);
     const apbdesId = await ApbdRepo.getApbdesIdByRincianId(payload.rincian_id);
     const total = await ApbdRepo.recalculatePenjabaranApbdesTotals(apbdesId);
@@ -179,7 +166,6 @@ export default function createApbdService(ApbdRepo) {
   };
 
   const updatePenjabaranApbdesItem = async (id, data) => {
-    ApbdRepo.validateApbdesRincianPenjabaran(data);
     const updatedItem = await ApbdRepo.updatePenjabaranApbdesItem(id, data);
     const q = `
       SELECT a.id AS apbdes_id
@@ -282,7 +268,6 @@ export default function createApbdService(ApbdRepo) {
     getKelompok,
     getJenis,
     getObjek,
-    validateApbdesRincian,
     createApbdesRincian,
 
     //output apbdes rincian
@@ -294,7 +279,6 @@ export default function createApbdService(ApbdRepo) {
     postDraftApbdes,
 
     //input form apbdes rincian penjabaran
-    validateApbdesRincianPenjabaran,
     createApbdesRincianPenjabaran,
 
     //output draft apbdes rincian penjabaran

@@ -1,15 +1,5 @@
 // src/api/handler/apbd/apbd.handler.js
 export default function createApbdHandler(ApbdService) {
-  //validate
-  const validateApbdesRincian = async (req, res, next) => {
-    try {
-      await ApbdService.validateApbdesRincian(req.body);
-      res.json({ message: "Validasi berhasil" });
-    } catch (e) {
-      next(e);
-    }
-  };
-
   //create
   const createApbdesRincian = async (req, res, next) => {
     try {
@@ -192,15 +182,6 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
-  const validateApbdesRincianPenjabaran = async (req, res, next) => {
-    try {
-      await ApbdService.validateApbdesRincianPenjabaran(req.body);
-      res.json({ message: "Validasi berhasil" });
-    } catch (e) {
-      next(e);
-    }
-  };
-
   const createApbdesRincianPenjabaran = async (req, res, next) => {
     try {
       const result = await ApbdService.createApbdesRincianPenjabaran(req.body);
@@ -305,7 +286,6 @@ export default function createApbdHandler(ApbdService) {
     getKelompok,
     getJenis,
     getUraian2,
-    validateApbdesRincian,
     createApbdesRincian,
 
     //output apbdes rincian
@@ -317,7 +297,6 @@ export default function createApbdHandler(ApbdService) {
     postDraftApbdes,
 
     //input form apbdes rincian penjabaran
-    validateApbdesRincianPenjabaran,
     createApbdesRincianPenjabaran,
 
     //output draft apbdes rincian penjabaran
