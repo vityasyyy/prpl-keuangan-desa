@@ -116,7 +116,7 @@ const DropdownInput = ({ label, options = [], value, onChange }) => {
         onClick={() => setIsOpen(!isOpen)}
         className={`text-leftfocus:ring-1 flex w-full items-center justify-between rounded-md border border-[#D4D4D8] bg-white px-3 focus:outline-none ${hasSelected ? "py-2.5 text-sm text-[#011829]" : "py-2 text-gray-400"}`}
       >
-        <span>{value || `Pilih ${label}`}</span>
+        <span className="line-clamp-2">{value || `Pilih ${label}`}</span>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           className={`h-4 w-4 transform text-gray-500 transition-transform ${

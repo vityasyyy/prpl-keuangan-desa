@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Button from "@/components/dpa/button";
 import Toggle from "@/components/dpa/toggle";
 import { DateInput, TextInput, NumberInput, DropdownInput } from "@/components/dpa/formInput";
@@ -9,101 +10,405 @@ import { Trash, Floppy, Cross } from "@/components/dpa/icons";
 import LogTable from "@/components/dpa/logTable";
 import { z } from "zod";
 
-export default function RencanaAnggaranBiayaForm() {
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8081/api";
+
+function RencanaAnggaranBiayaFormContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [formData, setFormData] = useState({
     waktuMulai: "",
     waktuSelesai: "",
-    norek: "",
+    kode_ekonomi: "",
+    jenis: "",
+    uraian1: "",
+    uraian2: "",
+    kode_fungsi: "",
     bidang: "",
     subBidang: "",
     kegiatan: "",
     uraian: "",
     volume: "",
     satuan: "",
-    hargaSatuan: "",
+    harga_satuan: "",
     jumlah: "",
   });
+
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editLineId, setEditLineId] = useState(null);
 
   const formSchema = z.object({
     waktuMulai: z.string().nonempty("Waktu mulai harus diisi."),
     waktuSelesai: z.string().nonempty("Waktu selesai harus diisi."),
-    norek: z.string().nonempty("Kode rekening harus diisi."),
+    kode_fungsi: z.string().nonempty("Kode rekening harus diisi."),
+    jenis: z.string().nonempty("Jenis harus dipilih."),
+    uraian1: z.string().nonempty("Uraian 1 harus dipilih."),
+    uraian2: z.string().nonempty("Uraian 2 harus dipilih."),
+    kode_ekonomi: z.string().nonempty("Kode rekening harus diisi."),
     bidang: z.string().nonempty("Bidang harus dipilih."),
     subBidang: z.string().nonempty("Sub-bidang harus dipilih."),
     kegiatan: z.string().nonempty("Kegiatan harus dipilih."),
     uraian: z.string().nonempty("Uraian harus diisi."),
     volume: z.string().nonempty("Volume harus diisi."),
     satuan: z.string().nonempty("Satuan harus diisi."),
-    hargaSatuan: z.string().nonempty("Harga satuan harus diisi."),
+    harga_satuan: z.string().nonempty("Harga satuan harus diisi."),
+  });
+
+  const [akunList, setAkunList] = useState([]);
+  const [uraian1List, setUraian1List] = useState([]);
+  const [uraian2List, setUraian2List] = useState([]);
+  const [selectedKE, setSelectedKE] = useState({
+    jenis: "",
+    uraian1: "",
+    uraian2: "",
+  });
+
+  const [bidangList, setBidangList] = useState([]);
+  const [subBidangList, setSubBidangList] = useState([]);
+  const [kegiatanList, setKegiatanList] = useState([]);
+  const [selectedKF, setSelectedKF] = useState({
+    bidang: "",
+    subBidang: "",
+    kegiatan: "",
   });
 
   const [hasSavedDetail, setHasSavedDetail] = useState(false);
+  const [currentRabId, setCurrentRabId] = useState(null);
+  const [rabLines, setRabLines] = useState([]);
   const [onToggle, setOnToggle] = useState(false);
   const [error, setError] = useState({});
   const [toast, setToast] = useState({ message: "", type: "", visible: false });
+  const [isSavingDetail, setIsSavingDetail] = useState(false);
 
-  const dummyBidang = [
-    { option: "Bidang 1", value: "bidang_1" },
-    { option: "Bidang 2", value: "bidang_2" },
-  ];
-  const dummySubBidang = [
-    { option: "Sub-Bidang 1", value: "sub_bidang_1" },
-    { option: "Sub-Bidang 2", value: "sub_bidang_2" },
-  ];
-  const dummyKegiatan = [
-    { option: "Kegiatan 1", value: "kegiatan_1" },
-    { option: "Kegiatan 2", value: "kegiatan_2" },
-  ];
+  const fetchRABLines = async (rabId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/rab/${rabId}/lines`);
+      const data = await response.json();
+      if (data.success) {
+        setRabLines(data.data || []);
+        console.log("RAB Lines fetched:", data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching RAB lines:", error);
+      setRabLines([]);
+    }
+  };
 
-  const dummyLogLine = [
-    {
-      norek: "111111",
-      uraian: "item 1",
-      volume: "5",
-      satuan: "pcs",
-      hargaSatuan: "50000",
-      jumlah: "25000",
-    },
-    {
-      norek: "222222",
-      uraian: "item 2",
-      volume: "3",
-      satuan: "pcs",
-      hargaSatuan: "75000",
-      jumlah: "225000",
-    },
-  ];
+  useEffect(() => {
+    if (currentRabId) {
+      fetchRABLines(currentRabId);
+    }
+  }, [currentRabId]);
+
+  useEffect(() => {
+    const editParam = searchParams.get("edit");
+    const dataParam = searchParams.get("data");
+
+    console.log("Search params - edit:", editParam, "data:", dataParam);
+
+    if (editParam && dataParam) {
+      try {
+        const editData = JSON.parse(decodeURIComponent(dataParam));
+        console.log("Edit data received:", editData);
+        console.log("kode_fungsi_full:", editData.kode_fungsi_id);
+        console.log("kode_ekonomi_full:", editData.kode_ekonomi_id);
+
+        if (!editData || typeof editData !== "object") {
+          throw new Error("Invalid edit data");
+        }
+
+        setIsEditMode(true);
+        setEditLineId(editData.lineId);
+        setCurrentRabId(editData.rabId);
+        setHasSavedDetail(true);
+
+        const newFormData = {
+          waktuMulai: editData.waktuMulai || "",
+          waktuSelesai: editData.waktuSelesai || "",
+          kode_fungsi: editData.kode_fungsi_id || "",
+          kode_ekonomi: editData.kode_ekonomi_id || "",
+          uraian: editData.uraian || "",
+          volume: editData.volume?.toString() || "",
+          satuan: editData.satuan || "",
+          harga_satuan: editData.harga_satuan?.toString() || "",
+          jumlah: editData.jumlah?.toString() || "",
+        };
+
+        setFormData((prev) => {
+          const updated = { ...prev, ...newFormData };
+          return updated;
+        });
+
+        if (editData.kode_ekonomi_id) {
+          setSelectedKE((prev) => ({
+            ...prev,
+            uraian2: editData.kode_ekonomi_id,
+          }));
+        }
+
+        if (editData.kode_fungsi_id) {
+          setSelectedKF((prev) => ({
+            ...prev,
+            kegiatan: editData.kode_fungsi_id,
+          }));
+        }
+
+        setToast({
+          message: "Mode Edit: Data rincian berhasil dimuat",
+          type: "info",
+          visible: true,
+        });
+      } catch (error) {
+        console.error("Error parsing edit data:", error);
+        setToast({
+          message: "Gagal memuat data untuk edit",
+          type: "error",
+          visible: true,
+        });
+      }
+    }
+  }, [searchParams]);
+
+  console.log("Form populated for edit mode:", formData);
+
+  useEffect(() => {
+    async function fetchAkun() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/rab/kode-ekonomi/akun`);
+        const data = await response.json();
+        console.log("fetchJenis response:", data);
+        setAkunList(data.data || []);
+      } catch (error) {
+        console.error("Error fetching jenis (akun):", error);
+        setAkunList([]);
+      }
+    }
+    fetchAkun();
+  }, []);
+
+  useEffect(() => {
+    const akunId = selectedKE.jenis;
+
+    async function fetchUraian1(akunId) {
+      setUraian1List([]);
+      try {
+        const res = await fetch(`${API_BASE_URL}/rab/kode-ekonomi/akun/${akunId}/kelompok`);
+        const data = await res.json();
+        data.data.map(async (item) => {
+          const response = await fetch(
+            `${API_BASE_URL}/rab/kode-ekonomi/kelompok/${item.id}/jenis`
+          );
+          const jenisData = await response.json();
+          setUraian1List((prevList) => [...prevList, ...jenisData.data]);
+        });
+      } catch (error) {
+        console.error("Error fetching uraian1:", error);
+        setUraian1List([]);
+      }
+    }
+    if (akunId) {
+      fetchUraian1(akunId);
+    } else {
+      setUraian1List([]);
+    }
+  }, [selectedKE.jenis]);
+
+  useEffect(() => {
+    const jenisId = selectedKE.uraian1;
+
+    async function fetchUraian2(jenisId) {
+      setUraian2List([]);
+      try {
+        const response = await fetch(`${API_BASE_URL}/rab/kode-ekonomi/jenis/${jenisId}/objek`);
+        const data = await response.json();
+        setUraian2List(data.data || []);
+      } catch (error) {
+        console.error("Error fetching uraian2:", error);
+        setUraian2List([]);
+      }
+    }
+    if (jenisId) {
+      fetchUraian2(jenisId);
+    } else {
+      setUraian2List([]);
+    }
+  }, [selectedKE.uraian1]);
+
+  useEffect(() => {
+    async function fetchBidang() {
+      const data = await fetch(`${API_BASE_URL}/rab/kode-rekening/bidang`).then((res) =>
+        res.json()
+      );
+      setBidangList(data.data);
+    }
+    fetchBidang();
+  }, []);
+
+  useEffect(() => {
+    const bidangId = selectedKF.bidang;
+
+    async function fetchSubBidang(bidangId) {
+      const data = await fetch(
+        `${API_BASE_URL}/rab/kode-rekening/bidang/${bidangId}/sub-bidang`
+      ).then((res) => res.json());
+      setSubBidangList(data.data);
+    }
+    if (selectedKF.bidang) {
+      fetchSubBidang(bidangId);
+    }
+  }, [selectedKF.bidang]);
+
+  useEffect(() => {
+    const subBidangId = selectedKF.subBidang;
+
+    async function fetchKegiatan(subBidangId) {
+      const data = await fetch(
+        `${API_BASE_URL}/rab/kode-rekening/sub-bidang/${subBidangId}/kegiatan`
+      ).then((res) => res.json());
+      setKegiatanList(data.data);
+    }
+    if (selectedKF.subBidang) {
+      fetchKegiatan(subBidangId);
+    }
+  }, [selectedKF.subBidang]);
+
+  const handleKodeChange = (field, value, lists) => {
+    setError((prev) => ({ ...prev, [field]: "" }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
+    const matchedItem = lists
+      .flatMap(({ list, type }) => list.map((item) => ({ ...item, type })))
+      .find((item) => item.id === value.trim());
+
+    if (matchedItem) handleOnChange(matchedItem.type, matchedItem.label);
+  };
 
   const handleOnChange = (field, value) => {
     setError((prev) => ({ ...prev, [field]: "" }));
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+
+    const ekonomiConfig = {
+      jenis: {
+        list: akunList,
+        kodeField: "kode_ekonomi",
+        setState: setSelectedKE,
+        reset: { jenis: "", uraian1: "", uraian2: "" },
+      },
+      uraian1: {
+        list: uraian1List,
+        kodeField: "kode_ekonomi",
+        setState: setSelectedKE,
+        reset: { uraian1: "", uraian2: "" },
+      },
+      uraian2: {
+        list: uraian2List,
+        kodeField: "kode_ekonomi",
+        setState: setSelectedKE,
+        reset: { uraian2: "" },
+      },
+    };
+
+    const fungsiConfig = {
+      bidang: {
+        list: bidangList,
+        kodeField: "kode_fungsi",
+        setState: setSelectedKF,
+        reset: { bidang: "", subBidang: "", kegiatan: "" },
+      },
+      subBidang: {
+        list: subBidangList,
+        kodeField: "kode_fungsi",
+        setState: setSelectedKF,
+        reset: { subBidang: "", kegiatan: "" },
+      },
+      kegiatan: {
+        list: kegiatanList,
+        kodeField: "kode_fungsi",
+        setState: setSelectedKF,
+        reset: { kegiatan: "" },
+      },
+    };
+
+    const config = { ...ekonomiConfig, ...fungsiConfig }[field];
+    if (config) {
+      const selectedItem = config.list.find((item) => item.label === value);
+      if (selectedItem) {
+        const newKode = selectedItem.id;
+
+        setError((prev) => ({ ...prev, [config.kodeField]: "" }));
+        config.setState((prev) => ({ ...prev, ...config.reset, [field]: selectedItem.id }));
+        setFormData((prev) => ({
+          ...prev,
+          ...config.reset,
+          [field]: value,
+          [config.kodeField]: newKode,
+        }));
+        return;
+      }
+    }
+
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const getErrorMessage = (field) => {
+    if (!error[field]) return null;
+    return typeof error[field] === "string" ? error[field] : String(error[field]);
   };
 
   const handleCalculateJumlah = () => {
     const vol = parseFloat(formData.volume) || 0;
-    const harga = parseFloat(formData.hargaSatuan) || 0;
+    const harga = parseFloat(formData.harga_satuan) || 0;
     setFormData((prev) => ({ ...prev, jumlah: vol * harga }));
   };
 
-  const handleSimpanDetail = (e) => {
+  const handleSimpanDetail = async (e) => {
     e.preventDefault();
-    setHasSavedDetail(true);
+    if (isSavingDetail) return;
+
+    setIsSavingDetail(true);
     try {
       formSchema
         .pick({
           waktuMulai: true,
           waktuSelesai: true,
-          norek: true,
+          kode_fungsi: true,
+          kode_ekonomi: true,
           bidang: true,
           subBidang: true,
           kegiatan: true,
+          jenis: true,
+          uraian1: true,
+          uraian2: true,
         })
         .parse(formData);
-      // Logic untuk nyimpen detail
-      //{fungsi simpan detail}
+
+      const rabData = {
+        mulai: formData.waktuMulai,
+        selesai: formData.waktuSelesai,
+        kode_fungsi_id: selectedKF.kegiatan,
+        kode_ekonomi_id: selectedKE.uraian2,
+      };
+
+      const response = await fetch(`${API_BASE_URL}/rab`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(rabData),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setCurrentRabId(data.data.id);
+        setHasSavedDetail(true);
+        setToast({
+          message: "Detail RAB berhasil disimpan!",
+          type: "success",
+          visible: true,
+        });
+      } else {
+        throw new Error(data.error || "Gagal menyimpan detail RAB");
+      }
     } catch (err) {
       if (err instanceof z.ZodError) {
         const fieldErrors = {};
@@ -112,6 +417,7 @@ export default function RencanaAnggaranBiayaForm() {
         });
         setError(fieldErrors);
       }
+      setIsSavingDetail(false);
     }
   };
 
@@ -122,27 +428,86 @@ export default function RencanaAnggaranBiayaForm() {
       uraian: "",
       volume: "",
       satuan: "",
-      hargaSatuan: "",
+      harga_satuan: "",
       jumlah: 0,
     }));
   };
 
-  const handleSimpanRincian = (e) => {
+  const handleSimpanRincian = async (e) => {
     e.preventDefault();
     try {
-      formSchema.parse(formData);
-      //Handle Simpan Rincian di sini
-      //{fngsi simpan rincian}
-      setToast({ message: "Rincian berhasil disimpan!", type: "success", visible: true });
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        const fieldErrors = {};
-        err.issues.forEach((error) => {
-          fieldErrors[error.path[0]] = error.message;
-        });
-        setError(fieldErrors);
+      formSchema
+        .pick({ uraian: true, volume: true, satuan: true, harga_satuan: true })
+        .parse(formData);
+
+      if (!currentRabId) {
+        throw new Error("Detail RAB belum disimpan. Simpan detail terlebih dahulu.");
       }
-    }
+
+      const lineData = {
+        uraian: formData.uraian.trim(),
+        volume: formData.volume,
+        satuan: formData.satuan.trim(),
+        harga_satuan: formData.harga_satuan,
+      };
+
+      console.log("Submitting line data:", lineData);
+
+      const url =
+        isEditMode && editLineId
+          ? `${API_BASE_URL}/rab/lines/${editLineId}`
+          : `${API_BASE_URL}/rab/${currentRabId}/lines`;
+
+      const method = isEditMode && editLineId ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(lineData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setToast({
+          message: isEditMode ? "Rincian berhasil diupdate!" : "Rincian berhasil disimpan!",
+          type: "success",
+          visible: true,
+        });
+
+        setError({});
+        await fetchRABLines(currentRabId);
+
+        if (onToggle) {
+          setFormData((prev) => ({
+            ...prev,
+            uraian: "",
+            volume: "",
+            satuan: "",
+            harga_satuan: "",
+            jumlah: "",
+          }));
+
+          if (isEditMode) {
+            setIsEditMode(false);
+            setEditLineId(null);
+          }
+        } else {
+          router.push("/Rencana-anggaran-biaya");
+          if (isEditMode) {
+            setIsEditMode(false);
+            setEditLineId(null);
+          }
+        }
+      }
+    } catch (err) {}
   };
 
   const handleToggle = (e) => {
@@ -158,7 +523,13 @@ export default function RencanaAnggaranBiayaForm() {
 
   useEffect(() => {
     handleCalculateJumlah();
-  }, [formData.volume, formData.hargaSatuan]);
+  }, [formData.volume, formData.harga_satuan]);
+
+  useEffect(() => {
+    console.log("FormData changed:", formData);
+  }, [formData]);
+
+  console.log("RAB Lines:", rabLines);
 
   return (
     <main className="min-h-screen bg-white">
@@ -180,7 +551,7 @@ export default function RencanaAnggaranBiayaForm() {
               <div className="w-full space-y-2">
                 <label className="block font-medium text-[#011829]">Waktu Pelaksanaan</label>
                 <div className="flex items-center gap-2">
-                  <div className="flex-1">
+                  <div className="relative flex-1">
                     <DateInput
                       value={formData.waktuMulai}
                       onChange={(value) => {
@@ -188,11 +559,13 @@ export default function RencanaAnggaranBiayaForm() {
                       }}
                     />
                     {error.waktuMulai && (
-                      <p className="mt-1 text-sm text-red-600">{error.waktuMulai}</p>
+                      <p className="absolute mt-1 text-sm text-red-600">
+                        {getErrorMessage("waktuMulai")}
+                      </p>
                     )}
                   </div>
                   <p className="w-9 text-center font-normal text-black">s.d.</p>
-                  <div className="flex-1">
+                  <div className="relative flex-1">
                     <DateInput
                       value={formData.waktuSelesai}
                       onChange={(value) => {
@@ -200,7 +573,71 @@ export default function RencanaAnggaranBiayaForm() {
                       }}
                     />
                     {error.waktuSelesai && (
-                      <p className="mt-1 text-sm text-red-600">{error.waktuSelesai}</p>
+                      <p className="absolute mt-1 text-sm text-red-600">
+                        {getErrorMessage("waktuSelesai")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="block font-medium text-[#011829]">Klasifikasi Ekonomi</label>
+                <div className="flex gap-2">
+                  <div className="relative w-full flex-1">
+                    <TextInput
+                      placeholder="Kode Rekening"
+                      value={formData.kode_ekonomi}
+                      onChange={(value) =>
+                        handleKodeChange("kode_ekonomi", value, [
+                          { list: akunList, type: "jenis" },
+                          { list: uraian1List, type: "uraian1" },
+                          { list: uraian2List, type: "uraian2" },
+                        ])
+                      }
+                    />
+                    {error.kode_fungsi && (
+                      <p className="absolute mt-1 text-sm text-red-600">
+                        {getErrorMessage("kode_ekonomi")}
+                      </p>
+                    )}
+                  </div>
+                  <div className="relative w-full flex-2">
+                    <DropdownInput
+                      label="Jenis"
+                      options={akunList.map((item) => item.label)}
+                      value={formData.jenis}
+                      onChange={(value) => handleOnChange("jenis", value)}
+                    />
+                    {error.jenis && (
+                      <p className="absolute mt-1 text-sm text-red-600">
+                        {getErrorMessage("jenis")}
+                      </p>
+                    )}
+                  </div>
+                  <div className="relative w-full flex-2">
+                    <DropdownInput
+                      label="Uraian 1"
+                      options={uraian1List.map((item) => item.label)}
+                      value={formData.uraian1}
+                      onChange={(value) => handleOnChange("uraian1", value)}
+                    />
+                    {error.uraian1 && (
+                      <p className="absolute mt-1 text-sm text-red-600">
+                        {getErrorMessage("uraian1")}
+                      </p>
+                    )}
+                  </div>
+                  <div className="relative w-full flex-2">
+                    <DropdownInput
+                      label="Uraian 2"
+                      options={uraian2List.map((item) => item.label)}
+                      value={formData.uraian2}
+                      onChange={(value) => handleOnChange("uraian2", value)}
+                    />
+                    {error.uraian2 && (
+                      <p className="absolute mt-1 text-sm text-red-600">
+                        {getErrorMessage("uraian2")}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -210,43 +647,61 @@ export default function RencanaAnggaranBiayaForm() {
                   Klasifikasi Bidang Kegiatan
                 </label>
                 <div className="flex gap-2">
-                  <div className="w-full flex-1">
+                  <div className="relative w-full flex-1">
                     <TextInput
                       placeholder="Kode Rekening"
-                      value={formData.norek}
-                      onChange={(value) => handleOnChange("norek", value)}
+                      value={formData.kode_fungsi}
+                      onChange={(value) =>
+                        handleKodeChange("kode_fungsi", value, [
+                          { list: bidangList, type: "bidang" },
+                          { list: subBidangList, type: "subBidang" },
+                          { list: kegiatanList, type: "kegiatan" },
+                        ])
+                      }
                     />
-                    {error.norek && <p className="mt-1 text-sm text-red-600">{error.norek}</p>}
+                    {error.kode_fungsi && (
+                      <p className="absolute mt-1 text-sm text-red-600">
+                        {getErrorMessage("kode_fungsi")}
+                      </p>
+                    )}
                   </div>
-                  <div className="w-full flex-2">
+                  <div className="relative w-full flex-2">
                     <DropdownInput
                       label="Bidang"
-                      options={dummyBidang.map((item) => item.option)}
+                      options={bidangList.map((item) => item.label)}
                       value={formData.bidang}
                       onChange={(value) => handleOnChange("bidang", value)}
                     />
-                    {error.bidang && <p className="mt-1 text-sm text-red-600">{error.bidang}</p>}
+                    {error.bidang && (
+                      <p className="absolute mt-1 text-sm text-red-600">
+                        {getErrorMessage("bidang")}
+                      </p>
+                    )}
                   </div>
-                  <div className="w-full flex-2">
+                  <div className="relative w-full flex-2">
                     <DropdownInput
                       label="Sub-Bidang"
-                      options={dummySubBidang.map((item) => item.option)}
+                      options={subBidangList.map((item) => item.label)}
                       value={formData.subBidang}
                       onChange={(value) => handleOnChange("subBidang", value)}
                     />
                     {error.subBidang && (
-                      <p className="mt-1 text-sm text-red-600">{error.subBidang}</p>
+                      <p className="absolute mt-1 text-sm text-red-600">
+                        {getErrorMessage("subBidang")}
+                      </p>
                     )}
                   </div>
-                  <div className="w-full flex-2">
+                  <div className="relative w-full flex-2">
                     <DropdownInput
                       label="Kegiatan"
-                      options={dummyKegiatan.map((item) => item.option)}
+                      options={kegiatanList.map((item) => item.label)}
                       value={formData.kegiatan}
                       onChange={(value) => handleOnChange("kegiatan", value)}
                     />
                     {error.kegiatan && (
-                      <p className="mt-1 text-sm text-red-600">{error.kegiatan}</p>
+                      <p className="absolute mt-1 text-sm text-red-600">
+                        {getErrorMessage("kegiatan")}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -254,7 +709,13 @@ export default function RencanaAnggaranBiayaForm() {
             </div>
           </div>
           <div className="flex justify-end">
-            <Button variant="primary" type="submit" className="mt-4" onClick={handleSimpanDetail}>
+            <Button
+              variant="primary"
+              type="submit"
+              className="mt-4"
+              onClick={handleSimpanDetail}
+              disabled={isSavingDetail || isEditMode}
+            >
               Tambah Rincian
               <Cross width={16} height={16} />
             </Button>
@@ -265,7 +726,9 @@ export default function RencanaAnggaranBiayaForm() {
         <div className="text-[#011829]">
           <form>
             <div className="space-y-5 rounded-2xl border-[0.5px] border-[#4B5565] px-5 py-8">
-              <h2 className="font-normal text-black">Rincian Pendanaan</h2>
+              <h2 className="font-normal text-black">
+                {isEditMode ? "Edit Rincian Pendanaan" : "Rincian Pendanaan"}
+              </h2>
               <div className="space-y-2">
                 <label className="block font-medium text-[#011829]">Uraian</label>
                 <TextInput
@@ -273,7 +736,9 @@ export default function RencanaAnggaranBiayaForm() {
                   value={formData.uraian}
                   onChange={(e) => handleOnChange("uraian", e)}
                 />
-                {error.uraian && <p className="mt-1 text-sm text-red-600">{error.uraian}</p>}
+                {error.uraian && (
+                  <p className="mt-1 text-sm text-red-600">{getErrorMessage("uraian")}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <label className="block font-medium">Volume</label>
@@ -283,7 +748,9 @@ export default function RencanaAnggaranBiayaForm() {
                   value={formData.volume}
                   onChange={(e) => handleOnChange("volume", e)}
                 />
-                {error.volume && <p className="mt-1 text-sm text-red-600">{error.volume}</p>}
+                {error.volume && (
+                  <p className="mt-1 text-sm text-red-600">{getErrorMessage("volume")}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <label className="block font-medium">Satuan</label>
@@ -292,17 +759,19 @@ export default function RencanaAnggaranBiayaForm() {
                   value={formData.satuan}
                   onChange={(e) => handleOnChange("satuan", e)}
                 />
-                {error.satuan && <p className="mt-1 text-sm text-red-600">{error.satuan}</p>}
+                {error.satuan && (
+                  <p className="mt-1 text-sm text-red-600">{getErrorMessage("satuan")}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <label className="block font-medium">Harga Satuan</label>
                 <NumberInput
                   placeholder="Harga Satuan Besaran Membayar Orang / Barang"
-                  value={formData.hargaSatuan}
-                  onChange={(e) => handleOnChange("hargaSatuan", e)}
+                  value={formData.harga_satuan}
+                  onChange={(e) => handleOnChange("harga_satuan", e)}
                 />
-                {error.hargaSatuan && (
-                  <p className="mt-1 text-sm text-red-600">{error.hargaSatuan}</p>
+                {error.harga_satuan && (
+                  <p className="mt-1 text-sm text-red-600">{getErrorMessage("harga_satuan")}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -326,7 +795,7 @@ export default function RencanaAnggaranBiayaForm() {
                   className="mt-4"
                   onClick={handleSimpanRincian}
                 >
-                  Simpan
+                  {isEditMode ? "Update" : "Simpan"}
                   <Floppy width={16} height={16} />
                 </Button>
               </div>
@@ -334,7 +803,15 @@ export default function RencanaAnggaranBiayaForm() {
           </form>
         </div>
       )}
-      {dummyLogLine && <LogTable logData={dummyLogLine} />}
+      {rabLines.length > 0 && <LogTable logData={rabLines} />}
     </main>
+  );
+}
+
+export default function RencanaAnggaranBiayaForm() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white p-8">Loading...</div>}>
+      <RencanaAnggaranBiayaFormContent />
+    </Suspense>
   );
 }
