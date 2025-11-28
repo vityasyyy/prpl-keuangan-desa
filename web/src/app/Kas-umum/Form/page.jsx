@@ -443,6 +443,8 @@ export default function FormInputKasUmum() {
   };
 
   const handleCancel = () => {
+    //chekc if this record is exist
+    
     // Navigate back to Kas Umum page without saving
     router.push("/Kas-umum");
   };
