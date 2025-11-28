@@ -19,6 +19,7 @@ const migrations = [
   "2_kode_rekening.sql",
   "3_user.sql",
   "4_add_timestamps_to_buku_tables.sql",
+  "4_revisi_RAB.sql",
   "5_add_persetujuan_to_buku_kas_umum.sql",
 ];
 
@@ -34,14 +35,12 @@ async function runMigrations() {
 
       try {
         const sql = readFileSync(filePath, "utf8");
-        
+
         // Skip if file is empty or only contains comments
-        const hasActualSQL = sql
-          .split('\n')
-          .some(line => {
-            const trimmed = line.trim();
-            return trimmed.length > 0 && !trimmed.startsWith('--');
-          });
+        const hasActualSQL = sql.split("\n").some((line) => {
+          const trimmed = line.trim();
+          return trimmed.length > 0 && !trimmed.startsWith("--");
+        });
 
         if (hasActualSQL) {
           await client.query(sql);
