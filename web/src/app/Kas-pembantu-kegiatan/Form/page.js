@@ -47,6 +47,7 @@ export default function Page() {
   const [belanjaModal, setBelanjaModal] = useState("");
   const [nomorBukti, setNomorBukti] = useState("");
   const [jumlahPengembalian, setJumlahPengembalian] = useState(""); // New state for Jumlah Pengembalian
+  const [idKegiatan, setIdKegiatan] = useState("");
 
   // UI state
   const [loading, setLoading] = useState(false);
@@ -58,6 +59,22 @@ export default function Page() {
   const [bidangOptions, setBidangOptions] = useState([]);
   const [subBidangOptions, setSubBidangOptions] = useState([]);
   const [kegiatanOptions, setKegiatanOptions] = useState([]);
+
+  async function getBKUidByKodeFungsi(kode) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/get-bku-id-by-kode-fungsi/${kode}`);
+      const result = await response.json();
+      if (!response.ok || result.success === false) {
+        setError(result.message || `Gagal mendapatkan ID Buku Kas Umum dari kode fungsi ${kode}`);
+        return null;
+      }
+      return result.data.bku_id;
+    } catch (err) {
+      console.error("Failed to fetch BKU ID by Kode Fungsi:", err);
+      setError("Terjadi kesalahan saat mengambil BKU ID");
+      return null;
+    }
+  }
 
   // Fetch data if in edit mode
   useEffect(() => {
@@ -106,10 +123,13 @@ export default function Page() {
   useEffect(() => {
     async function fetchBidang() {
       try {
-        // Placeholder: fetch bidang options from API if endpoint exists
-        setBidangOptions([]);
+        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/bidang`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const result = await response.json();
+        setBidangOptions(result.data || []);
       } catch (err) {
         console.error("Failed to fetch bidang:", err);
+        setBidangOptions([]);
       }
     }
     fetchBidang();
@@ -120,12 +140,15 @@ export default function Page() {
     if (bidang) {
       async function fetchSubBidang() {
         try {
-          // Placeholder: fetch sub-bidang options from API if endpoint exists
-          setSubBidangOptions([]);
+          const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/sub-bidang/${bidang}`);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const result = await response.json();
+          setSubBidangOptions(result.data || []);
           setSubBidang("");
           setKegiatanOptions([]);
         } catch (err) {
           console.error("Failed to fetch sub-bidang:", err);
+          setSubBidangOptions([]);
         }
       }
       fetchSubBidang();
@@ -138,20 +161,33 @@ export default function Page() {
   // Fetch kegiatan when sub-bidang changes
   useEffect(() => {
     if (subBidang) {
-      async function fetchKegiatan() {
+      async function fetchKegiatanData() {
         try {
-          // Placeholder: fetch kegiatan options from API if endpoint exists
-          setKegiatanOptions([]);
+          const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/sub-bidang/kegiatan/${subBidang}`);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const result = await response.json();
+          setKegiatanOptions(result.data || []);
           setKegiatan("");
         } catch (err) {
           console.error("Failed to fetch kegiatan:", err);
+          setKegiatanOptions([]);
         }
       }
-      fetchKegiatan();
+      fetchKegiatanData();
     } else {
       setKegiatanOptions([]);
     }
   }, [subBidang]);
+
+  useEffect(() => {
+    if (kegiatan && kegiatanOptions.length > 0) {
+      const selected = kegiatanOptions.find(opt => opt.id === kegiatan);
+      setIdKegiatan(selected?.id || "");
+    }
+    else {
+      setIdKegiatan("");
+    }
+  }, [kegiatan, kegiatanOptions]);  
 
   // Calculate saldo automatically when input values change
   useEffect(() => {
@@ -228,10 +264,10 @@ export default function Page() {
 
     // Validation
     if (!tanggal || !uraian) {
-      setError("Tanggal dan Uraian harus diisi");
+      setError(`Tanggal dan Uraian harus diisi`);
       return;
     }
-
+    
     try {
       setLoading(true);
       setError(null);
@@ -242,10 +278,13 @@ export default function Page() {
 
       // Map classification to type_enum
       const type_enum = kegiatan || "kegiatan";
+      
+      const bku_id = await getBKUidByKodeFungsi(idKegiatan);
+      if(bku_id === null) return ;
 
       // Prepare payload
       const payload = {
-        bku_id: "bku003", // Default for now
+        bku_id: bku_id,
         type_enum: type_enum,
         tanggal: tanggal, // Already in YYYY-MM-DD format
         uraian: uraian,
@@ -271,7 +310,7 @@ export default function Page() {
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
       }
-
+      
       // Success - check if "buat lagi" is enabled
       if (buatLagi && !editId) {
         handleCreate();
@@ -327,6 +366,7 @@ export default function Page() {
     },
     []
   );
+
 
   return (
     <div className="flex h-screen bg-gray-100">

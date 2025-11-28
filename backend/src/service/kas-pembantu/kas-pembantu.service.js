@@ -598,5 +598,10 @@ export default function createKasPembantuService(repo) {
       const kegiatan = await repo.getKodeFungsi(parentId);
       return kegiatan || [];
     },
+
+    async getBKUidByKodeFungsi(kode) {
+      const bku_id = await repo.getBKUidByKodeFungsi(kode);
+      return bku_id || null; // maka BKU yang memiliki kode_fungsi tersebut belum ada
+    }
   };
 }

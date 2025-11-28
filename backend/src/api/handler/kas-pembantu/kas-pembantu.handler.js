@@ -5,7 +5,6 @@ export default function createKasPembantuHandler(service) {
 
   const kegiatan = async (req, res, next) => {
     try {
-
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
 
@@ -66,9 +65,7 @@ export default function createKasPembantuHandler(service) {
       if (success) {
         res.json({ message: `Entry dengan id ${id} berhasil dihapus.` });
       } else {
-        res
-          .status(404)
-          .json({ message: `Entry dengan id ${id} tidak ditemukan.` });
+        res.status(404).json({ message: `Entry dengan id ${id} tidak ditemukan.` });
       }
     } catch (err) {
       next(err);
@@ -302,6 +299,22 @@ export default function createKasPembantuHandler(service) {
     }
   };
 
+  const getBKUidByKodeFungsi = async (req, res, next) => {
+    try {
+      const { kode } = req.params;
+      const bku_id = await service.getBKUidByKodeFungsi(kode);
+      if (bku_id === null || bku_id === undefined) {
+        return res.status(404).json({
+          success: false,
+          message: `Belum ada entry buku kas umum dengan kode fungsi ${kode ? kode : "tersebut"}`
+        });
+      }
+      res.json({ success: true, data: { bku_id } });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   return {
     health,
     kegiatan,
@@ -322,5 +335,6 @@ export default function createKasPembantuHandler(service) {
     getBidang,
     getSubBidang,
     getKegiatan,
+    getBKUidByKodeFungsi
   };
 }

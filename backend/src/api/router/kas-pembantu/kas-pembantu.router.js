@@ -5,10 +5,11 @@ export default function kasPembantuRouter(handler) {
 
   r.get("/health", handler.health);
 
-  // Category routes
-  r.get("/categories/bidang", handler.getBidang);
-  r.get("/categories/bidang/:bidangId/sub-bidang", handler.getSubBidang);
-  r.get("/categories/sub-bidang/:subBidangId/kegiatan", handler.getKegiatan);
+  // kode kegiatan
+  r.get("/kegiatan/bidang", handler.getBidang);
+  r.get("/kegiatan/sub-bidang/:bidangId", handler.getSubBidang);
+  r.get("/kegiatan/sub-bidang/kegiatan/:subBidangId", handler.getKegiatan);
+  r.get("/kegiatan/get-bku-id-by-kode-fungsi/:kode", handler.getBKUidByKodeFungsi);
 
   // buku pembantu kegiatan
   r.get("/kegiatan", handler.kegiatan);

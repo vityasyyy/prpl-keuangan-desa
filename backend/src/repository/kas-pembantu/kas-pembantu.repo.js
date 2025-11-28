@@ -653,6 +653,18 @@ export default function createRepo(db) {
     return rows;
   }
 
+  async function getBKUidByKodeFungsi(kode) {
+    const sql = `
+      SELECT id
+      FROM buku_kas_umum
+      WHERE kode_fungsi_id = $1
+      LIMIT 1
+    `;
+    const { rows } = await db.query(sql, [kode]);
+    if (rows.length === 0) return null; // maka BKU yang memiliki kode_fungsi tersebut belum ada
+    return rows[0].id;
+  }
+
   return {
     listKegiatanTransaksi,
     getKegiatanById,
@@ -676,5 +688,6 @@ export default function createRepo(db) {
     insertPajak,
     updatePajakById,
     getKodeFungsi,
+    getBKUidByKodeFungsi
   };
 }
