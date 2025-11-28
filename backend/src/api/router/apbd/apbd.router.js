@@ -29,8 +29,8 @@ export default function createApbdRouter(apbdHandler) {
   r.get("/kegiatan", apbdHandler.getKegiatan); // GET /api/apbd/kegiatan
   r.get("/kode-ekonomi", apbdHandler.getKodeEkonomi); // GET /api/apbd/kode-ekonomi
   r.get("/akun", apbdHandler.getAkun); // GET /api/apbd/akun
-  r.get("/sumber-dana", apbdHandler.getSumberDana); // GET /api/apbd/sumber-dana
-  r.get("/uraian1", apbdHandler.getUraian1); // GET /api/apbd/uraian1
+  r.get("/kelompok", apbdHandler.getKelompok); // GET /api/apbd/kelompok
+  r.get("/jenis", apbdHandler.getJenis); // GET /api/apbd/jenis
   r.get("/uraian2", apbdHandler.getUraian2); // GET /api/apbd/uraian2
   r.get("/dropdown-options", apbdHandler.getDropdownOptionsByKodeRekening); // GET /api/apbd/dropdown-options
   r.get("/all-dropdown-options", apbdHandler.getAllDropdownOptions); // GET /api/apbd/all-dropdown-options

@@ -104,7 +104,7 @@ export default function createApbdRepo(arg) {
     return rows;
   };
 
-  const listSumberDana = async () => {
+  const listKelompok = async () => {
     const { rows } = await db.query(
       `SELECT id, full_code, uraian, parent_id FROM kode_ekonomi WHERE level = $1 ORDER BY full_code`,
       ["kelompok"]
@@ -112,7 +112,7 @@ export default function createApbdRepo(arg) {
     return rows;
   };
 
-  const listUraian1 = async () => {
+  const listJenis = async () => {
     const { rows } = await db.query(
       `SELECT id, full_code, uraian, parent_id FROM kode_ekonomi WHERE level = $1 ORDER BY full_code`,
       ["jenis"]
@@ -120,7 +120,7 @@ export default function createApbdRepo(arg) {
     return rows;
   };
 
-  const listUraian2 = async () => {
+  const listObjek = async () => {
     const { rows } = await db.query(
       `SELECT id, full_code, uraian, parent_id FROM kode_ekonomi WHERE level = $1 ORDER BY full_code`,
       ["objek"]
@@ -657,9 +657,9 @@ export default function createApbdRepo(arg) {
     listKegiatan,
     listKodeEkonomi,
     listAkun,
-    listSumberDana,
-    listUraian1,
-    listUraian2,
+    listKelompok,
+    listJenis,
+    listObjek,
     validateApbdesRincian,
     createApbdesRincian,
     getApbdesIdByKegiatanId,

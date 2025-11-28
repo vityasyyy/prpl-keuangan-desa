@@ -51,11 +51,11 @@ export default function createApbdService(ApbdRepo) {
 
   const getAkun = async () => ApbdRepo.listAkun();
 
-  const getSumberDana = async () => ApbdRepo.listSumberDana(akunId);
+  const getKelompok = async () => ApbdRepo.listKelompok(akunId);
 
-  const getUraian1 = async () => ApbdRepo.listUraian1(sumberDanaId);
+  const getJenis = async () => ApbdRepo.listJenis(KelompokId);
 
-  const getUraian2 = async () => ApbdRepo.listUraian2(uraian1Id);
+  const getObjek = async () => ApbdRepo.listObjek(JenisId);
 
   const getApbdesStatus = async (id) => {
     if (!id) throw { status: 400, error: "id_required" };
@@ -231,9 +231,9 @@ export default function createApbdService(ApbdRepo) {
       const result = await ApbdRepo.getKodeEkonomiDetailsByFullCode(fullCode);
       if (result && result.objek) {
         // Fetch all options for dependent dropdowns
-        const allSumberDana = await ApbdRepo.listSumberDana(result.akun.id);
-        const allUraian1 = await ApbdRepo.listUraian1(result.kelompok.id);
-        const allUraian2 = await ApbdRepo.listUraian2(result.jenis.id);
+        const allKelompok = await ApbdRepo.listKelompok(result.akun.id);
+        const allJenis = await ApbdRepo.listJenis(result.kelompok.id);
+        const allObjek = await ApbdRepo.listObjek(result.jenis.id);
 
         return {
           type: "kode_ekonomi",
@@ -241,9 +241,9 @@ export default function createApbdService(ApbdRepo) {
           kelompok: result.kelompok,
           jenis: result.jenis,
           objek: result.objek,
-          sumberDana: allSumberDana, // Return all options, not just the selected one
-          uraian1: allUraian1, // Return all options
-          uraian2: allUraian2, // Return all options
+          allKelompok: allKelompok, // Return all options, not just the selected one
+          allJenis: allJenis, // Return all options
+          allObjek: allObjek, // Return all options
         };
       }
     }
@@ -256,18 +256,18 @@ export default function createApbdService(ApbdRepo) {
     const subBidang = await ApbdRepo.listSubBidang();
     const kegiatan = await ApbdRepo.listKegiatan();
     const akun = await ApbdRepo.listAkun();
-    const sumberDana = await ApbdRepo.listSumberDana();
-    const uraian1 = await ApbdRepo.listUraian1();
-    const uraian2 = await ApbdRepo.listUraian2();
+    const kelompok = await ApbdRepo.listKelompok();
+    const jenis = await ApbdRepo.listJenis();
+    const objek = await ApbdRepo.listObjek();
 
     return {
       bidang,
       subBidang,
       kegiatan,
       akun,
-      sumberDana,
-      uraian1,
-      uraian2,
+      kelompok,
+      jenis,
+      objek,
     };
   };
 
@@ -279,9 +279,9 @@ export default function createApbdService(ApbdRepo) {
     getKegiatan,
     getKodeEkonomi,
     getAkun,
-    getSumberDana,
-    getUraian1,
-    getUraian2,
+    getKelompok,
+    getJenis,
+    getObjek,
     validateApbdesRincian,
     createApbdesRincian,
 

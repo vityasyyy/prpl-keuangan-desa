@@ -84,18 +84,18 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
-  const getSumberDana = async (_req, res, next) => {
+  const getKelompok = async (_req, res, next) => {
     try {
-      const data = await ApbdService.getSumberDana();
+      const data = await ApbdService.getKelompok();
       res.json(data);
     } catch (e) {
       next(e);
     }
   };
 
-  const getUraian1 = async (_req, res, next) => {
+  const getJenis = async (_req, res, next) => {
     try {
-      const data = await ApbdService.getUraian1();
+      const data = await ApbdService.getJenis();
       res.json(data);
     } catch (e) {
       next(e);
@@ -302,8 +302,8 @@ export default function createApbdHandler(ApbdService) {
     getKegiatan,
     getKodeEkonomi,
     getAkun,
-    getSumberDana,
-    getUraian1,
+    getKelompok,
+    getJenis,
     getUraian2,
     validateApbdesRincian,
     createApbdesRincian,
