@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Breadcrumb from "@/components/Breadcrumb";
 import Button from "@/components/Button";
+import { useAuth } from "@/lib/auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
-export default function FormInputKasUmum() {
+export default function FormEditKasUmum() {
   const router = useRouter();
+  const { id } = useParams(); // id dari URL
+  const { token, user } = useAuth() || {};
+
+  // ================== STATE UTAMA ==================
   const [formData, setFormData] = useState({
     tanggal: "",
     kodeEko: "",
@@ -30,11 +35,23 @@ export default function FormInputKasUmum() {
     kodeRAB: "",
   });
 
+  const [loading, setLoading] = useState(true);
+
   const [rabList, setRabList] = useState([]);
 
   const [kodeRekError, setKodeRekError] = useState(""); // Error state (opsional ditampilkan di UI)
   const [kodeEkoError, setKodeEkoError] = useState("");
 
+  const [bidangList, setBidangList] = useState([]);
+  const [subBidangList, setSubBidangList] = useState([]);
+  const [kegiatanList, setKegiatanList] = useState([]);
+  const [akunList, setAkunList] = useState([]);
+  const [jenisList, setJenisList] = useState([]);
+  const [objekList, setObjekList] = useState([]);
+  const [saldoAutomated, setSaldoAutomated] = useState(null);
+  const [persetujuan, setPersetujuan] = useState(null);
+
+  // ================== HELPER KODE EKONOMI ==================
   // Parse "5.3 5 3" → ["5","3","5","3"]
   const ekoParse = (s) =>
     (s || "")
@@ -80,11 +97,10 @@ export default function FormInputKasUmum() {
       .join(" ");
   };
 
-  // Fungsi validasi format kode rekening
+  // ================== HELPER KODE REKENING ==================
   const validateKodeRek = (kode) => {
     if (!kode) return "";
 
-    // Bersihkan input - terima baik titik maupun spasi sebagai pemisah
     const cleanKode = kode.replace(/\./g, " ").trim();
     const pattern = /^\d+(\s+\d+(\s+\d+)?)?$/;
 
@@ -94,7 +110,6 @@ export default function FormInputKasUmum() {
 
     const parts = cleanKode.split(/\s+/);
 
-    // Validasi: bidang dan sub-bidang harus 1 digit, kegiatan maks 2 digit
     if (parts[0] && parts[0].length > 1) return "Kode bidang harus 1 digit";
     if (parts[1] && parts[1].length > 1) return "Kode sub-bidang harus 1 digit";
     if (parts[2] && parts[2].length > 2) return "Kode kegiatan maksimal 2 digit";
@@ -102,41 +117,111 @@ export default function FormInputKasUmum() {
     return "";
   };
 
-  // Format kode rekening ke format yang benar (x x xx)
   const formatKodeRek = (kode) => {
-    // Bersihkan input (ubah titik jadi spasi)
     const cleanKode = kode.replace(/\./g, " ");
     const parts = cleanKode.split(/\s+/);
 
-    // Format: bidang dan sub-bidang single digit, kegiatan 2 digit
     const formattedParts = parts.map((part, index) => {
       if (index === 2) {
-        // kegiatan
         return part.padStart(2, "0");
       }
-      return parseInt(part); // hilangkan leading zero untuk bidang dan sub-bidang
+      return parseInt(part); // hilangkan leading zero
     });
 
     return formattedParts.join(" ");
   };
 
+  const formatNumber = (num) => {
+    if (num === null || num === undefined) return "";
+    try {
+      return new Intl.NumberFormat("id-ID", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(Number(num));
+    } catch (e) {
+      return String(num);
+    }
+  };
+
+  // ================== FETCH SALDO OTOMATIS ==================
+  const fetchSaldo = useCallback(async (kodeRAB) => {
+    try {
+      if (!kodeRAB) {
+        setSaldoAutomated(null);
+        return;
+      }
+      const q = `?rabId=${encodeURIComponent(kodeRAB)}`;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${API_BASE_URL}/kas-umum/saldo${q}`, {
+        credentials: "include",
+        headers,
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`Gagal ambil saldo (HTTP ${res.status})`);
+      const data = await res.json();
+      setSaldoAutomated(data?.saldo ?? 0);
+    } catch (err) {
+      console.error("[fetchSaldo]", err);
+      setSaldoAutomated(0);
+    }
+  }, []);
+
+  // ================== FETCH DETAIL UNTUK EDIT ==================
+  useEffect(() => {
+    async function fetchDetail() {
+      try {
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE_URL}/kas-umum/${id}`, {
+            credentials: "include",
+            headers,
+            cache: "no-store",
+          });
+        if (!res.ok) throw new Error("Gagal mengambil data kas umum");
+
+        const data = await res.json();
+
+        setFormData((prev) => ({
+          ...prev,
+          tanggal: data.tanggal?.slice(0, 10) || "",
+          kodeRAB: data.rab_id || "",
+          kodeEko: data.kode_ekonomi_id || "",
+          kodeRek: data.kode_fungsi_id || "",
+          uraian: data.uraian || "",
+          pemasukan: String(data.penerimaan ?? data.pemasukan ?? ""),
+          pengeluaran: String(data.pengeluaran ?? ""),
+          nomorBukti: data.no_bukti || data.nomor_bukti || "",
+          // kalau backend kirim bidang/subBidang/akun/jenis, bisa di-mapping juga di sini
+        }));
+        setPersetujuan(data.persetujuan || null);
+      } catch (err) {
+        console.error("Gagal fetch detail:", err);
+        alert("Gagal mengambil data kas umum");
+        router.push("/Kas-umum");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (id) fetchDetail();
+  }, [id, router]);
+
+  // ================== HANDLER INPUT ==================
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
     if (name === "pemasukan" || name === "pengeluaran") {
-      // Ensure only numeric input
       const numericValue = value.replace(/[^0-9]/g, "");
       setFormData((prev) => ({ ...prev, [name]: numericValue }));
       return;
     }
+
     // ====== KODE EKONOMI (manual) ======
     if (name === "kodeEko") {
       if (value === formData.kodeEko) return;
 
       const err = validateKodeEko(value);
-      setKodeEkoError?.(err); // kalau kamu punya state error
+      setKodeEkoError(err);
 
-      // simpan apa adanya dulu (biar user bebas ketik spasi/titik)
       setFormData((prev) => ({ ...prev, kodeEko: value }));
 
       if (!err) {
@@ -149,9 +234,7 @@ export default function FormInputKasUmum() {
             return tok[0] === parts[0];
           });
           if (mAkun) {
-            setFormData((prev) => ({ ...prev, akun: mAkun.id }));
-            // reset turunannya
-            setFormData((prev) => ({ ...prev, jenis: "", objek: "" }));
+            setFormData((prev) => ({ ...prev, akun: mAkun.id, jenis: "", objek: "" }));
           }
         }
 
@@ -162,13 +245,11 @@ export default function FormInputKasUmum() {
             return tok[0] === parts[0] && tok[1] === parts[1] && tok[2] === parts[2];
           });
           if (mJenis) {
-            setFormData((prev) => ({ ...prev, jenis: mJenis.id }));
-            // reset objek
-            setFormData((prev) => ({ ...prev, objek: "" }));
+            setFormData((prev) => ({ ...prev, jenis: mJenis.id, objek: "" }));
           }
         }
 
-        // 3) OBJEK = token[0..3] (a b c dd) — dd harus 2 digit
+        // 3) OBJEK = token[0..3] (a b c dd)
         if (parts.length >= 4 && objekList.length > 0) {
           const dd = parts[3].padStart(2, "0");
           const mObj = objekList.find((o) => {
@@ -182,7 +263,6 @@ export default function FormInputKasUmum() {
           }
         }
 
-        // Jika kosong total → kosongkan dropdown
         if (parts.length === 0) {
           setFormData((prev) => ({ ...prev, akun: "", jenis: "", objek: "" }));
         }
@@ -193,7 +273,6 @@ export default function FormInputKasUmum() {
     // ====== DROPDOWN → sinkron ke kodeEko ======
     if (name === "objek") {
       if (!value) {
-        // kosongkan objek → kembali ke kode jenis (a b c) atau akun (a)
         if (formData.jenis) {
           const j = jenisList.find((x) => x.id === formData.jenis);
           setFormData((prev) => ({
@@ -211,10 +290,9 @@ export default function FormInputKasUmum() {
         } else {
           setFormData((prev) => ({ ...prev, objek: "", kodeEko: "" }));
         }
-        setKodeEkoError?.("");
+        setKodeEkoError("");
         return;
       }
-      // pilih objek → tampil a b c dd
       const o = objekList.find((x) => x.id === value);
       if (o) {
         setFormData((prev) => ({
@@ -222,14 +300,13 @@ export default function FormInputKasUmum() {
           objek: value,
           kodeEko: formatEkoFromFullCode(o.full_code),
         }));
-        setKodeEkoError?.("");
+        setKodeEkoError("");
       }
       return;
     }
 
     if (name === "jenis") {
       if (!value) {
-        // kosongkan jenis → balik ke akun (a)
         if (formData.akun) {
           const a = akunList.find((x) => x.id === formData.akun);
           setFormData((prev) => ({
@@ -241,10 +318,9 @@ export default function FormInputKasUmum() {
         } else {
           setFormData((prev) => ({ ...prev, jenis: "", objek: "", kodeEko: "" }));
         }
-        setKodeEkoError?.("");
+        setKodeEkoError("");
         return;
       }
-      // pilih jenis → tampil a b c
       const j = jenisList.find((x) => x.id === value);
       if (j) {
         setFormData((prev) => ({
@@ -253,7 +329,7 @@ export default function FormInputKasUmum() {
           objek: "",
           kodeEko: formatJenisOnly(j.full_code),
         }));
-        setKodeEkoError?.("");
+        setKodeEkoError("");
       }
       return;
     }
@@ -261,10 +337,9 @@ export default function FormInputKasUmum() {
     if (name === "akun") {
       if (!value) {
         setFormData((prev) => ({ ...prev, akun: "", jenis: "", objek: "", kodeEko: "" }));
-        setKodeEkoError?.("");
+        setKodeEkoError("");
         return;
       }
-      // pilih akun → tampil a
       const a = akunList.find((x) => x.id === value);
       if (a) {
         setFormData((prev) => ({
@@ -274,51 +349,37 @@ export default function FormInputKasUmum() {
           objek: "",
           kodeEko: formatEkoFromFullCode(a.full_code),
         }));
-        setKodeEkoError?.("");
+        setKodeEkoError("");
       }
       return;
     }
 
     if (name === "kodeRek") {
-      // Hanya proses jika ada perubahan
       if (value === formData.kodeRek) return;
 
       const error = validateKodeRek(value);
       setKodeRekError(error);
 
-      // Update form dengan kode yang diinput
       setFormData((prev) => ({ ...prev, [name]: value }));
 
       if (!error) {
-        // Format: ubah titik jadi spasi dan trim
         const cleanKode = value.replace(/\./g, " ").trim();
         const parts = cleanKode.split(/\s+/);
 
         if (parts[0]) {
-          // Find matching bidang (sekarang menggunakan parseInt untuk menghilangkan leading zero)
           const matchingBidang = bidangList.find((b) => {
             const bidangParts = b.full_code.replace(/\./g, " ").trim().split(/\s+/);
             return parseInt(bidangParts[0]) === parseInt(parts[0]);
           });
 
           if (matchingBidang) {
-            // Format ulang kode untuk menghilangkan leading zero di bidang
-            const formattedCode = `${parseInt(parts[0])}${parts[1] ? ` ${parts[1]}` : ""}${parts[2] ? ` ${parts[2].padStart(2, "0")}` : ""}`;
-
-            // Set bidang id but keep the user's raw input in kodeRek so they can type spaces
             setFormData((prev) => ({
               ...prev,
               bidang: matchingBidang.id,
-            }));
-
-            // Reset sub-bidang dan kegiatan
-            setFormData((prev) => ({
-              ...prev,
               subBidang: "",
               kegiatan: "",
             }));
 
-            // Cek sub-bidang jika ada
             if (parts[1] && subBidangList.length > 0) {
               const matchingSubBidang = subBidangList.find((s) => {
                 const subParts = s.full_code.replace(/\./g, " ").trim().split(/\s+/);
@@ -329,28 +390,21 @@ export default function FormInputKasUmum() {
               });
 
               if (matchingSubBidang) {
-                // Set subBidang id but keep user's raw input in kodeRek while typing
                 setFormData((prev) => ({
                   ...prev,
                   subBidang: matchingSubBidang.id,
-                }));
-
-                // Reset kegiatan
-                setFormData((prev) => ({
-                  ...prev,
                   kegiatan: "",
                 }));
 
-                // Cek kegiatan jika ada
                 if (parts[2] && kegiatanList.length > 0) {
                   const matchingKegiatan = kegiatanList.find((k) => {
-                    const kegParts = k.full_code.replace(/\./g, " ").trim().split(/\s+/);
-                    const targetKode = `${parseInt(parts[0])} ${parseInt(parts[1])} ${parts[2].padStart(2, "0")}`;
+                    const targetKode = `${parseInt(parts[0])} ${parseInt(
+                      parts[1]
+                    )} ${parts[2].padStart(2, "0")}`;
                     return k.full_code.replace(/\./g, " ").trim() === targetKode;
                   });
 
                   if (matchingKegiatan) {
-                    // Set kegiatan id but keep the raw input; dropdown selection will format kodeRek
                     setFormData((prev) => ({
                       ...prev,
                       kegiatan: matchingKegiatan.id,
@@ -363,13 +417,13 @@ export default function FormInputKasUmum() {
         }
       }
     } else {
-      // Dropdown handling logic
       if (name === "kegiatan" && value) {
         const selectedKegiatan = kegiatanList.find((k) => k.id === value);
         if (selectedKegiatan) {
-          // Format ulang kode dari kegiatan yang dipilih
           const parts = selectedKegiatan.full_code.replace(/\./g, " ").trim().split(/\s+/);
-          const formattedCode = `${parseInt(parts[0])} ${parseInt(parts[1])} ${parts[2].padStart(2, "0")}`;
+          const formattedCode = `${parseInt(parts[0])} ${parseInt(
+            parts[1]
+          )} ${parts[2].padStart(2, "0")}`;
 
           setFormData((prev) => ({
             ...prev,
@@ -381,14 +435,13 @@ export default function FormInputKasUmum() {
       } else if (name === "subBidang" && value) {
         const selectedSubBidang = subBidangList.find((s) => s.id === value);
         if (selectedSubBidang) {
-          // Format ulang kode dari sub-bidang yang dipilih
           const parts = selectedSubBidang.full_code.replace(/\./g, " ").trim().split(/\s+/);
           const formattedCode = `${parseInt(parts[0])} ${parseInt(parts[1])}`;
 
           setFormData((prev) => ({
             ...prev,
             [name]: value,
-            kegiatan: "", // Reset kegiatan when sub-bidang changes
+            kegiatan: "",
             kodeRek: formattedCode,
           }));
           setKodeRekError("");
@@ -396,15 +449,14 @@ export default function FormInputKasUmum() {
       } else if (name === "bidang" && value) {
         const selectedBidang = bidangList.find((b) => b.id === value);
         if (selectedBidang) {
-          // Format ulang kode dari bidang yang dipilih (hilangkan leading zero)
           const parts = selectedBidang.full_code.replace(/\./g, " ").trim().split(/\s+/);
           const formattedCode = `${parseInt(parts[0])}`;
 
           setFormData((prev) => ({
             ...prev,
             [name]: value,
-            subBidang: "", // Reset sub-bidang when bidang changes
-            kegiatan: "", // Reset kegiatan when bidang changes
+            subBidang: "",
+            kegiatan: "",
             kodeRek: formattedCode,
           }));
           setKodeRekError("");
@@ -415,12 +467,29 @@ export default function FormInputKasUmum() {
     }
   };
 
-  const handleToggle = () => {
-    setFormData((prev) => ({ ...prev, buatLagi: !prev.buatLagi }));
+  const handleApprove = async () => {
+    if (!confirm("Setujui data ini?")) return;
+    try {
+      const headers = token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : { "Content-Type": "application/json" };
+      const res = await fetch(`${API_BASE_URL}/kas-umum/${id}/approve`, {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({ status: "approved" }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Approve failed");
+      }
+      setPersetujuan("approved");
+      alert("Data berhasil disetujui");
+    } catch (e) {
+      console.error("Approve error", e);
+      alert(e.message || "Approve failed");
+    }
   };
 
   const resetForm = () => {
-    // Reset semua field form ke state awal
     setFormData({
       tanggal: "",
       kodeEko: "",
@@ -437,45 +506,26 @@ export default function FormInputKasUmum() {
       pengeluaran: "",
       nomorBukti: "",
       nettoTransaksi: "",
-      buatLagi: true, // Keep toggle on since user wants to create another
+      buatLagi: true,
       kodeRAB: "",
     });
   };
 
-  const handleCancel = () => {
-    // Navigate back to Kas Umum page without saving
-    router.push("/Kas-umum");
-  };
+  const handleDelete = async () => {
+    if (!confirm("Apakah yakin ingin menghapus data ini?")) return;
 
-  const handleSubmit = async () => {
     try {
-      // Map frontend field names to backend field names
-      const payload = {
-        tanggal: formData.tanggal,
-        rab_id: formData.kodeRAB,
-        kode_ekonomi_id: formData.objek, // Use the selected objek as kode_ekonomi_id
-        kegiatan_id: formData.kegiatan,
-        uraian: formData.uraian,
-        pemasukan: formData.pemasukan,
-        pengeluaran: formData.pengeluaran,
-        nomor_bukti: formData.nomorBukti,
-      };
+      console.log("Sending DELETE request for id:", id);
 
-      console.log("📤 Sending payload:", payload);
-      console.log("📋 Current formData.objek:", formData.objek);
-
-      const res = await fetch(`${API_BASE_URL}/kas-umum`, {
-        method: "POST",
+      const res = await fetch(`${API_BASE_URL}/kas-umum/${id}`, {
+        method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
       });
 
-      // Log status dan response mentah
-      console.log("🛰️ Status:", res.status);
       const text = await res.text();
-      console.log("📩 Raw response:", text);
+      console.log("Status:", res.status);
+      console.log("Raw response:", text);
 
-      // Coba parse JSON kalau bisa
       let data;
       try {
         data = JSON.parse(text);
@@ -484,24 +534,61 @@ export default function FormInputKasUmum() {
       }
 
       if (!res.ok) {
-        console.error("❌ Backend error:", data);
-        // Display the hint if available for better user feedback
         const errorMsg = data.hint || data.error || "Terjadi kesalahan";
         throw new Error(errorMsg);
       }
 
-      console.log("✅ Success:", data);
-      alert(data.message || "Data berhasil disimpan!");
-
-      // If user selected "Buat lagi", reset form for new entry
-      if (formData.buatLagi) {
-        resetForm();
-      } else {
-        // Otherwise navigate back to Kas Umum page
-        router.push("/Kas-umum");
-      }
+      alert(data.message || "Data berhasil dihapus!");
+      router.push("/Kas-umum");
     } catch (error) {
-      console.error("🚨 Caught error:", error);
+      console.error("Caught error:", error);
+      alert(`Terjadi kesalahan: ${error.message || JSON.stringify(error)}`);
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const payload = {
+        tanggal: formData.tanggal,
+        rab_id: formData.kodeRAB,
+        kode_ekonomi_id: formData.objek,
+        kegiatan_id: formData.kegiatan,
+        uraian: formData.uraian,
+        pemasukan: formData.pemasukan,
+        pengeluaran: formData.pengeluaran,
+        nomor_bukti: formData.nomorBukti,
+      };
+
+      console.log("Sending payload (EDIT):", payload);
+
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${API_BASE_URL}/kas-umum/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+
+      const text = await res.text();
+      console.log("Status:", res.status);
+      console.log("Raw response:", text);
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Respon bukan JSON: ${text.slice(0, 100)}...`);
+      }
+
+      if (!res.ok) {
+        const errorMsg = data.hint || data.error || "Terjadi kesalahan";
+        throw new Error(errorMsg);
+      }
+
+      alert(data.message || "Data berhasil diperbarui!");
+      router.push("/Kas-umum");
+    } catch (error) {
+      console.error("Caught error:", error);
       alert(`Terjadi kesalahan: ${error.message || JSON.stringify(error)}`);
     }
   };
@@ -511,53 +598,17 @@ export default function FormInputKasUmum() {
     { label: "Buku Kas Umum", active: true },
   ];
 
-  const [bidangList, setBidangList] = useState([]);
-  const [subBidangList, setSubBidangList] = useState([]);
-  const [kegiatanList, setKegiatanList] = useState([]);
-  const [akunList, setAkunList] = useState([]);
-  const [jenisList, setJenisList] = useState([]);
-  const [objekList, setObjekList] = useState([]);
-  const [saldoAutomated, setSaldoAutomated] = useState(null);
-
-  const formatNumber = (num) => {
-    if (num === null || num === undefined) return "";
-    try {
-      return new Intl.NumberFormat("id-ID", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(Number(num));
-    } catch (e) {
-      return String(num);
-    }
-  };
-
-  const fetchSaldo = useCallback(
-    async (kodeRAB) => {
-      try {
-        if (!kodeRAB) {
-          // kalau belum pilih RAB, kosongkan tampilan saldo
-          setSaldoAutomated(null);
-          return;
-        }
-        const q = `?rabId=${encodeURIComponent(kodeRAB)}`;
-        const res = await fetch(`${API_BASE_URL}/kas-umum/saldo${q}`);
-        if (!res.ok) throw new Error(`Gagal ambil saldo (HTTP ${res.status})`);
-        const data = await res.json();
-        // backend returns { saldo: number }
-        setSaldoAutomated(data?.saldo ?? 0);
-      } catch (err) {
-        console.error("[fetchSaldo]", err);
-        setSaldoAutomated(0);
-      }
-    },
-    [API_BASE_URL]
-  );
-
+  // ================== EFFECT-EFFECT LIST DROPDOWN & SALDO ==================
   // Ambil akun (level tertinggi)
   useEffect(() => {
     async function fetchAkun() {
       try {
-        const res = await fetch(`${API_BASE_URL}/kas-umum/akun`);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE_URL}/kas-umum/akun`, {
+          credentials: "include",
+          headers,
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Gagal ambil data akun");
         const data = await res.json();
         setAkunList(data);
@@ -566,14 +617,19 @@ export default function FormInputKasUmum() {
       }
     }
     fetchAkun();
-  }, [API_BASE_URL]);
+  }, []);
 
   // Ambil jenis kalau akun berubah
   useEffect(() => {
     if (!formData.akun) return;
     async function fetchJenis() {
-      try {
-        const res = await fetch(`${API_BASE_URL}/kas-umum/jenis?akunId=${formData.akun}`);
+        try {
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE_URL}/kas-umum/jenis?akunId=${formData.akun}`, {
+          credentials: "include",
+          headers,
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Gagal ambil data jenis");
         const data = await res.json();
         setJenisList(data);
@@ -582,7 +638,7 @@ export default function FormInputKasUmum() {
       }
     }
     fetchJenis();
-  }, [formData.akun, API_BASE_URL]);
+  }, [formData.akun]);
 
   // Reset jenis & objek kalau akun berubah
   useEffect(() => {
@@ -601,7 +657,12 @@ export default function FormInputKasUmum() {
 
     async function fetchObjek() {
       try {
-        const res = await fetch(`${API_BASE_URL}/kas-umum/objek?jenisId=${formData.jenis}`);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE_URL}/kas-umum/objek?jenisId=${formData.jenis}`, {
+          credentials: "include",
+          headers,
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Gagal ambil data objek");
         const data = await res.json();
         setObjekList(data);
@@ -611,13 +672,18 @@ export default function FormInputKasUmum() {
     }
 
     fetchObjek();
-  }, [formData.jenis, API_BASE_URL]);
+  }, [formData.jenis]);
 
   // Ambil daftar bidang
   useEffect(() => {
     async function fetchBidang() {
       try {
-        const res = await fetch(`${API_BASE_URL}/kas-umum/bidang`);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE_URL}/kas-umum/bidang`, {
+          credentials: "include",
+          headers,
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Gagal ambil data bidang");
         const data = await res.json();
         setBidangList(data);
@@ -626,14 +692,19 @@ export default function FormInputKasUmum() {
       }
     }
     fetchBidang();
-  }, [API_BASE_URL]);
+  }, []);
 
   // Ambil sub-bidang kalau bidang berubah
   useEffect(() => {
     if (!formData.bidang) return;
     async function fetchSubBidang() {
       try {
-        const res = await fetch(`${API_BASE_URL}/kas-umum/sub-bidang?bidangId=${formData.bidang}`);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE_URL}/kas-umum/sub-bidang?bidangId=${formData.bidang}`, {
+          credentials: "include",
+          headers,
+          cache: "no-store",
+        });
         const data = await res.json();
         setSubBidangList(data);
       } catch (err) {
@@ -641,9 +712,8 @@ export default function FormInputKasUmum() {
       }
     }
     fetchSubBidang();
-  }, [formData.bidang, API_BASE_URL]);
+  }, [formData.bidang]);
 
-  // Ambil kegiatan kalau sub-bidang berubah
   // Reset kegiatan kalau bidang berubah
   useEffect(() => {
     setKegiatanList([]);
@@ -660,8 +730,10 @@ export default function FormInputKasUmum() {
 
     const fetchKegiatan = async () => {
       try {
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const res = await fetch(
-          `${API_BASE_URL}/kas-umum/kegiatan?subBidangId=${formData.subBidang}`
+          `${API_BASE_URL}/kas-umum/kegiatan?subBidangId=${formData.subBidang}`,
+          { credentials: "include", headers, cache: "no-store" }
         );
         const data = await res.json();
         setKegiatanList(data);
@@ -671,6 +743,8 @@ export default function FormInputKasUmum() {
     };
     fetchKegiatan();
   }, [formData.subBidang]);
+
+  // Hitung netto transaksi
   useEffect(() => {
     const pemasukan = Number(formData.pemasukan) || 0;
     const pengeluaran = Number(formData.pengeluaran) || 0;
@@ -685,7 +759,12 @@ export default function FormInputKasUmum() {
   useEffect(() => {
     const fetchRAB = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/kas-umum/rab`);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE_URL}/kas-umum/rab`, {
+          credentials: "include",
+          headers,
+          cache: "no-store",
+        });
         const data = await res.json();
         setRabList(data);
       } catch (err) {
@@ -698,9 +777,9 @@ export default function FormInputKasUmum() {
   // Ambil saldo otomatis saat RAB dipilih
   useEffect(() => {
     if (formData.kodeRAB) {
-      fetchSaldo(formData.kodeRAB); // Pass RAB ID ke fetchSaldo
+      fetchSaldo(formData.kodeRAB);
     }
-  }, [formData.kodeRAB, fetchSaldo]); // Include fetchSaldo in dependencies
+  }, [formData.kodeRAB, fetchSaldo]);
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -711,7 +790,7 @@ export default function FormInputKasUmum() {
 
         <div className="flex w-[977px] flex-col items-start gap-5">
           <h1 className="m-0 self-stretch font-['Poppins'] text-base leading-6 font-bold text-black">
-            Input Data Kas Umum
+            Edit Data Kas Umum
           </h1>
 
           <div className="flex flex-col items-start gap-[29px] self-stretch">
@@ -1127,7 +1206,7 @@ export default function FormInputKasUmum() {
             <Button
               variant="danger"
               className="px-[18px] py-2.5"
-              onClick={handleCancel}
+              onClick={handleDelete}
               icon={
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path
@@ -1142,27 +1221,23 @@ export default function FormInputKasUmum() {
               Hapus
             </Button>
 
-            <div className="flex w-[304px] items-center justify-between">
+              <div className="flex w-1/2 items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <span className="font-['Plus_Jakarta_Sans'] text-base leading-6 font-normal text-black">
-                  Buat lagi
-                </span>
-                <button
-                  onClick={handleToggle}
-                  className="relative flex h-6 w-12 cursor-pointer items-center rounded-full border-none transition-all duration-300"
-                  style={{
-                    backgroundColor: formData.buatLagi ? "#10B981" : "#D1D5DB",
-                    padding: "2px",
-                  }}
-                >
-                  {/* Animated Circle */}
-                  <div
-                    className="h-4 w-4 rounded-full bg-white transition-all duration-300"
-                    style={{
-                      marginLeft: formData.buatLagi ? "calc(100% - 1rem)" : "0",
-                    }}
-                  />
-                </button>
+                {persetujuan === "approved" ? (
+                  <span className="text-green-600">✅ Disetujui</span>
+                ) : (
+                  <span className="text-yellow-600">⏳ Menunggu Persetujuan</span>
+                )}
+
+                {user?.role === "kepala_desa" && persetujuan !== "approved" && (
+                  <Button
+                    variant="green"
+                    className="px-3 py-1 text-sm"
+                    onClick={handleApprove}
+                  >
+                    Setuju
+                  </Button>
+                )}
               </div>
 
               <Button

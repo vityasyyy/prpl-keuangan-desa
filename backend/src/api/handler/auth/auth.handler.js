@@ -1,4 +1,4 @@
-import { logError, logDebug, logInfo } from "../../../common/logger/logger.js";
+import { logError, logInfo } from "../../../common/logger/logger.js";
 
 export class AuthHandler {
   constructor(authService) {
@@ -28,6 +28,20 @@ export class AuthHandler {
     } catch (err) {
       logError(err, "Login failed", { username, layer: "handler", route: "POST /login" }, req.log);
       return res.status(401).json({ error: err.message || "Invalid credentials" });
+    }
+  }
+
+  // POST /register
+  async register(req, res) {
+    const { username, password, full_name, role } = req.body;
+    try {
+      const log = req.log;
+      const user = await this.authService.registerUser({ username, password, full_name, role }, log);
+      logInfo("User registered", { username, layer: "handler", route: "POST /register" }, 5, req.log);
+      return res.status(201).json({ message: "User created", user });
+    } catch (err) {
+      logError(err, "User registration failed", { username, layer: "handler", route: "POST /register" }, req.log);
+      return res.status(400).json({ error: err.message || "Registration failed" });
     }
   }
 

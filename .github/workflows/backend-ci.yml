@@ -1,16 +1,21 @@
 name: Backend CI/CD
 
 on:
-  push:
-    branches:
-      - dev
+  # Run fast tests on Pull Requests to 'dev'
   pull_request:
     branches:
       - dev
 
+  # On a new tag like 'v1.0.0', run the full release
+  push:
+    tags:
+      - "v*.*.*" # Matches v1.0.0, v1.2.3, etc.
+
 jobs:
-  test:
-    name: Run Tests
+  # This job just runs fast tests on Pull Requests
+  test-pr:
+    name: Run PR Tests (Unit & Handler)
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
     steps:
@@ -33,34 +38,71 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: ./backend
 
-      - name: Run tests
-        run: echo "halo"
+      - name: Run Unit & Handler Tests
+        run: pnpm test:unit && pnpm test:integration:handler
         working-directory: ./backend
 
-  build-and-push:
-    name: Build and Push to Docker Hub
+  # This job runs on a Git Tag and creates a full release
+  release:
+    name: Create Release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
-    needs: test
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: ./backend
+
+      - name: Start Test Database
+        run: pnpm test:db:up
+        working-directory: ./backend
+
+      - name: Wait for Test Database
+        run: pnpm exec wait-on tcp:5433
+        working-directory: ./backend
+
+      - name: Run ALL Tests (Unit, Handler, Repo)
+        env:
+          DB_URL: postgresql://prpl_koma:testpassword123@localhost:5433/keuangan_desa_test
+        run: pnpm test:unit && pnpm test:integration:handler && pnpm test:integration:repo
+        working-directory: ./backend
+
+      - name: Stop Test Database
+        if: always()
+        run: pnpm test:db:down
+        working-directory: ./backend
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: vityasyyy
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: vityasyyy/prpl-keuangan-desa-backend
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/prpl-keuangan-desa-backend
           tags: |
-            type=sha,prefix=dev-,format=short
-            type=raw,value=dev
+            # This gets the git tag (e.g., v1.0.0)
+            type=ref,event=tag
+            # This also tags it as 'latest'
+            type=raw,value=latest
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -68,9 +110,20 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          # These paths are also relative to the repo root
           context: ./backend
           file: ./backend/dockerfiles/Dockerfile.prod
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            Official release for version ${{ github.ref_name }}.
+
+            Docker image: `${{ secrets.DOCKERHUB_USERNAME }}/prpl-keuangan-desa-backend:${{ github.ref_name }}`
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
