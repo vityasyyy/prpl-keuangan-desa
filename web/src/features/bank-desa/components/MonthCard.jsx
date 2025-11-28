@@ -51,33 +51,34 @@ export default function MonthCard({ monthName, monthKey, totalMonth, totalCumula
     };
 
     return (
-        <div className="mb-4">
-            <div className="border border-[#4b5565] rounded-[30px] px-[25px] py-[17px] flex items-center justify-between bg-white">
+        <div className="flex flex-col">
+            <div className="border border-[#4b5565] rounded-[30px] h-[66px] px-[25px] py-[17px] flex items-center bg-white">
                 {/* Left side: Chevron + Month Name */}
-                <div className="flex items-center gap-[10px] cursor-pointer select-none" onClick={() => setIsOpen(!isOpen)}>
-                    <ChevronDown className={`w-6 h-6 transition-transform ${isOpen ? 'rotate-180' : ''} text-black`} />
-                    <span className="font-semibold text-[20px] text-black">{monthName}</span>
+                <div className="flex items-center gap-[10px] min-w-[180px] cursor-pointer select-none shrink-0" onClick={() => setIsOpen(!isOpen)}>
+                    <ChevronDown className={`w-6 h-6 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''} text-black`} />
+                    <span className="font-semibold text-[20px] leading-[30px] text-black whitespace-nowrap">{monthName}</span>
                 </div>
 
-                {/* Middle: Totals */}
-                <div className="flex gap-8">
-                    <div className="flex items-center gap-2">
-                        <span className="font-normal text-[16px] text-black">Total Bulan ini</span>
-                        <span className="font-semibold text-[16px] text-black">{totalMonth}</span>
+                {/* Middle: Totals - use fixed widths for alignment */}
+                <div className="flex items-center justify-center flex-1">
+                    <div className="flex items-center gap-[10px] min-w-[280px]">
+                        <span className="font-normal text-[16px] leading-[24px] text-black">Total Bulan ini</span>
+                        <span className="font-semibold text-[16px] leading-[24px] text-black">{totalMonth}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="font-normal text-[16px] text-black">Total Kumulatif</span>
-                        <span className="font-semibold text-[16px] text-black">{totalCumulative}</span>
+
+                    <div className="flex items-center gap-[10px] min-w-[280px]">
+                        <span className="font-normal text-[16px] leading-[24px] text-black">Total Kumulatif</span>
+                        <span className="font-semibold text-[16px] leading-[24px] text-black">{totalCumulative}</span>
                     </div>
                 </div>
 
                 {/* Right: Actions */}
-                <div className="flex gap-1">
-                    <button onClick={handleDownload} className="border border-black rounded-[8px] p-2 hover:bg-gray-100 text-black transition-colors">
-                        <DownloadIcon className="w-4 h-4 stroke-2" />
+                <div className="flex gap-[4px] items-center shrink-0">
+                    <button onClick={handleDownload} className="border border-[#4b5565] rounded-[8px] p-[8px] hover:bg-gray-100 transition-colors">
+                        <DownloadIcon className="w-4 h-4 text-[#364152]" />
                     </button>
-                    <button onClick={handleAdd} className="border border-black rounded-[8px] p-2 hover:bg-gray-100 text-black transition-colors">
-                        <PlusIcon className="w-4 h-4 stroke-2" />
+                    <button onClick={handleAdd} className="border border-[#4b5565] rounded-[8px] p-[8px] hover:bg-gray-100 transition-colors">
+                        <PlusIcon className="w-4 h-4 text-[#364152]" />
                     </button>
                 </div>
             </div>

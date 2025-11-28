@@ -120,10 +120,10 @@ export default async function BukuBankPage({ searchParams }) {
   const latestMonth = sortedMonthKeys.length > 0 ? sortedMonthKeys[0] : null;
 
   return (
-    <div className="p-8 min-h-screen bg-white">
+    <div className="px-[40px] py-[20px] min-h-screen bg-white">
       <PageHeader latestMonth={latestMonth} />
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-[10px]">
         {transactions.length === 0 ? (
              <div className="text-center text-gray-500 py-10">
                 Belum ada data transaksi.

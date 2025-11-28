@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 // Icons
 const MailIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect width="20" height="16" x="2" y="4" rx="2" />
     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
   </svg>
@@ -28,7 +28,7 @@ const SaveIcon = () => (
 );
 
 const LockIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
   </svg>
@@ -72,10 +72,10 @@ const InputField = ({ label, id, type, value, onChange, placeholder = '', requir
       <label htmlFor={id} className="font-[var(--font-inter)] font-bold text-[16px] md:text-[18px] leading-[24px] text-black">
         {label} {required && <span className="text-red-600">*</span>}
       </label>
-      <div className={`bg-white border border-solid border-gray-600 rounded-[8px] w-full overflow-hidden ${disabled ? 'bg-gray-200 cursor-not-allowed' : ''}`}>
+      <div className={`bg-white border border-solid border-black rounded-[8px] w-full overflow-hidden ${disabled ? 'bg-gray-200 cursor-not-allowed' : ''}`}>
         <div className="flex items-center px-[14px] py-[12px] gap-[8px]">
           {prefix && (
-            <span className="font-[var(--font-inter)] font-semibold text-[16px] md:text-[18px] leading-[24px] text-black border-r border-gray-600 pr-3 mr-1">
+            <span className="font-[var(--font-inter)] font-semibold text-[16px] md:text-[18px] leading-[24px] text-black border-r border-black pr-3 mr-1">
               {prefix}
             </span>
           )}
@@ -94,7 +94,7 @@ const InputField = ({ label, id, type, value, onChange, placeholder = '', requir
             required={required}
             disabled={disabled}
             min={min}
-            className="w-full font-[var(--font-inter)] font-medium text-[16px] md:text-[18px] leading-[24px] text-black placeholder-gray-700 outline-none bg-transparent disabled:text-black disabled:cursor-not-allowed"
+            className="w-full font-[var(--font-inter)] font-bold text-[16px] md:text-[18px] leading-[24px] !text-black placeholder-gray-900 outline-none bg-transparent disabled:!text-black disabled:cursor-not-allowed"
           />
         </div>
       </div>

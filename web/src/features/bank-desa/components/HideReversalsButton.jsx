@@ -15,7 +15,7 @@ const EyeSlashIcon = ({ className }) => (
   </svg>
 );
 
-export default function HideReversalsButton() {
+export default function HideReversalsButton({ className = '' }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isHidden = searchParams.get('hideReversals') === 'true';
@@ -33,15 +33,15 @@ export default function HideReversalsButton() {
   return (
     <button
       onClick={toggle}
-      className={`rounded-[8px] px-[14px] py-[8px] flex items-center gap-2 font-medium text-[14px] transition-colors border ${
+      className={`rounded-[8px] px-[14px] py-[8px] h-[36px] flex items-center justify-center gap-[8px] font-medium !text-[14px] !leading-[20px] transition-colors border ${
         isHidden 
           ? 'bg-black text-white border-black hover:bg-gray-900' 
           : 'bg-white text-black border-black hover:bg-gray-100'
-      }`}
+      } ${className}`}
       title={isHidden ? "Tampilkan transaksi reversal" : "Sembunyikan transaksi reversal"}
     >
-      {isHidden ? <EyeIcon className="w-5 h-5" /> : <EyeSlashIcon className="w-5 h-5" />}
-      <span>{isHidden ? 'Tampilkan Reversal' : 'Sembunyikan Reversal'}</span>
+      {isHidden ? <EyeIcon className="w-5 h-5" /> : <EyeSlashIcon className="w-5 h-5 text-gray-400" />}
+      <span className={isHidden ? "" : "text-gray-400"}>{isHidden ? 'Tampilkan Reversal' : 'Sembunyikan Reversal'}</span>
     </button>
   );
 }

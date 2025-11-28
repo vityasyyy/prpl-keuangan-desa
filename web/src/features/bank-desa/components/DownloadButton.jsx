@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-export default function DownloadButton({ latestMonth }) {
+export default function DownloadButton({ latestMonth, className = '' }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleDownload = () => {
@@ -50,7 +50,7 @@ export default function DownloadButton({ latestMonth }) {
     <button 
       onClick={handleDownload}
       disabled={isLoading}
-      className="bg-[#FF9500] text-white rounded-[8px] px-[14px] py-[8px] flex items-center gap-2 font-medium text-[14px] hover:bg-[#e68600] transition-colors disabled:opacity-50"
+      className={`bg-[#FF9500] border border-[#FF9500] text-white rounded-[8px] px-[14px] py-[8px] h-[36px] flex items-center justify-center gap-[8px] font-medium !text-[14px] !leading-[20px] hover:bg-[#e68600] transition-colors disabled:opacity-50 ${className}`}
     >
       <span>{isLoading ? 'Loading...' : 'Unduh File'}</span>
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
