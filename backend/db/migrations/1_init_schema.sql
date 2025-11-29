@@ -199,6 +199,7 @@ CREATE TABLE buku_pembantu_panjar (
     bku_id TEXT REFERENCES buku_kas_umum(id) ON DELETE CASCADE,
     tanggal DATE NOT NULL,
     uraian TEXT,
+    no_bukti TEXT,
     pemberian NUMERIC(18,2) DEFAULT 0,
     pertanggungjawaban NUMERIC(18,2) DEFAULT 0,
     saldo_after NUMERIC(18,2) DEFAULT 0,

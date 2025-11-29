@@ -296,11 +296,11 @@ async function seedDatabase() {
 
     console.log("Seeding buku_pembantu_panjar...");
     await client.query(`
-      INSERT INTO buku_pembantu_panjar (id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after) VALUES
-      ('panjar001', 'bku005', '2024-02-01', 'Panjar untuk Belanja ATK Februari', 500000.00, 0.00, 500000.00),
-      ('panjar002', 'bku005', '2024-02-03', 'Pertanggungjawaban Belanja ATK (SPJ)', 0.00, 500000.00, 0.00),
-      ('panjar003', 'bku009', '2024-04-30', 'Panjar untuk Persiapan Pelatihan Masyarakat', 1500000.00, 0.00, 1500000.00),
-      ('panjar004', 'bku009', '2024-05-02', 'Pertanggungjawaban Panjar Pelatihan', 0.00, 1500000.00, 0.00)
+      INSERT INTO buku_pembantu_panjar (id, bku_id, tanggal, uraian, no_bukti, pemberian, pertanggungjawaban, saldo_after) VALUES
+      ('panjar001', 'bku005', '2024-02-01', 'Panjar untuk Belanja ATK Februari', 'NB1', 500000.00, 0.00, 500000.00),
+      ('panjar002', 'bku005', '2024-02-03', 'Pertanggungjawaban Belanja ATK (SPJ)', 'NB2',0.00, 500000.00, 0.00),
+      ('panjar003', 'bku009', '2024-04-30', 'Panjar untuk Persiapan Pelatihan Masyarakat','NB3', 1500000.00, 0.00, 1500000.00),
+      ('panjar004', 'bku009', '2024-05-02', 'Pertanggungjawaban Panjar Pelatihan', 'NB8', 0.00, 1500000.00, 0.00)
     `);
 
     // Commit transaction

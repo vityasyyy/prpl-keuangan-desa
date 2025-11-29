@@ -356,7 +356,7 @@ export default function createRepo(db) {
     // Paging
     const offset = (page - 1) * per_page;
     const sql = `
-      SELECT id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
+      SELECT id, bku_id, tanggal, uraian, no_bukti, pemberian, pertanggungjawaban, saldo_after
       FROM buku_pembantu_panjar
       ${whereSql}
       ORDER BY ${sort_by} ${order.toUpperCase()}, id ${order.toUpperCase()}
@@ -376,7 +376,7 @@ export default function createRepo(db) {
 
   async function getPanjarById(id) {
     const sql = `
-      SELECT id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
+      SELECT id, bku_id, tanggal, uraian, no_bukti, pemberian, pertanggungjawaban, saldo_after
       FROM buku_pembantu_panjar
       WHERE id = $1
       LIMIT 1
@@ -388,15 +388,16 @@ export default function createRepo(db) {
   async function insertPanjar(payload) {
     const sql = `
       INSERT INTO buku_pembantu_panjar
-        (id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
-      RETURNING id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
+        (id, bku_id, tanggal, uraian, no_bukti, pemberian, pertanggungjawaban, saldo_after)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      RETURNING id, bku_id, tanggal, uraian, no_bukti, pemberian, pertanggungjawaban, saldo_after
     `;
     const values = [
       payload.id,
       payload.bku_id,
       payload.tanggal,
       payload.uraian,
+      payload.no_bukti,
       payload.pemberian ?? 0,
       payload.pertanggungjawaban ?? 0,
       payload.saldo_after ?? 0,
@@ -408,7 +409,7 @@ export default function createRepo(db) {
   async function updatePanjarById(id, updates) {
     // ambil row lama
     const qOld = `
-      SELECT id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
+      SELECT id, bku_id, tanggal, uraian, no_bukti, pemberian, pertanggungjawaban, saldo_after
       FROM buku_pembantu_panjar
       WHERE id = $1
       LIMIT 1
@@ -421,6 +422,7 @@ export default function createRepo(db) {
     const newBkuId = updates.bku_id ?? oldRow.bku_id;
     const newTanggal = updates.tanggal ?? oldRow.tanggal;
     const newUraian = updates.uraian ?? oldRow.uraian;
+    const newNoBukti = updates.no_bukti ?? oldRow.no_bukti;
     const newPemberian =
       updates.pemberian !== undefined
         ? Number(updates.pemberian)
@@ -433,22 +435,25 @@ export default function createRepo(db) {
       updates.saldo_after !== undefined
         ? Number(updates.saldo_after)
         : newPemberian - newPertanggungjawaban;
+    
 
     const qUpdate = `
       UPDATE buku_pembantu_panjar
       SET bku_id = $1,
           tanggal = $2,
           uraian = $3,
-          pemberian = $4,
-          pertanggungjawaban = $5,
-          saldo_after = $6
-      WHERE id = $7
+          no_bukti = $4,
+          pemberian = $5,
+          pertanggungjawaban = $6,
+          saldo_after = $7
+      WHERE id = $8
       RETURNING id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
     `;
     const values = [
       newBkuId,
       newTanggal,
       newUraian,
+      newNoBukti,
       newPemberian,
       newPertanggungjawaban,
       newSaldoAfter,

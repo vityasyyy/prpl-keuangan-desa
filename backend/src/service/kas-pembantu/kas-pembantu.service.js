@@ -235,7 +235,7 @@ export default function createKasPembantuService(repo) {
 
     async createPanjar(input) {
       // required fields
-      const { id: rawId, bku_id, tanggal, uraian } = input || {};
+      const { id: rawId, bku_id, tanggal, uraian, no_bukti} = input || {};
       if (!bku_id) throw { status: 400, message: "bku_id is required" };
       if (!tanggal) throw { status: 400, message: "tanggal is required" };
       if (!uraian) throw { status: 400, message: "uraian is required" };
@@ -294,6 +294,7 @@ export default function createKasPembantuService(repo) {
         bku_id,
         tanggal,
         uraian,
+        no_bukti,
         pemberian,
         pertanggungjawaban,
         saldo_after,
@@ -313,9 +314,10 @@ export default function createKasPembantuService(repo) {
 
     async editPanjar(id, updates) {
       if (!id) throw { status: 400, message: "id is required" };
+      
       if (!updates || Object.keys(updates).length === 0)
         throw { status: 400, message: "no update fields provided" };
-
+      
       // validate tanggal if provided
       if (updates.tanggal !== undefined) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(String(updates.tanggal))) {
@@ -325,7 +327,27 @@ export default function createKasPembantuService(repo) {
           };
         }
       }
-
+  
+      // validate no_bukti if provided
+      if (updates.no_bukti !== undefined) {
+        if (typeof updates.no_bukti !== 'string' || updates.no_bukti.trim() === '') {
+          throw {
+            status: 400,
+            message: "no_bukti must be a non-empty string",
+          };
+        }
+      }
+      
+      // validate uraian if provided
+      if (updates.uraian !== undefined) {
+        if (typeof updates.uraian !== 'string' || updates.uraian.trim() === '') {
+          throw {
+            status: 400,
+            message: "uraian must be a non-empty string",
+          };
+        }
+      }
+      
       // validate numeric fields if provided
       if (updates.pemberian !== undefined) {
         const p = Number(updates.pemberian);
@@ -335,6 +357,7 @@ export default function createKasPembantuService(repo) {
             message: "pemberian must be a non-negative number",
           };
       }
+      
       if (updates.pertanggungjawaban !== undefined) {
         const pj = Number(updates.pertanggungjawaban);
         if (Number.isNaN(pj) || pj < 0)
@@ -343,12 +366,13 @@ export default function createKasPembantuService(repo) {
             message: "pertanggungjawaban must be a non-negative number",
           };
       }
+      
       if (updates.saldo_after !== undefined) {
         const s = Number(updates.saldo_after);
         if (Number.isNaN(s))
           throw { status: 400, message: "saldo_after must be numeric" };
       }
-
+      
       // compute final saldo_after if not provided
       let finalPemberian =
         updates.pemberian !== undefined ? Number(updates.pemberian) : undefined;
@@ -356,23 +380,22 @@ export default function createKasPembantuService(repo) {
         updates.pertanggungjawaban !== undefined
           ? Number(updates.pertanggungjawaban)
           : undefined;
-
-      // if both not provided, repo will reuse old values; to check business rule we need final values.
+      
       // fetch current row to compute missing values
       const existing = await repo.getPanjarById(id);
       if (!existing)
         throw { status: 404, message: `Panjar entry with id ${id} not found` };
-
+      
       if (finalPemberian === undefined)
         finalPemberian = Number(existing.pemberian ?? 0);
       if (finalPertanggungjawaban === undefined)
         finalPertanggungjawaban = Number(existing.pertanggungjawaban ?? 0);
-
+      
       const finalSaldo =
         updates.saldo_after !== undefined
           ? Number(updates.saldo_after)
           : finalPemberian - finalPertanggungjawaban;
-
+      
       // business rule: saldo cannot be negative
       if (finalSaldo < 0) {
         throw {
@@ -381,7 +404,7 @@ export default function createKasPembantuService(repo) {
             "Update would cause negative saldo_after (conflict with business rules)",
         };
       }
-
+      
       // optional: validate bku_id exists if repo has checkBkuExists
       if (
         updates.bku_id !== undefined &&
@@ -391,11 +414,12 @@ export default function createKasPembantuService(repo) {
         if (!ok)
           throw { status: 400, message: `bku_id ${updates.bku_id} not found` };
       }
-
+      
       // delegate update to repo (repo will return updated row or null)
       const updated = await repo.updatePanjarById(id, updates);
       if (!updated)
         throw { status: 404, message: `Panjar entry with id ${id} not found` };
+      
       return updated;
     },
 
