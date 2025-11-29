@@ -157,8 +157,10 @@ CREATE TABLE buku_kas_pembantu (
     tanggal DATE NOT NULL,
     uraian TEXT,
     no_bukti TEXT,
-    penerimaan NUMERIC(18,2) DEFAULT 0,
-    pengeluaran NUMERIC(18,2) DEFAULT 0,
+    penerimaan_bendahara NUMERIC(18,2) DEFAULT 0,
+    penerimaan_swadaya NUMERIC(18,2) DEFAULT 0,
+    pengeluaran_barang_dan_jasa NUMERIC(18,2) DEFAULT 0,
+    pengeluaran_modal NUMERIC(18,2) DEFAULT 0,
     saldo_after NUMERIC(18,2) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

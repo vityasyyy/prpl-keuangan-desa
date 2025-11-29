@@ -4,6 +4,7 @@ export default function createRepo(db) {
   /**
    * Ambil daftar transaksi kas pembantu dengan filter dan pagination
    */
+
   async function listKegiatanTransaksi({
     bulan,
     tahun,
@@ -39,7 +40,9 @@ export default function createRepo(db) {
 
     const offset = (page - 1) * limit;
     const sql = `
-      SELECT id, bku_id, type_enum, tanggal, uraian, no_bukti, penerimaan, pengeluaran, saldo_after
+      SELECT id, bku_id, type_enum, tanggal, uraian, no_bukti,
+        penerimaan_bendahara, penerimaan_swadaya,
+        pengeluaran_barang_dan_jasa, pengeluaran_modal, saldo_after
       FROM buku_kas_pembantu
       ${where.length ? "WHERE " + where.join(" AND ") : ""}
       ORDER BY tanggal, id
@@ -49,9 +52,12 @@ export default function createRepo(db) {
     const { rows } = await db.query(sql, params);
     return rows;
   }
+
   async function getKegiatanById(id) {
     const sql = `
-      SELECT id, bku_id, type_enum, tanggal, uraian, no_bukti, penerimaan, pengeluaran, saldo_after
+      SELECT id, bku_id, type_enum, tanggal, uraian, no_bukti,
+        penerimaan_bendahara, penerimaan_swadaya,
+        pengeluaran_barang_dan_jasa, pengeluaran_modal, saldo_after
       FROM buku_kas_pembantu
       WHERE id = ${P(1)}
       LIMIT 1
@@ -160,16 +166,17 @@ export default function createRepo(db) {
     if (rows.length === 0) return null;
     return Number(rows[0].saldo_after);
   }
-  /**
-   * Insert satu row ke buku_kas_pembantu
-   * payload: { id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after }
-   */
+  
   async function insertKegiatan(payload) {
     const q = `
       INSERT INTO buku_kas_pembantu
-        (id, bku_id, type_enum, tanggal, uraian, no_bukti, penerimaan, pengeluaran, saldo_after)
-      VALUES (${P(1)},${P(2)},${P(3)},${P(4)},${P(5)},${P(6)},${P(7)},${P(8)},${P(9)})
-      RETURNING *`;
+        (id, bku_id, type_enum, tanggal, uraian, no_bukti,
+        penerimaan_bendahara, penerimaan_swadaya,
+        pengeluaran_barang_dan_jasa, pengeluaran_modal, saldo_after)
+      VALUES (${P(1)},${P(2)},${P(3)},${P(4)},${P(5)},${P(6)},
+              ${P(7)},${P(8)},${P(9)},${P(10)},${P(11)})
+      RETURNING *
+    `;
     const values = [
       payload.id,
       payload.bku_id,
@@ -177,8 +184,10 @@ export default function createRepo(db) {
       payload.tanggal,
       payload.uraian,
       payload.no_bukti,
-      payload.penerimaan ?? 0,
-      payload.pengeluaran ?? 0,
+      payload.penerimaan_bendahara ?? 0,
+      payload.penerimaan_swadaya ?? 0,
+      payload.pengeluaran_barang_dan_jasa ?? 0,
+      payload.pengeluaran_modal ?? 0,
       payload.saldo_after,
     ];
     const { rows } = await db.query(q, values);
@@ -192,7 +201,9 @@ export default function createRepo(db) {
 
       // ambil row lama
       const qOld = `
-        SELECT id, bku_id, type_enum, tanggal, uraian, no_bukti, penerimaan, pengeluaran, saldo_after
+        SELECT id, bku_id, type_enum, tanggal, uraian, no_bukti,
+          penerimaan_bendahara, penerimaan_swadaya,
+          pengeluaran_barang_dan_jasa, pengeluaran_modal, saldo_after
         FROM buku_kas_pembantu
         WHERE id = ${P(1)}
         LIMIT 1
@@ -208,14 +219,22 @@ export default function createRepo(db) {
       const newTanggal = updates.tanggal ?? oldRow.tanggal;
       const newUraian = updates.uraian ?? oldRow.uraian;
       const newNoBukti = updates.no_bukti ?? oldRow.no_bukti;
-      const newPenerimaan =
-        updates.penerimaan !== undefined
-          ? Number(updates.penerimaan)
-          : Number(oldRow.penerimaan ?? 0);
-      const newPengeluaran =
-        updates.pengeluaran !== undefined
-          ? Number(updates.pengeluaran)
-          : Number(oldRow.pengeluaran ?? 0);
+      const newPenerimaanBendahara =
+        updates.penerimaan_bendahara !== undefined
+          ? Number(updates.penerimaan_bendahara)
+          : Number(oldRow.penerimaan_bendahara ?? 0);
+      const newPenerimaanSwadaya =
+        updates.penerimaan_swadaya !== undefined
+          ? Number(updates.penerimaan_swadaya)
+          : Number(oldRow.penerimaan_swadaya ?? 0);
+      const newPengeluaranBarangJasa =
+        updates.pengeluaran_barang_dan_jasa !== undefined
+          ? Number(updates.pengeluaran_barang_dan_jasa)
+          : Number(oldRow.pengeluaran_barang_dan_jasa ?? 0);
+      const newPengeluaranModal =
+        updates.pengeluaran_modal !== undefined
+          ? Number(updates.pengeluaran_modal)
+          : Number(oldRow.pengeluaran_modal ?? 0);
       const newTypeEnum = updates.type_enum ?? oldRow.type_enum;
 
       // ambil saldo_before (saldo_after dari row sebelum row ini) berdasarkan ordering tanggal,id
@@ -235,7 +254,7 @@ export default function createRepo(db) {
 
       // hitung saldo baru untuk row ini
       const newSaldoAfter = Number(
-        (prevSaldo + newPenerimaan - newPengeluaran).toFixed(2)
+        (prevSaldo + newPenerimaanBendahara + newPenerimaanSwadaya - newPengeluaranBarangJasa - newPengeluaranModal).toFixed(2)
       );
       const oldSaldoAfter = Number(oldRow.saldo_after ?? 0);
       const delta = Number((newSaldoAfter - oldSaldoAfter).toFixed(2));
@@ -246,19 +265,25 @@ export default function createRepo(db) {
         SET tanggal = ${P(1)},
             uraian = ${P(2)},
             no_bukti = ${P(3)},
-            penerimaan = ${P(4)},
-            pengeluaran = ${P(5)},
-            saldo_after = ${P(6)},
-            type_enum = ${P(7)}
-        WHERE id = ${P(8)}
-        RETURNING id, bku_id, type_enum, tanggal, uraian, no_bukti, penerimaan, pengeluaran, saldo_after
+            penerimaan_bendahara = ${P(4)},
+            penerimaan_swadaya = ${P(5)},
+            pengeluaran_barang_dan_jasa = ${P(6)},
+            pengeluaran_modal = ${P(7)},
+            saldo_after = ${P(8)},
+            type_enum = ${P(9)}
+        WHERE id = ${P(10)}
+        RETURNING id, bku_id, type_enum, tanggal, uraian, no_bukti,
+          penerimaan_bendahara, penerimaan_swadaya,
+          pengeluaran_barang_dan_jasa, pengeluaran_modal, saldo_after
       `;
       const valuesUpdate = [
         newTanggal,
         newUraian,
         newNoBukti,
-        newPenerimaan,
-        newPengeluaran,
+        newPenerimaanBendahara,
+        newPenerimaanSwadaya,
+        newPengeluaranBarangJasa,
+        newPengeluaranModal,
         newSaldoAfter,
         newTypeEnum,
         id,

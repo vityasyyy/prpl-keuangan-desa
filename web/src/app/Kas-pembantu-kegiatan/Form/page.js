@@ -93,10 +93,10 @@ export default function Page() {
           setUraian(data.uraian || "");
           
           // Map stored data back to form fields
-          setDariBendahara(String(data.penerimaan || 0));
-          setSwadaya("0");
-          setBelanjaBarang(String(data.pengeluaran || 0));  
-          setBelanjaModal("0");
+          setDariBendahara(String(data.penerimaan_bendahara || 0));
+          setSwadaya(String(data.penerimaan_swadaya || 0));
+          setBelanjaBarang(String(data.pengeluaran_belanja_dan_barang || 0));  
+          setBelanjaModal(String(data.pengeluaran_modal || 0 ));
           
           // Set type_enum to kegiatan dropdown if available
           setKodeRek(data.type_enum || "");
@@ -272,8 +272,10 @@ export default function Page() {
       setError(null);
 
       // Parse currency values
-      const penerimaan = parseCurrency(dariBendahara) + parseCurrency(swadaya);
-      const pengeluaran = parseCurrency(belanjaBarang) + parseCurrency(belanjaModal);
+      const penerimaan_bendahara = parseCurrency(dariBendahara)
+      const penerimaan_swadaya = parseCurrency(swadaya);
+      const pengeluaran_belanja_dan_barang = parseCurrency(belanjaBarang)
+      const pengeluaran_modal = parseCurrency(belanjaModal);
 
       // Map classification to type_enum
       const type_enum = kegiatan || "kegiatan";
@@ -287,8 +289,10 @@ export default function Page() {
         tanggal: tanggal, // Already in YYYY-MM-DD format
         uraian: uraian,
         no_bukti: nomorBukti,
-        penerimaan: penerimaan,
-        pengeluaran: pengeluaran,
+        penerimaan_bendahara: penerimaan_bendahara,
+        penerimaan_swadaya: swadaya,
+        pengeluaran_belanja_dan_barang: pengeluaran_belanja_dan_barang,
+        pengeluaran_modal: pengeluaran_modal, 
       };
 
       // Submit to API - use update if editId exists, otherwise create

@@ -62,8 +62,10 @@ export default function createKasPembantuService(repo) {
         tanggal: row.tanggal,
         uraian: row.uraian,
         no_bukti: row.no_bukti,
-        penerimaan: row.penerimaan,
-        pengeluaran: row.pengeluaran,
+        penerimaan_bendahara: row.penerimaan_bendahara,
+        penerimaan_swadaya: row.penerimaan_swadaya,
+        pengeluaran_barang_dan_jasa: row.pengeluaran_barang_dan_jasa,
+        pengeluaran_modal: row.pengeluaran_modal,
         saldo_after: row.saldo_after,
       }));
 
@@ -95,9 +97,12 @@ export default function createKasPembantuService(repo) {
       if (!exists) throw new Error(`bku_id ${payload.bku_id} not found`);
 
       // parse angka
-      const penerimaan = Number(payload.penerimaan ?? 0);
-      const pengeluaran = Number(payload.pengeluaran ?? 0);
-      if (Number.isNaN(penerimaan) || Number.isNaN(pengeluaran)) {
+      const penerimaan_bendahara = Number(payload.penerimaan_bendahara ?? 0);
+      const penerimaan_swadaya = Number(payload.penerimaan_swadaya ?? 0);
+      const pengeluaran_barang_dan_jasa = Number(payload.pengeluaran_barang_dan_jasa ?? 0);
+      const pengeluaran_modal = Number(payload.pengeluaran_modal ?? 0);
+      if (Number.isNaN(penerimaan_bendahara) ||Number.isNaN(penerimaan_swadaya) ||
+          Number.isNaN(pengeluaran_modal) || Number.isNaN(pengeluaran_barang_dan_jasa)) {
         throw new Error("penerimaan and pengeluaran must be numeric");
       }
 
@@ -105,7 +110,7 @@ export default function createKasPembantuService(repo) {
       const lastSaldo = await repo.getLastSaldoByBkuId(payload.bku_id);
       const starting = lastSaldo === null ? 0 : lastSaldo;
       const saldo_after = Number(
-        (starting + penerimaan - pengeluaran).toFixed(2)
+        (starting + penerimaan_bendahara + penerimaan_swadaya - pengeluaran_barang_dan_jasa - pengeluaran_modal).toFixed(2)
       );
 
       // generate id sederhana (unik).
@@ -118,8 +123,10 @@ export default function createKasPembantuService(repo) {
         tanggal: payload.tanggal,
         uraian: payload.uraian,
         no_bukti: payload.no_bukti,
-        penerimaan,
-        pengeluaran,
+        penerimaan_bendahara,
+        penerimaan_swadaya,
+        pengeluaran_barang_dan_jasa,
+        pengeluaran_modal,
         saldo_after,
       };
 
@@ -133,19 +140,32 @@ export default function createKasPembantuService(repo) {
 
       // optional: validasi numeric
       if (
-        updates.penerimaan !== undefined &&
-        Number.isNaN(Number(updates.penerimaan))
+        updates.penerimaan_bendahara !== undefined &&
+        Number.isNaN(Number(updates.penerimaan_bendahara))
       ) {
-        throw { status: 400, message: "penerimaan must be numeric" };
+        throw { status: 400, message: "penerimaan bendahara must be numeric" };
       }
       if (
-        updates.pengeluaran !== undefined &&
-        Number.isNaN(Number(updates.pengeluaran))
+        updates.penerimaan_swadaya !== undefined &&
+        Number.isNaN(Number(updates.penerimaan_swadaya))
       ) {
-        throw { status: 400, message: "pengeluaran must be numeric" };
+        throw { status: 400, message: "penerimaan swadaya must be numeric" };
       }
 
-      // delegasi ke repo — repo akan membuka transaksi sendiri
+      if (
+        updates.pengeluaran_barang_dan_jasa !== undefined &&
+        Number.isNaN(Number(updates.pengeluaran_barang_dan_jasa))
+      ) {
+        throw { status: 400, message: "pengeluaran barang dan jasa must be numeric" };
+      }
+
+      if (
+        updates.pengeluaran_modal !== undefined &&
+        Number.isNaN(Number(updates.pengeluaran_modal))
+      ) {
+        throw { status: 400, message: "pengeluaran modal dan jasa must be numeric" };
+      }
+
       const updated = await repo.updateKegiatanById(id, updates);
       if (!updated)
         throw { status: 404, message: `Kegiatan with id ${id} not found` };

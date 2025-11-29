@@ -34,9 +34,11 @@ const MODULE_FIELDS = {
   kegiatan: {
     columns: [
       { key: "tanggal", label: "Tanggal", width: "100px" },
-      { key: "uraian", label: "Uraian", width: "auto" },
-      { key: "penerimaan", label: "Penerimaan", width: "120px" },
-      { key: "pengeluaran", label: "Pengeluaran", width: "120px" },
+      { key: "uraian", label: "Uraian", width: "200px" },
+      { key: "penerimaan_bendahara", label: "Penerimaan dari Bendahara", width: "auto" },
+      { key: "penerimaan_swadaya", label: "Penerimaan dari Swadaya", width: "auto" },
+      { key: "pengeluaran_barang_dan_jasa", label: "Pengeluaran Belanja dan Barang", width: "auto" },
+      { key: "pengeluaran_modal", label: "Pengeluaran Modal", width: "auto" },
       { key: "saldo_after", label: "Saldo", width: "120px" },
     ],
   },
