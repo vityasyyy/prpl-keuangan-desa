@@ -201,6 +201,24 @@ export default function Page() {
     return `${day}/${month}/${year}`;
   };
 
+  const resetForm = () => {
+    setTanggal("");
+    setKodeRek("");
+    setBidang("");
+    setSubBidang("");
+    setKegiatan("");
+    setUraian("");
+    setNomorBukti("");
+    setDariBendahara("");
+    setSwadaya("");
+    setBelanjaBarang("");
+    setBelanjaModal("");
+    setNomorBukti("");
+    setJumlahPengembalian(""); // Reset Jumlah Pengembalian
+    setError(null);
+    setCalculatedSaldo(0);
+  }
+
   const handleDelete = async () => {
     if (editId) {
       if (confirm("Apakah Anda yakin ingin menghapus data ini?")) {
@@ -221,41 +239,12 @@ export default function Page() {
         }
       }
     } else {
-      setTanggal("");
-      setKodeRek("");
-      setBidang("");
-      setSubBidang("");
-      setKegiatan("");
-      setUraian("");
-      setDariBendahara("");
-      setSwadaya("");
-      setBelanjaBarang("");
-      setBelanjaModal("");
-      setNomorBukti("");
-      setJumlahPengembalian("");
-      setError(null);
-      setCalculatedSaldo(0);
+      resetForm();
     }
   };
 
   const handleCreate = () => {
     setBuatLagi(true);
-    // Reset form
-    setTanggal("");
-    setKodeRek("");
-    setBidang("");
-    setSubBidang("");
-    setKegiatan("");
-    setUraian("");
-    setNomorBukti("");
-    setDariBendahara("");
-    setSwadaya("");
-    setBelanjaBarang("");
-    setBelanjaModal("");
-    setNomorBukti("");
-    setJumlahPengembalian(""); // Reset Jumlah Pengembalian
-    setError(null);
-    setCalculatedSaldo(0);
   };
   
   const handleSave = async (e) => {
@@ -278,19 +267,18 @@ export default function Page() {
       const pengeluaran_modal = parseCurrency(belanjaModal);
 
       // Map classification to type_enum
-      const type_enum = kegiatan || "kegiatan";
-      const bku_id = await getBKUidByKodeFungsi(idKegiatan);
+      const bku_id = await getBKUidByKodeFungsi(kodeRek);
       if(bku_id === null) return ;
 
       // Prepare payload
       const payload = {
         bku_id: bku_id,
-        type_enum: type_enum,
+        type_enum: kodeRek,
         tanggal: tanggal, // Already in YYYY-MM-DD format
         uraian: uraian,
         no_bukti: nomorBukti,
         penerimaan_bendahara: penerimaan_bendahara,
-        penerimaan_swadaya: swadaya,
+        penerimaan_swadaya: penerimaan_swadaya,
         pengeluaran_belanja_dan_barang: pengeluaran_belanja_dan_barang,
         pengeluaran_modal: pengeluaran_modal, 
       };
@@ -317,6 +305,7 @@ export default function Page() {
       // Success - check if "buat lagi" is enabled
       if (buatLagi && !editId) {
         handleCreate();
+        resetForm();
       } else {
         // Redirect to list
         router.push("/Kas-pembantu-kegiatan");
@@ -443,7 +432,7 @@ export default function Page() {
                     <option value="">Bidang</option>
                     {bidangOptions.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.uraian}
+                        {item.id}) {item.uraian}
                       </option>
                     ))}
                   </select>
@@ -456,7 +445,7 @@ export default function Page() {
                     <option value="">Sub-Bidang</option>
                     {subBidangOptions.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.uraian}
+                        {item.id}) {item.uraian}
                       </option>
                     ))}
                   </select>
@@ -469,7 +458,7 @@ export default function Page() {
                     <option value="">Kegiatan</option>
                     {kegiatanOptions.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.uraian}
+                        {item.id}) {item.uraian}
                       </option>
                     ))}
                   </select>
