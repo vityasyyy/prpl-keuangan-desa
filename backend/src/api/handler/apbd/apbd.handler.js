@@ -92,9 +92,9 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
-  const getUraian2 = async (_req, res, next) => {
+  const getObjek = async (_req, res, next) => {
     try {
-      const data = await ApbdService.getUraian2();
+      const data = await ApbdService.getObjek();
       res.json(data);
     } catch (e) {
       next(e);
@@ -285,7 +285,7 @@ export default function createApbdHandler(ApbdService) {
     getAkun,
     getKelompok,
     getJenis,
-    getUraian2,
+    getObjek,
     createApbdesRincian,
 
     //output apbdes rincian
