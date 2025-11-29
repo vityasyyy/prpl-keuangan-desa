@@ -37,7 +37,7 @@ const MODULE_FIELDS = {
       { key: "uraian", label: "Uraian", width: "200px" },
       { key: "penerimaan_bendahara", label: "Penerimaan dari Bendahara", width: "auto" },
       { key: "penerimaan_swadaya", label: "Penerimaan dari Swadaya", width: "auto" },
-      { key: "pengeluaran_barang_dan_jasa", label: "Pengeluaran Belanja dan Barang", width: "auto" },
+      { key: "pengeluaran_barang_dan_jasa", label: "Pengeluaran Barang dan Jasa", width: "auto" },
       { key: "pengeluaran_modal", label: "Pengeluaran Modal", width: "auto" },
       { key: "saldo_after", label: "Saldo", width: "120px" },
     ],

@@ -21,13 +21,6 @@ function formatCurrency(value) {
   }).format(num);
 }
 
-function parseCurrency(value) {
-  if (!value) return 0;
-  const cleaned = value.replace(/[^0-9,-]/g, "").replace(",", ".");
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? 0 : num;
-}
-
 // Convert any date format to YYYY-MM-DD
 function toYYYYMMDD(dateValue) {
   if (!dateValue) return "";
@@ -133,7 +126,7 @@ export default function Page() {
           // Map stored data back to form fields
           setDariBendahara(String(data.penerimaan_bendahara || 0));
           setSwadaya(String(data.penerimaan_swadaya || 0));
-          setBelanjaBarang(String(data.pengeluaran_belanja_dan_barang || 0));  
+          setBelanjaBarang(String(data.pengeluaran_barang_dan_jasa || 0));  
           setBelanjaModal(String(data.pengeluaran_modal || 0));
           
           // Set type_enum to kegiatan dropdown if available
@@ -228,6 +221,7 @@ export default function Page() {
   useEffect(() => {
     const penerimaan = parseFloat(dariBendahara || 0) + parseFloat(swadaya || 0);
     const pengeluaran = parseFloat(belanjaBarang || 0) + parseFloat(belanjaModal || 0);
+
     const saldo = penerimaan - pengeluaran;
     setCalculatedSaldo(saldo);
   }, [dariBendahara, swadaya, belanjaBarang, belanjaModal]);
@@ -293,8 +287,18 @@ export default function Page() {
       // Parse currency values
       const penerimaan_bendahara = parseFloat(dariBendahara);
       const penerimaan_swadaya = parseFloat(swadaya);
-      const pengeluaran_belanja_dan_barang = parseFloat(belanjaBarang);
+      const pengeluaran_barang_dan_jasa = parseFloat(belanjaBarang);
       const pengeluaran_modal = parseFloat(belanjaModal);
+
+      console.log("bendahara", dariBendahara);
+      console.log("swadaya", swadaya);
+      console.log("belanja barang", belanjaBarang);
+      console.log("belanja modal", belanjaModal);
+
+      console.log("penerimaan_bendahara", penerimaan_bendahara);
+      console.log("penerimaan_swadaya", penerimaan_swadaya);
+      console.log("pengeluaran_barang_dan_jasa", pengeluaran_barang_dan_jasa);
+      console.log("pengeluaran_modal", pengeluaran_modal);
 
       // Ensure tanggal is in YYYY-MM-DD format
       const formattedTanggal = toYYYYMMDD(tanggal);
@@ -319,7 +323,7 @@ export default function Page() {
         no_bukti: nomorBukti || null,
         penerimaan_bendahara: penerimaan_bendahara,
         penerimaan_swadaya: penerimaan_swadaya,
-        pengeluaran_belanja_dan_barang: pengeluaran_belanja_dan_barang,
+        pengeluaran_barang_dan_jasa: pengeluaran_barang_dan_jasa,
         pengeluaran_modal: pengeluaran_modal, 
       };
 
