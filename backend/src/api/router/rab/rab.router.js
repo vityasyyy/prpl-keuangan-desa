@@ -69,6 +69,9 @@ export default function createRabRouter(rabHandler) {
   // Validate RAB data
   router.post("/validate", rabHandler.validateRABData.bind(rabHandler));
 
+  // Update RAB status
+  router.put("/:rabId/status", rabHandler.updateRABStatus.bind(rabHandler));
+
   // ==================== UID-BASED ROUTES (WILDCARDS) ====================
 
   // Get RAB by ID

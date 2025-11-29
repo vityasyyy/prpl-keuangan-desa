@@ -17,6 +17,8 @@ const Button = ({
     neutral: "bg-white text-black hover:bg-gray-200",
     peace: "bg-green-600 text-white hover:bg-green-700",
     warm: "bg-[#FF9500] text-white hover:bg-yellow-700",
+    icon: "bg-transparent text-gray-600 hover:bg-gray-100",
+    "icon-sm": "bg-transparent text-gray-600 hover:bg-gray-100 p-1",
   };
 
   const sizes = {

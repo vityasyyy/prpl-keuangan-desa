@@ -519,6 +519,45 @@ export default function createRabRepo(db) {
       throw err;
     }
   }
+
+  async function updateRABStatus(rabId, newStatus) {
+    try {
+      const sql = `
+        UPDATE rab 
+        SET status_rab = $1
+        WHERE id = $2
+        RETURNING *
+      `;
+
+      const { rows } = await db.query(sql, [newStatus, rabId]);
+
+      if (rows.length === 0) {
+        return null;
+      }
+
+      const detailQuery = `
+        SELECT 
+          r.*,
+          kf.full_code AS kode_fungsi_full,
+          kf.uraian AS kode_fungsi_uraian,
+          kf.level AS kode_fungsi_level,
+          ke.full_code AS kode_ekonomi_full,
+          ke.uraian AS kode_ekonomi_uraian,
+          ke.level AS kode_ekonomi_level
+        FROM rab r
+        LEFT JOIN kode_fungsi kf ON kf.id = r.kode_fungsi_id
+        LEFT JOIN kode_ekonomi ke ON ke.id = r.kode_ekonomi_id
+        WHERE r.id = $1
+      `;
+
+      const { rows: [detailRow] } = await db.query(detailQuery, [rows[0].id]);
+      return detailRow;
+    } catch (err) {
+      console.error("ERROR updateRABStatus:", err);
+      throw err;
+    }
+  }
+
   return {
     getKodeRekeningBidang,
     getKodeRekeningSubBidang,
@@ -544,5 +583,6 @@ export default function createRabRepo(db) {
     updateRABLine,
     deleteRABLine,
     getRABWithLines,
+    updateRABStatus,
   };
 }

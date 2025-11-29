@@ -547,6 +547,49 @@ export default function createRabService(rabRepo) {
     };
   }
 
+  async function updateRABStatusService(rabId, newStatus) {
+    if (!rabId) {
+      throw new Error("rabId harus diisi");
+    }
+
+    const validStatuses = [
+      "belum diajukan",
+      "diajukan",
+      "terverifikasi",
+      "tidak terverifikasi",
+      "disetujui",
+      "tidak disetujui",
+    ];
+
+    if (!validStatuses.includes(newStatus)) {
+      throw new Error(
+        `Status tidak valid. Status harus salah satu dari: ${validStatuses.join(", ")}`
+      );
+    }
+
+    try {
+      const rab = await rabRepo.getRABbyId(rabId);
+      if (!rab) {
+        throw new Error(`RAB dengan id ${rabId} tidak ditemukan`);
+      }
+
+      const updatedRAB = await rabRepo.updateRABStatus(rabId, newStatus);
+
+      return {
+        ...updatedRAB,
+        total_amount: parseFloat(updatedRAB.total_amount || 0),
+        success: true,
+        message: `Status RAB berhasil diubah menjadi ${newStatus}`,
+      };
+    } catch (err) {
+      console.error("SERVICE ERROR updateRABStatusService:", err);
+      if (err.message.includes("tidak ditemukan")) {
+        throw err;
+      }
+      throw new Error("Gagal mengubah status RAB");
+    }
+  }
+
   return {
     getRAByearService,
     getRABbyYearService,
@@ -568,5 +611,6 @@ export default function createRabService(rabRepo) {
 
     calculateRABTotalService,
     validateRABDataService,
+    updateRABStatusService,
   };
 }

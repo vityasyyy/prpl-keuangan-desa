@@ -17,7 +17,10 @@ import {
 import { useAuth } from "@/lib/auth";
 import ToastNotification from "@/components/dpa/toastNotification";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8081/api";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "http://localhost:8081/api";
 
 // --- FUNGSI HELPER ---
 function formatRupiah(angka) {
@@ -59,10 +62,10 @@ function getStatusBadge(status) {
   );
 }
 
-function getActionButton(status, role, onAction) {
+function getActionButton(status, role, onApprove) {
   if ((role.startsWith("kaur") || role.startsWith("kasi")) && status === "belum diajukan") {
     return (
-      <Button variant="primary" size="xs" onClick={onAction}>
+      <Button variant="primary" size="xs" onClick={onApprove}>
         Ajukan <Send width={14} />
       </Button>
     );
@@ -70,7 +73,7 @@ function getActionButton(status, role, onAction) {
 
   if (role.startsWith("sekretaris") && status === "diajukan") {
     return (
-      <Button variant="primary" size="xs" onClick={onAction}>
+      <Button variant="primary" size="xs" onClick={onApprove}>
         Verifikasi <Check width={14} />
       </Button>
     );
@@ -78,7 +81,7 @@ function getActionButton(status, role, onAction) {
 
   if (role.startsWith("kepala_desa") && status === "terverifikasi") {
     return (
-      <Button variant="primary" size="xs" onClick={onAction}>
+      <Button variant="primary" size="xs" onClick={onApprove}>
         Setujui <Check width={14} />
       </Button>
     );
@@ -120,6 +123,59 @@ function AccordionRABItem({ kegiatan, isOpen, onToggle, userRole, setToast }) {
 
   const handleActionClick = async (e) => {
     e.stopPropagation();
+
+    let newStatus = "";
+
+    if (
+      (userRole.startsWith("kaur") || userRole.startsWith("kasi")) &&
+      status_rab === "belum diajukan"
+    ) {
+      newStatus = "diajukan";
+    } else if (userRole.startsWith("sekretaris") && status_rab === "diajukan") {
+      newStatus = "terverifikasi";
+    } else if (userRole.startsWith("kepala_desa") && status_rab === "terverifikasi") {
+      newStatus = "disetujui";
+    } else {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/rab/${id}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        throw new Error(result.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        setToast({
+          message: `RAB berhasil ${newStatus === "diajukan" ? "diajukan" : newStatus === "terverifikasi" ? "diverifikasi" : "disetujui"}!`,
+          type: "success",
+          visible: true,
+        });
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        setToast({
+          message: result.error || "Gagal mengubah status RAB",
+          type: "error",
+          visible: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error updating RAB status:", error);
+    }
   };
 
   const handleEdit = (lineItem) => (e) => {
@@ -175,11 +231,13 @@ function AccordionRABItem({ kegiatan, isOpen, onToggle, userRole, setToast }) {
         credentials: "include",
       });
       if (res.ok) {
+        console.log("RAB line deleted successfully");
         setToast({
           message: "Rincian RAB berhasil dihapus.",
           type: "success",
           visible: true,
         });
+        window.location.reload();
       }
     } catch (error) {
       console.error("Error deleting RAB line:", error);

@@ -448,5 +448,33 @@ export default function createRabHandler(rabService) {
         });
       }
     },
+
+    async updateRABStatus(req, res) {
+      try {
+        const { rabId } = req.params;
+        const { status } = req.body;
+
+        if (!status) {
+          return res.status(400).json({
+            success: false,
+            error: "Status harus diisi",
+          });
+        }
+
+        const result = await rabService.updateRABStatusService(rabId, status);
+
+        res.json({
+          success: true,
+          data: result,
+          message: `Status RAB berhasil diubah menjadi ${status}`,
+        });
+      } catch (err) {
+        console.error("HANDLER ERROR updateRABStatus:", err);
+        res.status(400).json({
+          success: false,
+          error: err.message,
+        });
+      }
+    },
   };
 }
