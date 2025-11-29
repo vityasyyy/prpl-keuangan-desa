@@ -5,6 +5,119 @@ export default function createKasPembantuHandler(service) {
     res.send("test kas pembantu router ok");
   };
 
+  // Export buku kas pembantu ke excel
+  const exportBukuKasPembantu = async (req, res, next) => {
+    try {
+      logInfo("Memulai export Buku Kas Pembantu Kegiatan ke Excel");
+
+      // Panggil service untuk generate Excel
+      const buffer = await service.exportKasPembantuKegiatan();
+
+      // Generate filename dengan timestamp
+      const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const filename = `Buku_Kas_Pembantu_Kegiatan_${timestamp}.xlsx`;
+
+      logInfo(`Export Excel berhasil: ${filename}`);
+
+      // Set response headers
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${filename}"`
+      );
+      res.setHeader('Content-Length', buffer.length);
+
+      // Kirim buffer sebagai response
+      return res.send(buffer);
+    } catch (error) {
+      logError(`Gagal export Excel: ${error.message}`, error.stack);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Gagal export data ke Excel',
+        error: error.message,
+      });
+    }
+  };
+
+  const exportBukuKasPajak = async (req, res, next) => {
+    try {
+      logInfo("Memulai export Buku Kas Pajak ke Excel");
+
+      // Panggil service untuk generate Excel
+      const buffer = await service.exportKasPajak();
+
+      // Generate filename dengan timestamp
+      const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const filename = `Buku_Kas_Pajak_${timestamp}.xlsx`;
+
+      logInfo(`Export Excel berhasil: ${filename}`);
+
+      // Set response headers
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${filename}"`
+      );
+      res.setHeader('Content-Length', buffer.length);
+
+      // Kirim buffer sebagai response
+      return res.send(buffer);
+    } catch (error) {
+      logError(`Gagal export Excel Kas Pajak: ${error.message}`, error.stack);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Gagal export data ke Excel',
+        error: error.message,
+      });
+    }
+  };
+
+  const exportBukuKasPanjar = async (req, res, next) => {
+    try {
+      logInfo("Memulai export Buku Pembantu Panjar ke Excel");
+
+      // Panggil service untuk generate Excel
+      const buffer = await service.exportKasPanjar();
+
+      // Generate filename dengan timestamp
+      const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const filename = `Buku_Pembantu_Panjar_${timestamp}.xlsx`;
+
+      logInfo(`Export Excel berhasil: ${filename}`);
+
+      // Set response headers
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${filename}"`
+      );
+      res.setHeader('Content-Length', buffer.length);
+
+      // Kirim buffer sebagai response
+      return res.send(buffer);
+    } catch (error) {
+      logError(`Gagal export Excel Kas Panjar: ${error.message}`, error.stack);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Gagal export data ke Excel',
+        error: error.message,
+      });
+    }
+  };
+
+
   const kegiatan = async (req, res, next) => {
     const log = req?.log;
     try {
@@ -416,6 +529,11 @@ export default function createKasPembantuHandler(service) {
     getBidang,
     getSubBidang,
     getKegiatan,
-    getBKUidByKodeFungsi
+    getBKUidByKodeFungsi,
+
+    //export buku-buku ke excel
+    exportBukuKasPembantu,
+    exportBukuKasPajak,
+    exportBukuKasPanjar
   };
 }

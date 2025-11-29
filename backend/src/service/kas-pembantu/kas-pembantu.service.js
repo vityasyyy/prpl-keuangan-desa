@@ -1,7 +1,555 @@
 // src/service/kas-pembantu/kas-pembantu.service.js
 
+import ExcelJS from 'exceljs';
+
+function formatTanggal(tanggal) {
+  if (!tanggal) return '-';
+  const date = new Date(tanggal);
+  return date.toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
 export default function createKasPembantuService(repo) {
   return {
+
+    // EXPORT BUKU-BUKU KE EXCEL
+    async exportKasPembantuKegiatan() {
+      try {
+        // Ambil SEMUA data dari tabel buku_kas_pembantu
+        const data = await repo.getAllData();
+
+        if (!data || data.length === 0) {
+          throw new Error('Tidak ada data untuk diekspor');
+        }
+
+        // Buat workbook baru
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Kas Pembantu Kegiatan');
+
+        // Set properti workbook
+        workbook.creator = 'Sistem Keuangan Desa';
+        workbook.created = new Date();
+
+        // HEADER DOKUMEN
+        worksheet.mergeCells('A1:K1');
+        worksheet.getCell('A1').value = 'BUKU KAS PEMBANTU KEGIATAN';
+        worksheet.getCell('A1').font = { bold: true, size: 14 };
+        worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+
+        worksheet.mergeCells('A2:K2');
+        worksheet.getCell('A2').value = 'Desa BANGUNTAPAN';
+        worksheet.getCell('A2').font = { bold: true, size: 12 };
+        worksheet.getCell('A2').alignment = { horizontal: 'center' };
+
+        worksheet.mergeCells('A3:K3');
+        worksheet.getCell('A3').value = `Dicetak: ${new Date().toLocaleDateString('id-ID')}`;
+        worksheet.getCell('A3').font = { italic: true };
+        worksheet.getCell('A3').alignment = { horizontal: 'center' };
+
+        // Baris kosong
+        worksheet.addRow([]);
+
+        // HEADER TABEL (baris 5)
+        const headerRow = worksheet.addRow([
+          'No',
+          'Tanggal',
+          'No Bukti',
+          'Uraian',
+          'Penerimaan Bendahara',
+          'Penerimaan Swadaya',
+          'Jumlah Penerimaan',
+          'Pengeluaran Barang & Jasa',
+          'Pengeluaran Modal',
+          'Jumlah Pengeluaran',
+          'Saldo',
+        ]);
+
+        // Style header
+        headerRow.font = { bold: true };
+        headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        headerRow.height = 30;
+        headerRow.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF4472C4' },
+          };
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' },
+          };
+        });
+
+        // Set lebar kolom
+        worksheet.columns = [
+          { key: 'no', width: 5 },
+          { key: 'tanggal', width: 12 },
+          { key: 'no_bukti', width: 15 },
+          { key: 'uraian', width: 35 },
+          { key: 'penerimaan_bendahara', width: 18 },
+          { key: 'penerimaan_swadaya', width: 18 },
+          { key: 'jumlah_penerimaan', width: 18 },
+          { key: 'pengeluaran_barang', width: 20 },
+          { key: 'pengeluaran_modal', width: 18 },
+          { key: 'jumlah_pengeluaran', width: 18 },
+          { key: 'saldo', width: 18 },
+        ];
+
+        // Sort data berdasarkan tanggal
+        const sortedData = [...data].sort((a, b) => {
+          return new Date(a.tanggal) - new Date(b.tanggal);
+        });
+
+        // Hitung saldo kumulatif
+        let runningSaldo = 0;
+        let totalPenerimaanBendahara = 0;
+        let totalPenerimaanSwadaya = 0;
+        let totalPengeluaranBarang = 0;
+        let totalPengeluaranModal = 0;
+
+        // ISI DATA
+        sortedData.forEach((row, index) => {
+          const penerimaanBendahara = Number(row.penerimaan_bendahara) || 0;
+          const penerimaanSwadaya = Number(row.penerimaan_swadaya) || 0;
+          const pengeluaranBarang = Number(row.pengeluaran_barang_dan_jasa) || 0;
+          const pengeluaranModal = Number(row.pengeluaran_modal) || 0;
+
+          const jumlahPenerimaan = penerimaanBendahara + penerimaanSwadaya;
+          const jumlahPengeluaran = pengeluaranBarang + pengeluaranModal;
+          const delta = jumlahPenerimaan - jumlahPengeluaran;
+          runningSaldo += delta;
+
+          // Akumulasi total
+          totalPenerimaanBendahara += penerimaanBendahara;
+          totalPenerimaanSwadaya += penerimaanSwadaya;
+          totalPengeluaranBarang += pengeluaranBarang;
+          totalPengeluaranModal += pengeluaranModal;
+
+          const dataRow = worksheet.addRow([
+            index + 1,
+            formatTanggal(row.tanggal),
+            row.no_bukti || '-',
+            row.uraian || '-',
+            penerimaanBendahara,
+            penerimaanSwadaya,
+            jumlahPenerimaan,
+            pengeluaranBarang,
+            pengeluaranModal,
+            jumlahPengeluaran,
+            runningSaldo,
+          ]);
+
+          // Style data rows
+          dataRow.eachCell((cell, colNumber) => {
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+              left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+              bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+              right: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+            };
+
+            // Format currency untuk kolom angka (5-11)
+            if (colNumber >= 5 && colNumber <= 11) {
+              cell.numFmt = '#,##0.00';
+              cell.alignment = { horizontal: 'right' };
+            } else if (colNumber === 1) {
+              cell.alignment = { horizontal: 'center' };
+            }
+          });
+        });
+
+        // BARIS TOTAL
+        const totalRow = worksheet.addRow([
+          '',
+          '',
+          '',
+          'TOTAL',
+          totalPenerimaanBendahara,
+          totalPenerimaanSwadaya,
+          totalPenerimaanBendahara + totalPenerimaanSwadaya,
+          totalPengeluaranBarang,
+          totalPengeluaranModal,
+          totalPengeluaranBarang + totalPengeluaranModal,
+          runningSaldo,
+        ]);
+
+        totalRow.font = { bold: true };
+        totalRow.eachCell((cell, colNumber) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFFCE4D6' },
+          };
+          cell.border = {
+            top: { style: 'double' },
+            left: { style: 'thin' },
+            bottom: { style: 'double' },
+            right: { style: 'thin' },
+          };
+
+          if (colNumber >= 5 && colNumber <= 11) {
+            cell.numFmt = '#,##0.00';
+            cell.alignment = { horizontal: 'right' };
+          } else if (colNumber === 4) {
+            cell.alignment = { horizontal: 'right' };
+          }
+        });
+
+        // Generate buffer
+        const buffer = await workbook.xlsx.writeBuffer();
+        return buffer;
+      } catch (error) {
+        throw new Error(`Gagal export Excel: ${error.message}`);
+      }
+    },
+
+    async exportKasPajak() {
+      try {
+        // Ambil SEMUA data dari tabel buku_kas_pajak
+        const data = await repo.getAllKasPajak();
+
+        if (!data || data.length === 0) {
+          throw new Error('Tidak ada data untuk diekspor');
+        }
+
+        // Buat workbook baru
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Kas Pajak');
+
+        // Set properti workbook
+        workbook.creator = 'Sistem Keuangan Desa';
+        workbook.created = new Date();
+
+        // HEADER DOKUMEN
+        worksheet.mergeCells('A1:G1');
+        worksheet.getCell('A1').value = 'BUKU KAS PAJAK';
+        worksheet.getCell('A1').font = { bold: true, size: 14 };
+        worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+
+        worksheet.mergeCells('A2:G2');
+        worksheet.getCell('A2').value = 'Desa BANGUNTAPAN';
+        worksheet.getCell('A2').font = { bold: true, size: 12 };
+        worksheet.getCell('A2').alignment = { horizontal: 'center' };
+
+        worksheet.mergeCells('A3:G3');
+        worksheet.getCell('A3').value = `Dicetak: ${new Date().toLocaleDateString('id-ID')}`;
+        worksheet.getCell('A3').font = { italic: true };
+        worksheet.getCell('A3').alignment = { horizontal: 'center' };
+
+        // Baris kosong
+        worksheet.addRow([]);
+
+        // HEADER TABEL (baris 5)
+        const headerRow = worksheet.addRow([
+          'No',
+          'Tanggal',
+          'No Bukti',
+          'Uraian',
+          'Pemotongan',
+          'Penyetoran',
+          'Saldo',
+        ]);
+
+        // Style header
+        headerRow.font = { bold: true };
+        headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        headerRow.height = 30;
+        headerRow.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF4472C4' },
+          };
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' },
+          };
+        });
+
+        // Set lebar kolom
+        worksheet.columns = [
+          { key: 'no', width: 5 },
+          { key: 'tanggal', width: 12 },
+          { key: 'no_bukti', width: 15 },
+          { key: 'uraian', width: 40 },
+          { key: 'pemotongan', width: 18 },
+          { key: 'penyetoran', width: 18 },
+          { key: 'saldo', width: 18 },
+        ];
+
+        // Sort data berdasarkan tanggal (ascending)
+        const sortedData = [...data].sort((a, b) => {
+          return new Date(a.tanggal) - new Date(b.tanggal);
+        });
+
+        // Hitung saldo dengan prefix sum: saldo += (penyetoran - pemotongan)
+        let runningSaldo = 0;
+        let totalPemotongan = 0;
+        let totalPenyetoran = 0;
+
+        // ISI DATA
+        sortedData.forEach((row, index) => {
+          const pemotongan = Number(row.pemotongan) || 0;
+          const penyetoran = Number(row.penyetoran) || 0;
+
+          // Saldo = saldo sebelumnya + (penyetoran - pemotongan)
+          const delta = penyetoran - pemotongan;
+          runningSaldo += delta;
+
+          // Akumulasi total
+          totalPemotongan += pemotongan;
+          totalPenyetoran += penyetoran;
+
+          const dataRow = worksheet.addRow([
+            index + 1,
+            formatTanggal(row.tanggal),
+            row.no_bukti || '-',
+            row.uraian || '-',
+            pemotongan,
+            penyetoran,
+            runningSaldo,
+          ]);
+
+          // Style data rows
+          dataRow.eachCell((cell, colNumber) => {
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+              left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+              bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+              right: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+            };
+
+            // Format currency untuk kolom angka (5-7)
+            if (colNumber >= 5 && colNumber <= 7) {
+              cell.numFmt = '#,##0.00';
+              cell.alignment = { horizontal: 'right' };
+            } else if (colNumber === 1) {
+              cell.alignment = { horizontal: 'center' };
+            }
+          });
+        });
+
+        // BARIS TOTAL
+        const totalRow = worksheet.addRow([
+          '',
+          '',
+          '',
+          'TOTAL',
+          totalPemotongan,
+          totalPenyetoran,
+          runningSaldo,
+        ]);
+
+        totalRow.font = { bold: true };
+        totalRow.eachCell((cell, colNumber) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFFCE4D6' },
+          };
+          cell.border = {
+            top: { style: 'double' },
+            left: { style: 'thin' },
+            bottom: { style: 'double' },
+            right: { style: 'thin' },
+          };
+
+          if (colNumber >= 5 && colNumber <= 7) {
+            cell.numFmt = '#,##0.00';
+            cell.alignment = { horizontal: 'right' };
+          } else if (colNumber === 4) {
+            cell.alignment = { horizontal: 'right' };
+          }
+        });
+
+        // Generate buffer
+        const buffer = await workbook.xlsx.writeBuffer();
+        return buffer;
+      } catch (error) {
+        throw new Error(`Gagal export Excel: ${error.message}`);
+      }
+    },
+
+    async exportKasPanjar() {
+      try {
+        // Ambil SEMUA data dari tabel buku_pembantu_panjar
+        const data = await repo.getAllKasPanjar();
+
+        if (!data || data.length === 0) {
+          throw new Error('Tidak ada data untuk diekspor');
+        }
+
+        // Buat workbook baru
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Kas Panjar');
+
+        // Set properti workbook
+        workbook.creator = 'Sistem Keuangan Desa';
+        workbook.created = new Date();
+
+        // HEADER DOKUMEN
+        worksheet.mergeCells('A1:G1');
+        worksheet.getCell('A1').value = 'BUKU PEMBANTU PANJAR';
+        worksheet.getCell('A1').font = { bold: true, size: 14 };
+        worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+
+        worksheet.mergeCells('A2:G2');
+        worksheet.getCell('A2').value = 'Desa BANGUNTAPAN';
+        worksheet.getCell('A2').font = { bold: true, size: 12 };
+        worksheet.getCell('A2').alignment = { horizontal: 'center' };
+
+        worksheet.mergeCells('A3:G3');
+        worksheet.getCell('A3').value = `Dicetak: ${new Date().toLocaleDateString('id-ID')}`;
+        worksheet.getCell('A3').font = { italic: true };
+        worksheet.getCell('A3').alignment = { horizontal: 'center' };
+
+        // Baris kosong
+        worksheet.addRow([]);
+
+        // HEADER TABEL (baris 5)
+        const headerRow = worksheet.addRow([
+          'No',
+          'Tanggal',
+          'No Bukti',
+          'Uraian',
+          'Pemberian',
+          'Pertanggungjawaban',
+          'Saldo',
+        ]);
+
+        // Style header
+        headerRow.font = { bold: true };
+        headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        headerRow.height = 30;
+        headerRow.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF4472C4' },
+          };
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' },
+          };
+        });
+
+        // Set lebar kolom
+        worksheet.columns = [
+          { key: 'no', width: 5 },
+          { key: 'tanggal', width: 12 },
+          { key: 'no_bukti', width: 15 },
+          { key: 'uraian', width: 40 },
+          { key: 'pemberian', width: 20 },
+          { key: 'pertanggungjawaban', width: 22 },
+          { key: 'saldo', width: 18 },
+        ];
+
+        // Sort data berdasarkan tanggal (ascending)
+        const sortedData = [...data].sort((a, b) => {
+          return new Date(a.tanggal) - new Date(b.tanggal);
+        });
+
+        // Hitung saldo dengan prefix sum: saldo += (pemberian - pertanggungjawaban)
+        let runningSaldo = 0;
+        let totalPemberian = 0;
+        let totalPertanggungjawaban = 0;
+
+        // ISI DATA
+        sortedData.forEach((row, index) => {
+          const pemberian = Number(row.pemberian) || 0;
+          const pertanggungjawaban = Number(row.pertanggungjawaban) || 0;
+
+          // Saldo = saldo sebelumnya + (pemberian - pertanggungjawaban)
+          const delta = pemberian - pertanggungjawaban;
+          runningSaldo += delta;
+
+          // Akumulasi total
+          totalPemberian += pemberian;
+          totalPertanggungjawaban += pertanggungjawaban;
+
+          const dataRow = worksheet.addRow([
+            index + 1,
+            formatTanggal(row.tanggal),
+            row.no_bukti || '-',
+            row.uraian || '-',
+            pemberian,
+            pertanggungjawaban,
+            runningSaldo,
+          ]);
+
+          // Style data rows
+          dataRow.eachCell((cell, colNumber) => {
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+              left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+              bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+              right: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+            };
+
+            // Format currency untuk kolom angka (5-7)
+            if (colNumber >= 5 && colNumber <= 7) {
+              cell.numFmt = '#,##0.00';
+              cell.alignment = { horizontal: 'right' };
+            } else if (colNumber === 1) {
+              cell.alignment = { horizontal: 'center' };
+            }
+          });
+        });
+
+        // BARIS TOTAL
+        const totalRow = worksheet.addRow([
+          '',
+          '',
+          '',
+          'TOTAL',
+          totalPemberian,
+          totalPertanggungjawaban,
+          runningSaldo,
+        ]);
+
+        totalRow.font = { bold: true };
+        totalRow.eachCell((cell, colNumber) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFFCE4D6' },
+          };
+          cell.border = {
+            top: { style: 'double' },
+            left: { style: 'thin' },
+            bottom: { style: 'double' },
+            right: { style: 'thin' },
+          };
+
+          if (colNumber >= 5 && colNumber <= 7) {
+            cell.numFmt = '#,##0.00';
+            cell.alignment = { horizontal: 'right' };
+          } else if (colNumber === 4) {
+            cell.alignment = { horizontal: 'right' };
+          }
+        });
+
+        // Generate buffer
+        const buffer = await workbook.xlsx.writeBuffer();
+        return buffer;
+      } catch (error) {
+        throw new Error(`Gagal export Excel: ${error.message}`);
+      }
+    },
+
+    // BUKU KAS PEMBANTU KEGIATAN HERE
     async getKegiatan({
       bulan,
       tahun,

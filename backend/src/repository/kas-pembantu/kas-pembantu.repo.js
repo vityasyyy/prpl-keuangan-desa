@@ -306,6 +306,20 @@ export default function createRepo(db) {
     }
   }
 
+
+  async function getAllKasPanjar() {  // khusus untuk export semua data ke excel
+    try {
+      const query = `
+        SELECT * FROM buku_pembantu_panjar
+        ORDER BY tanggal ASC, id ASC
+      `;
+      const result = await db.query(query);
+      return result.rows;
+    } catch (err) {
+      console.error("ERROR Get All Kas Panjar:", err);
+      throw err;
+    }
+  }
   async function listPanjar({
     page = 1,
     per_page = 20,
@@ -458,6 +472,20 @@ export default function createRepo(db) {
   // =========================
   // BUKU KAS PAJAK (buku_kas_pajak)
   // =========================
+  
+  async function getAllKasPajak() {  // khusus untuk export semua data ke excel
+    try {
+      const query = `
+        SELECT * FROM buku_kas_pajak
+        ORDER BY tanggal ASC, id ASC
+      `;
+      const result = await db.query(query);
+      return result.rows;
+    } catch (err) {
+      console.error("ERROR Get All Kas Pajak:", err);
+      throw err;
+    }
+  }
 
   async function listPajak({
     page = 1,
@@ -648,12 +676,15 @@ export default function createRepo(db) {
     checkBkuExists,
     insertKegiatan,
     updateKegiatanById,
+
+    getAllKasPanjar,
     listPanjar,
     deletePanjarById,
     getPanjarById,
     insertPanjar,
     updatePanjarById,
 
+    getAllKasPajak,
     listPajak,
     getPajakById,
     deletePajakById,

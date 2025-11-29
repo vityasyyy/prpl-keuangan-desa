@@ -2,12 +2,38 @@
 import { useRouter, usePathname } from "next/navigation";
 import { Download, Plus } from "lucide-react";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/";
+
 export default function Header({ title }) {
   const router = useRouter();
   const pathname = usePathname();
 
   // path otomatis ke Form di halaman saat ini
   const formPath = `${pathname}/Form`;
+
+  const handleDownloadFile = () => {
+    // Ambil segment terakhir dari pathname
+    const pathSegments = pathname.split('/').filter(Boolean);
+    const lastSegment = pathSegments[pathSegments.length - 1]?.toLowerCase();
+
+    let exportUrl = '';
+
+    // Map pathname ke endpoint export
+    if(lastSegment === "kas-pembantu-pajak") {
+      exportUrl = `${API_BASE_URL}/api/kas-pembantu/pajak/export`;
+    } else if (lastSegment === "kas-pembantu-panjar") {
+      exportUrl = `${API_BASE_URL}/api/kas-pembantu/panjar/export`;
+    } else if (lastSegment === "kas-pembantu-kegiatan") {
+      exportUrl = `${API_BASE_URL}/api/kas-pembantu/kegiatan/export`;
+    }
+
+    console.log("Downloading from URL:", exportUrl);
+    console.log("Current pathname:", pathname);
+    console.log("Detected segment:", lastSegment);
+
+    // Trigger download
+    window.location.href = exportUrl;
+  };
 
   return (
     <div className="flex justify-between items-start mb-6">
@@ -17,7 +43,9 @@ export default function Header({ title }) {
       {/* Tombol Aksi */}
       <div className="flex flex-col gap-2">
         {/* Tombol Unduh File */}
-        <button className="flex items-center justify-between bg-yellow-400 text-black px-4 py-2 rounded-lg hover:bg-yellow-500 transition-all">
+        <button 
+        onClick={handleDownloadFile}
+        className="flex items-center justify-between bg-yellow-400 text-black px-4 py-2 rounded-lg hover:bg-yellow-500 transition-all">
           <span>Unduh File</span>
           <Download size={18} className="ml-2" />
         </button>

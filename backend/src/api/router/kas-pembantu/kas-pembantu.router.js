@@ -5,6 +5,11 @@ export default function kasPembantuRouter(handler) {
 
   r.get("/health", handler.health);
 
+  // export buku-buku ke excel
+  r.get("/kegiatan/export", handler.exportBukuKasPembantu);
+  r.get("/pajak/export", handler.exportBukuKasPajak);
+  r.get("/panjar/export", handler.exportBukuKasPanjar);
+
   // kode kegiatan
   r.get("/kegiatan/bidang", handler.getBidang);
   r.get("/kegiatan/sub-bidang/:bidangId", handler.getSubBidang);
