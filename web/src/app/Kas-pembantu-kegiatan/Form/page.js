@@ -291,10 +291,10 @@ export default function Page() {
       setError(null);
 
       // Parse currency values
-      const penerimaan_bendahara = parseCurrency(dariBendahara);
-      const penerimaan_swadaya = parseCurrency(swadaya);
-      const pengeluaran_belanja_dan_barang = parseCurrency(belanjaBarang);
-      const pengeluaran_modal = parseCurrency(belanjaModal);
+      const penerimaan_bendahara = parseFloat(dariBendahara);
+      const penerimaan_swadaya = parseFloat(swadaya);
+      const pengeluaran_belanja_dan_barang = parseFloat(belanjaBarang);
+      const pengeluaran_modal = parseFloat(belanjaModal);
 
       // Ensure tanggal is in YYYY-MM-DD format
       const formattedTanggal = toYYYYMMDD(tanggal);

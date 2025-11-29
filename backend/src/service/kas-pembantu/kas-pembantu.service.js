@@ -107,8 +107,7 @@ export default function createKasPembantuService(repo) {
       }
 
       // ambil saldo terakhir untuk bku_id (jika ada)
-      const lastSaldo = await repo.getLastSaldoByBkuId(payload.bku_id);
-      const starting = lastSaldo === null ? 0 : lastSaldo;
+      const starting = 0;
       const saldo_after = Number(
         (starting + penerimaan_bendahara + penerimaan_swadaya - pengeluaran_barang_dan_jasa - pengeluaran_modal).toFixed(2)
       );
@@ -543,16 +542,10 @@ export default function createKasPembantuService(repo) {
       }
       
       // saldo_after: default pakai running saldo global pajak
-      const lastSaldo =
-        typeof repo.getLastSaldoPajak === "function"
-          ? await repo.getLastSaldoPajak()
-          : 0;
-          
-      let saldo_after;
       if (input.saldo_after !== undefined) {
         saldo_after = Number(input.saldo_after);
       } else {
-        saldo_after = Number((lastSaldo + pemotongan - penyetoran).toFixed(2));
+        saldo_after = Number((pemotongan - penyetoran).toFixed(2));
       }
       
       if (Number.isNaN(saldo_after)) {

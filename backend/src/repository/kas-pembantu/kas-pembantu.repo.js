@@ -158,14 +158,6 @@ export default function createRepo(db) {
     const { rows } = await db.query(q, [bku_id]);
     return rows.length > 0;
   }
-  async function getLastSaldoByBkuId(bku_id) {
-    const q = `SELECT saldo_after FROM buku_kas_pembantu WHERE bku_id = ${P(
-      1
-    )} ORDER BY tanggal DESC, id DESC LIMIT 1`;
-    const { rows } = await db.query(q, [bku_id]);
-    if (rows.length === 0) return null;
-    return Number(rows[0].saldo_after);
-  }
   
   async function insertKegiatan(payload) {
     const q = `
@@ -539,18 +531,6 @@ export default function createRepo(db) {
     return rowCount > 0;
   }
 
-  async function getLastSaldoPajak() {
-    const sql = `
-      SELECT saldo_after
-      FROM buku_kas_pajak
-      ORDER BY tanggal DESC, id DESC
-      LIMIT 1
-    `;
-    const { rows } = await db.query(sql);
-    if (!rows.length) return 0;
-    return Number(rows[0].saldo_after ?? 0);
-  }
-
   async function insertPajak(payload) {
     const sql = `
       INSERT INTO buku_kas_pajak
@@ -666,7 +646,6 @@ export default function createRepo(db) {
     getAllData,
     deleteById,
     checkBkuExists,
-    getLastSaldoByBkuId,
     insertKegiatan,
     updateKegiatanById,
     listPanjar,
@@ -678,7 +657,6 @@ export default function createRepo(db) {
     listPajak,
     getPajakById,
     deletePajakById,
-    getLastSaldoPajak,
     insertPajak,
     updatePajakById,
     getKodeFungsi,
