@@ -31,7 +31,7 @@ export default function createApbdRouter(apbdHandler) {
   r.get("/akun", apbdHandler.getAkun); // GET /api/apbd/akun
   r.get("/kelompok", apbdHandler.getKelompok); // GET /api/apbd/kelompok
   r.get("/jenis", apbdHandler.getJenis); // GET /api/apbd/jenis
-  r.get("/uraian2", apbdHandler.getUraian2); // GET /api/apbd/uraian2
+  r.get("/objek", apbdHandler.getObjek); // GET /api/apbd/objek
   r.get("/dropdown-options", apbdHandler.getDropdownOptionsByKodeRekening); // GET /api/apbd/dropdown-options
   r.get("/all-dropdown-options", apbdHandler.getAllDropdownOptions); // GET /api/apbd/all-dropdown-options
 
