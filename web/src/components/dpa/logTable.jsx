@@ -13,7 +13,6 @@ const LogTable = ({ logData, onEdit }) => {
           <div className="w-1/6">Satuan</div>
           <div className="w-1/6">Harga Satuan</div>
           <div className="w-1/6">Jumlah</div>
-          <div className="w-1/6">Aksi</div>
         </div>
         {logData.length > 0 ? (
           logData.map((item, idx) => (
@@ -25,15 +24,10 @@ const LogTable = ({ logData, onEdit }) => {
               <div className="w-1/6 text-gray-700">{item.volume}</div>
               <div className="w-1/6 text-gray-700">{item.satuan}</div>
               <div className="w-1/6 text-gray-800">
-                Rp {Number(item.hargaSatuan).toLocaleString("id-ID")}
+                Rp {Number(item.harga_satuan).toLocaleString("id-ID")}
               </div>
               <div className="w-1/6 font-medium text-[#011829]">
                 Rp {Number(item.jumlah).toLocaleString("id-ID")}
-              </div>
-              <div className="w-1/6 text-gray-700">
-                <button className="text-gray-400 hover:text-gray-500" onClick={() => onEdit(item)}>
-                  <Edit width={16} height={16} />
-                </button>
               </div>
             </div>
           ))

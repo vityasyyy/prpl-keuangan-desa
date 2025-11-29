@@ -11,7 +11,7 @@ const ToastNotification = ({ message, type, onClose }) => {
     },
     error: {
       style: "border-red-500 text-red-700",
-      icon: <Error height={24} width={24} className="mr-4 flex-shrink-0" />,
+      icon: <ErrIcon height={24} width={24} className="mr-4 flex-shrink-0" />,
     },
     info: {
       style: "border-blue-500 text-blue-700",
@@ -28,7 +28,7 @@ const ToastNotification = ({ message, type, onClose }) => {
 
   return (
     <div
-      className={`fixed right-4 bottom-4 z-100 flex w-80 items-start justify-between rounded-md border-l-4 bg-white p-4 shadow-lg ${types[type].style}`}
+      className={`fixed right-4 bottom-4 z-100 flex max-w-100 min-w-80 items-start justify-between rounded-md border-l-4 bg-white p-4 text-sm shadow-lg ${types[type].style}`}
       role="alert"
       aria-live="assertive"
     >
