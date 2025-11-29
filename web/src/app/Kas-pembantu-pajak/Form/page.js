@@ -200,8 +200,6 @@ export default function Page() {
         penyetoran: penyetoranAmount,
       };
       
-      console.log("Payload:", payload);
-      
       // Submit to API
       if (editId) {
         const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/pajak/${editId}`, {

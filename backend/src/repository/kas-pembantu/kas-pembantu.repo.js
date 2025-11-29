@@ -1,3 +1,5 @@
+import { logError } from "../../common/logger/logger.js";
+
 export default function createRepo(db) {
   const P = (i) => `$${i}`;
 
@@ -122,7 +124,7 @@ export default function createRepo(db) {
       const result = await db.query(query);
       return result.rows;
     } catch (err) {
-      console.error("ERROR getAllData:", err);
+      logError("ERROR in getAllData():", err);
       throw err;
     }
   }
@@ -316,7 +318,7 @@ export default function createRepo(db) {
       const result = await db.query(query);
       return result.rows;
     } catch (err) {
-      console.error("ERROR Get All Kas Panjar:", err);
+      logError("ERROR in getAllKasPanjar():", err);
       throw err;
     }
   }
@@ -482,7 +484,7 @@ export default function createRepo(db) {
       const result = await db.query(query);
       return result.rows;
     } catch (err) {
-      console.error("ERROR Get All Kas Pajak:", err);
+      logError("ERROR in getAllKasPajak():", err);
       throw err;
     }
   }

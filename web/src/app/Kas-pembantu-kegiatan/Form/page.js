@@ -290,16 +290,6 @@ export default function Page() {
       const pengeluaran_barang_dan_jasa = parseFloat(belanjaBarang);
       const pengeluaran_modal = parseFloat(belanjaModal);
 
-      console.log("bendahara", dariBendahara);
-      console.log("swadaya", swadaya);
-      console.log("belanja barang", belanjaBarang);
-      console.log("belanja modal", belanjaModal);
-
-      console.log("penerimaan_bendahara", penerimaan_bendahara);
-      console.log("penerimaan_swadaya", penerimaan_swadaya);
-      console.log("pengeluaran_barang_dan_jasa", pengeluaran_barang_dan_jasa);
-      console.log("pengeluaran_modal", pengeluaran_modal);
-
       // Ensure tanggal is in YYYY-MM-DD format
       const formattedTanggal = toYYYYMMDD(tanggal);
       
