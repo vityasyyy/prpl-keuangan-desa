@@ -117,7 +117,7 @@ export default function OutputAPBDes() {
                       className="flex items-center space-x-1 text-left"
                       title="Edit item"
                     >
-                      <span>{item.uraian2 || "Pendapatan Transfer"}</span>
+                      <span>{item.objek || item.jenis || item.kelompok || item.pendapatanBelanja || "Tidak ada uraian"}</span>
                       <span className="text-gray-400 text-xs">✎</span>
                     </button>
                   </div>
