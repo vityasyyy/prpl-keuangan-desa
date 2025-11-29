@@ -510,7 +510,7 @@ export default function createRepo(db) {
     // Paging
     const offset = (page - 1) * per_page;
     const sql = `
-      SELECT id, bku_id, tanggal, uraian, pemotongan, penyetoran, saldo_after
+      SELECT id, bku_id, tanggal, uraian, no_bukti, pemotongan, penyetoran, saldo_after
       FROM buku_kas_pajak
       ${whereSql}
       ORDER BY ${sort_by} ${order.toUpperCase()}, id ${order.toUpperCase()}
@@ -524,7 +524,7 @@ export default function createRepo(db) {
 
   async function getPajakById(id) {
     const sql = `
-      SELECT id, bku_id, tanggal, uraian, pemotongan, penyetoran, saldo_after
+      SELECT id, bku_id, tanggal, uraian, no_bukti, pemotongan, penyetoran, saldo_after
       FROM buku_kas_pajak
       WHERE id = $1
       LIMIT 1
@@ -554,15 +554,16 @@ export default function createRepo(db) {
   async function insertPajak(payload) {
     const sql = `
       INSERT INTO buku_kas_pajak
-        (id, bku_id, tanggal, uraian, pemotongan, penyetoran, saldo_after)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
-      RETURNING id, bku_id, tanggal, uraian, pemotongan, penyetoran, saldo_after
+        (id, bku_id, tanggal, uraian, no_bukti, pemotongan, penyetoran, saldo_after)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      RETURNING id, bku_id, tanggal, uraian, no_bukti, pemotongan, penyetoran, saldo_after
     `;
     const values = [
       payload.id,
       payload.bku_id ?? null,
       payload.tanggal,
       payload.uraian,
+      payload.no_bukti ?? null,
       payload.pemotongan ?? 0,
       payload.penyetoran ?? 0,
       payload.saldo_after ?? 0,
@@ -571,101 +572,60 @@ export default function createRepo(db) {
     return rows[0];
   }
 
-  async function updatePajakById(id, updates = {}) {
-    const client = await db.connect();
-    try {
-      await client.query("BEGIN");
-
-      // ambil row lama
-      const qOld = `
-        SELECT id, bku_id, tanggal, uraian, pemotongan, penyetoran, saldo_after
-        FROM buku_kas_pajak
-        WHERE id = ${P(1)}
-        LIMIT 1
-      `;
-      const { rows: oldRows } = await client.query(qOld, [id]);
-      const oldRow = oldRows[0];
-      if (!oldRow) {
-        await client.query("ROLLBACK");
-        return null;
-      }
-
-      // nilai baru (pakai nilai lama bila tidak di-provide)
-      const newTanggal = updates.tanggal ?? oldRow.tanggal;
-      const newUraian = updates.uraian ?? oldRow.uraian;
-      const newPemotongan =
-        updates.pemotongan !== undefined
-          ? Number(updates.pemotongan)
-          : Number(oldRow.pemotongan ?? 0);
-      const newPenyetoran =
-        updates.penyetoran !== undefined
-          ? Number(updates.penyetoran)
-          : Number(oldRow.penyetoran ?? 0);
-      const newBkuId = Object.prototype.hasOwnProperty.call(updates, "bku_id")
-        ? updates.bku_id
-        : oldRow.bku_id;
-
-      // ambil saldo_before (global, tidak per bku_id)
-      const qPrev = `
-        SELECT saldo_after FROM buku_kas_pajak
-        WHERE (tanggal < ${P(1)} OR (tanggal = ${P(1)} AND id < ${P(2)}))
-        ORDER BY tanggal DESC, id DESC
-        LIMIT 1
-      `;
-      const { rows: prevRows } = await client.query(qPrev, [newTanggal, id]);
-      const prevSaldo = prevRows.length ? Number(prevRows[0].saldo_after) : 0;
-
-      // hitung saldo baru untuk row ini
-      const newSaldoAfter = Number(
-        (prevSaldo + newPemotongan - newPenyetoran).toFixed(2)
-      );
-      const oldSaldoAfter = Number(oldRow.saldo_after ?? 0);
-      const delta = Number((newSaldoAfter - oldSaldoAfter).toFixed(2));
-
-      // update baris ini
-      const qUpdate = `
-        UPDATE buku_kas_pajak
-        SET bku_id = ${P(1)},
-            tanggal = ${P(2)},
-            uraian = ${P(3)},
-            pemotongan = ${P(4)},
-            penyetoran = ${P(5)},
-            saldo_after = ${P(6)}
-        WHERE id = ${P(7)}
-        RETURNING id, bku_id, tanggal, uraian, pemotongan, penyetoran, saldo_after
-      `;
-      const valuesUpdate = [
-        newBkuId,
-        newTanggal,
-        newUraian,
-        newPemotongan,
-        newPenyetoran,
-        newSaldoAfter,
-        id,
-      ];
-      const { rows: updatedRows } = await client.query(qUpdate, valuesUpdate);
-      const updatedRow = updatedRows[0];
-
-      // kalau saldo berubah, adjust semua row setelahnya (global)
-      if (delta !== 0) {
-        const qAdjust = `
-          UPDATE buku_kas_pajak
-          SET saldo_after = (saldo_after + ${P(1)})
-          WHERE (tanggal > ${P(2)} OR (tanggal = ${P(2)} AND id > ${P(3)}))
-        `;
-        await client.query(qAdjust, [delta, newTanggal, id]);
-      }
-
-      await client.query("COMMIT");
-      return updatedRow;
-    } catch (err) {
-      try {
-        await client.query("ROLLBACK");
-      } catch (_) {}
-      throw err;
-    } finally {
-      client.release();
-    }
+  async function updatePajakById(id, updates) {
+    // ambil row lama
+    const qOld = `
+      SELECT id, bku_id, tanggal, uraian, no_bukti, pemotongan, penyetoran, saldo_after
+      FROM buku_kas_pajak
+      WHERE id = $1
+      LIMIT 1
+    `;
+    const { rows: oldRows } = await db.query(qOld, [id]);
+    const oldRow = oldRows[0];
+    if (!oldRow) return null;
+    
+    // tentukan nilai baru (pakai nilai lama kalau tidak disediakan)
+    const newBkuId = updates.bku_id ?? oldRow.bku_id;
+    const newTanggal = updates.tanggal ?? oldRow.tanggal;
+    const newUraian = updates.uraian ?? oldRow.uraian;
+    const newNoBukti = updates.no_bukti !== undefined ? updates.no_bukti : oldRow.no_bukti;
+    const newPemotongan =
+      updates.pemotongan !== undefined
+        ? Number(updates.pemotongan)
+        : Number(oldRow.pemotongan ?? 0);
+    const newPenyetoran =
+      updates.penyetoran !== undefined
+        ? Number(updates.penyetoran)
+        : Number(oldRow.penyetoran ?? 0);
+    const newSaldoAfter =
+      updates.saldo_after !== undefined
+        ? Number(updates.saldo_after)
+        : newPemotongan - newPenyetoran;
+    
+    const qUpdate = `
+      UPDATE buku_kas_pajak
+      SET bku_id = $1,
+          tanggal = $2,
+          uraian = $3,
+          no_bukti = $4,
+          pemotongan = $5,
+          penyetoran = $6,
+          saldo_after = $7
+      WHERE id = $8
+      RETURNING id, bku_id, tanggal, uraian, no_bukti, pemotongan, penyetoran, saldo_after
+    `;
+    const values = [
+      newBkuId,
+      newTanggal,
+      newUraian,
+      newNoBukti,
+      newPemotongan,
+      newPenyetoran,
+      newSaldoAfter,
+      id,
+    ];
+    const { rows: updatedRows } = await db.query(qUpdate, values);
+    return updatedRows[0] ?? null;
   }
 
   // Fetch kode_fungsi (categories) hierarchically

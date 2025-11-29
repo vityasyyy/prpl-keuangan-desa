@@ -28,6 +28,46 @@ function parseCurrency(value) {
   return isNaN(num) ? 0 : num;
 }
 
+// Convert any date format to YYYY-MM-DD
+function toYYYYMMDD(dateValue) {
+  if (!dateValue) return "";
+  
+  try {
+    // If already in YYYY-MM-DD format, return as is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
+    }
+    
+    // Parse ISO string or other formats
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return "";
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    
+    return `${year}-${month}-${day}`;
+  } catch {
+    return "";
+  }
+}
+
+// Format YYYY-MM-DD to DD/MM/YYYY for display
+function formatTanggalDisplay(dateValue) {
+  if (!dateValue) return "";
+  
+  try {
+    // Extract YYYY-MM-DD format
+    const yyyymmdd = toYYYYMMDD(dateValue);
+    if (!yyyymmdd) return "";
+    
+    const [year, month, day] = yyyymmdd.split("-");
+    return `${day}/${month}/${year}`;
+  } catch {
+    return "";
+  }
+}
+
 export default function Page() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,8 +86,7 @@ export default function Page() {
   const [belanjaBarang, setBelanjaBarang] = useState("");
   const [belanjaModal, setBelanjaModal] = useState("");
   const [nomorBukti, setNomorBukti] = useState("");
-  const [jumlahPengembalian, setJumlahPengembalian] = useState(""); // New state for Jumlah Pengembalian
-  const [idKegiatan, setIdKegiatan] = useState("");
+  const [jumlahPengembalian, setJumlahPengembalian] = useState("");
 
   // UI state
   const [loading, setLoading] = useState(false);
@@ -82,21 +121,20 @@ export default function Page() {
       if (editId) {
         try {
           setLoading(true);
-          // GET http://localhost:8081/api/kas-pembantu/kegiatan/{id}
           const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/${editId}`);
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const result = await response.json();
           const data = result.data;
           
-          // Basic fields that are directly stored
-          setTanggal(data.tanggal || "");
+          // Convert tanggal to YYYY-MM-DD format for input
+          setTanggal(toYYYYMMDD(data.tanggal));
           setUraian(data.uraian || "");
           
           // Map stored data back to form fields
           setDariBendahara(String(data.penerimaan_bendahara || 0));
           setSwadaya(String(data.penerimaan_swadaya || 0));
           setBelanjaBarang(String(data.pengeluaran_belanja_dan_barang || 0));  
-          setBelanjaModal(String(data.pengeluaran_modal || 0 ));
+          setBelanjaModal(String(data.pengeluaran_modal || 0));
           
           // Set type_enum to kegiatan dropdown if available
           setKodeRek(data.type_enum || "");
@@ -180,10 +218,9 @@ export default function Page() {
     if (kegiatan && kegiatanOptions.length > 0) {
       const selected = kegiatanOptions.find(opt => opt.id === kegiatan);
       setKodeRek(selected?.id || "");
-      setIdKegiatan(selected?.id || "");
     }
     else {
-      setIdKegiatan("");
+      setKodeRek("");
     }
   }, [kegiatan, kegiatanOptions]);  
 
@@ -194,12 +231,6 @@ export default function Page() {
     const saldo = penerimaan - pengeluaran;
     setCalculatedSaldo(saldo);
   }, [dariBendahara, swadaya, belanjaBarang, belanjaModal]);
-
-  const formatTanggal = (value) => {
-    if (!value) return "";
-    const [year, month, day] = value.split("-");
-    return `${day}/${month}/${year}`;
-  };
 
   const resetForm = () => {
     setTanggal("");
@@ -214,7 +245,7 @@ export default function Page() {
     setBelanjaBarang("");
     setBelanjaModal("");
     setNomorBukti("");
-    setJumlahPengembalian(""); // Reset Jumlah Pengembalian
+    setJumlahPengembalian("");
     setError(null);
     setCalculatedSaldo(0);
   }
@@ -225,7 +256,6 @@ export default function Page() {
         try {
           setLoading(true);
           setError(null);
-          // DELETE http://localhost:8081/api/kas-pembantu/kegiatan/{id}
           const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/${editId}`, {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
@@ -251,8 +281,8 @@ export default function Page() {
     e.preventDefault();
 
     // Validation
-    if (!tanggal || !uraian) {
-      setError(`Tanggal dan Uraian harus diisi`);
+    if (!tanggal || !uraian || !kodeRek){
+      setError(`Tanggal, Uraian, dan Kode Rek harus diisi`);
       return;
     }
     
@@ -261,22 +291,32 @@ export default function Page() {
       setError(null);
 
       // Parse currency values
-      const penerimaan_bendahara = parseCurrency(dariBendahara)
+      const penerimaan_bendahara = parseCurrency(dariBendahara);
       const penerimaan_swadaya = parseCurrency(swadaya);
-      const pengeluaran_belanja_dan_barang = parseCurrency(belanjaBarang)
+      const pengeluaran_belanja_dan_barang = parseCurrency(belanjaBarang);
       const pengeluaran_modal = parseCurrency(belanjaModal);
+
+      // Ensure tanggal is in YYYY-MM-DD format
+      const formattedTanggal = toYYYYMMDD(tanggal);
+      
+      if (!formattedTanggal) {
+        throw new Error("Format tanggal tidak valid");
+      }
 
       // Map classification to type_enum
       const bku_id = await getBKUidByKodeFungsi(kodeRek);
-      if(bku_id === null) return ;
+      if(bku_id === null){
+        // setError("Kode Rek tidak valid atau tidak ditemukan");
+        return ;
+      }
 
       // Prepare payload
       const payload = {
         bku_id: bku_id,
         type_enum: kodeRek,
-        tanggal: tanggal, // Already in YYYY-MM-DD format
+        tanggal: formattedTanggal, // YYYY-MM-DD format
         uraian: uraian,
-        no_bukti: nomorBukti,
+        no_bukti: nomorBukti || null,
         penerimaan_bendahara: penerimaan_bendahara,
         penerimaan_swadaya: penerimaan_swadaya,
         pengeluaran_belanja_dan_barang: pengeluaran_belanja_dan_barang,
@@ -285,21 +325,27 @@ export default function Page() {
 
       // Submit to API - use update if editId exists, otherwise create
       if (editId) {
-        // PUT http://localhost:8081/api/kas-pembantu/kegiatan/{id}
         const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/${editId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`HTTP ${response.status}: ${errorData.error || errorData.message || 'Unknown error'}`);
+        }
       } else {
-        // POST http://localhost:8081/api/kas-pembantu/kegiatan
         const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`HTTP ${response.status}: ${errorData.error || errorData.message || 'Unknown error'}`);
+        }
       }
       
       // Success - check if "buat lagi" is enabled
@@ -359,7 +405,6 @@ export default function Page() {
     []
   );
 
-
   return (
     <div className="flex h-screen bg-gray-100">
       <Sidebar />
@@ -406,7 +451,7 @@ export default function Page() {
                     className="absolute inset-0 h-full w-full cursor-pointer [appearance:none] opacity-0 [&::-webkit-calendar-picker-indicator]:opacity-0"
                   />
                   <span className="pointer-events-none text-sm text-gray-800 uppercase select-none">
-                    {tanggal ? formatTanggal(tanggal) : "DD/MM/YYYY"}
+                    {tanggal ? formatTanggalDisplay(tanggal) : "DD/MM/YYYY"}
                   </span>
                 </div>
               </div>

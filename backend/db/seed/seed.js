@@ -267,15 +267,15 @@ async function seedDatabase() {
     // Seed buku_kas_pajak (KEYS CORRECTED)
     console.log("Seeding buku_kas_pajak...");
     await client.query(`
-      INSERT INTO buku_kas_pajak (id, bku_id, tanggal, uraian, pemotongan, penyetoran, saldo_after) VALUES
-      ('bkpj001', 'bku004', '2024-01-15', 'PPh 21 Honorarium Januari', 150000.00, 0.00, 150000.00),
-      ('bkpj002', NULL, '2024-02-10', 'Setor PPh 21 Januari', 0.00, 150000.00, 0.00),
-      ('bkpj003', 'bku004', '2024-02-15', 'PPh 21 Honorarium Februari', 150000.00, 0.00, 150000.00),
-      ('bkpj004', NULL, '2024-03-10', 'Setor PPh 21 Februari', 0.00, 150000.00, 0.00),
-      ('bkpj005', 'bku006', '2024-03-15', 'PPh 23 Jasa Konstruksi', 1250000.00, 0.00, 1250000.00),
-      ('bkpj006', NULL, '2024-04-10', 'Setor PPh 23 Maret', 0.00, 1250000.00, 0.00),
-      ('bkpj007', 'bku004', '2024-04-15', 'PPh 21 Honorarium April', 150000.00, 0.00, 150000.00),
-      ('bkpj008', NULL, '2024-05-10', 'Setor PPh 21 April', 0.00, 150000.00, 0.00)
+      INSERT INTO buku_kas_pajak (id, bku_id, tanggal, uraian, no_bukti, pemotongan, penyetoran, saldo_after) VALUES
+      ('bkpj001', 'bku004', '2024-01-15', 'PPh 21 Honorarium Januari', 'NB1123', 150000.00, 0.00, 150000.00),
+      ('bkpj002', NULL, '2024-02-10', 'Setor PPh 21 Januari',  'NB421', 0.00, 150000.00, 0.00),
+      ('bkpj003', 'bku004', '2024-02-15', 'PPh 21 Honorarium Februari', 'NB021', 150000.00, 0.00, 150000.00),
+      ('bkpj004', NULL, '2024-03-10', 'Setor PPh 21 Februari', 'NB12', 0.00, 150000.00, 0.00),
+      ('bkpj005', 'bku006', '2024-03-15', 'PPh 23 Jasa Konstruksi', 'NB11', 1250000.00, 0.00, 1250000.00),
+      ('bkpj006', NULL, '2024-04-10', 'Setor PPh 23 Maret', 'NB14', 0.00, 1250000.00, 0.00),
+      ('bkpj007', 'bku004', '2024-04-15', 'PPh 21 Honorarium April', 'NB21', 150000.00, 0.00, 150000.00),
+      ('bkpj008', NULL, '2024-05-10', 'Setor PPh 21 April', 'NB7', 0.00, 150000.00, 0.00)
     `);
 
     // Seed buku_bank (KEYS CORRECTED)

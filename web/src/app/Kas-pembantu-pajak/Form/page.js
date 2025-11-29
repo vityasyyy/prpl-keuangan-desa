@@ -28,6 +28,46 @@ function parseCurrency(value) {
   return isNaN(num) ? 0 : num;
 }
 
+// Convert any date format to YYYY-MM-DD
+function toYYYYMMDD(dateValue) {
+  if (!dateValue) return "";
+  
+  try {
+    // If already in YYYY-MM-DD format, return as is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
+    }
+    
+    // Parse ISO string or other formats
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return "";
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    
+    return `${year}-${month}-${day}`;
+  } catch {
+    return "";
+  }
+}
+
+// Format YYYY-MM-DD to DD/MM/YYYY for display
+function formatTanggalDisplay(dateValue) {
+  if (!dateValue) return "";
+  
+  try {
+    // Extract YYYY-MM-DD format
+    const yyyymmdd = toYYYYMMDD(dateValue);
+    if (!yyyymmdd) return "";
+    
+    const [year, month, day] = yyyymmdd.split("-");
+    return `${day}/${month}/${year}`;
+  } catch {
+    return "";
+  }
+}
+
 export default function Page() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -39,6 +79,7 @@ export default function Page() {
   const [uraian, setUraian] = useState("");
   const [pemotongan, setPemotongan] = useState("");
   const [penyetoran, setPenyetoran] = useState("");
+  const [noBukti, setNoBukti] = useState("");
 
   // UI state
   const [loading, setLoading] = useState(false);
@@ -58,10 +99,12 @@ export default function Page() {
           const result = await response.json();
           const data = result.data;
           
-          setTanggal(data.tanggal);
+          // Convert tanggal to YYYY-MM-DD format for input
+          setTanggal(toYYYYMMDD(data.tanggal));
           setUraian(data.uraian);
           setPemotongan(data.pemotongan ? String(data.pemotongan) : "");
           setPenyetoran(data.penyetoran ? String(data.penyetoran) : "");
+          setNoBukti(data.no_bukti || "");
         } catch (err) {
           setError(err.message);
         } finally {
@@ -80,12 +123,6 @@ export default function Page() {
     const saldo = pemotonganAmount - penyetoranAmount;
     setCalculatedSaldo(saldo);
   }, [pemotongan, penyetoran]);
-
-  const formatTanggal = (value) => {
-    if (!value) return "";
-    const [year, month, day] = value.split("-");
-    return `${day}/${month}/${year}`;
-  };
 
   const handleDelete = async () => {
     if (editId) {
@@ -111,6 +148,7 @@ export default function Page() {
       setUraian("");
       setPemotongan("");
       setPenyetoran("");
+      setNoBukti("");
       setError(null);
       setCalculatedSaldo(0);
     }
@@ -123,60 +161,76 @@ export default function Page() {
     setUraian("");
     setPemotongan("");
     setPenyetoran("");
+    setNoBukti("");
     setError(null);
     setCalculatedSaldo(0);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
-
+    
     // Validation
     if (!tanggal || !uraian) {
       setError("Tanggal dan Uraian harus diisi");
       return;
     }
-
+    
     try {
       setLoading(true);
       setError(null);
-
-      // Parse currency values - convert to number directly
+      
+      // Parse currency values
       const pemotonganAmount = pemotongan ? parseFloat(pemotongan) : 0;
       const penyetoranAmount = penyetoran ? parseFloat(penyetoran) : 0;
-
+      
+      // Ensure tanggal is in YYYY-MM-DD format
+      const formattedTanggal = toYYYYMMDD(tanggal);
+      
+      if (!formattedTanggal) {
+        throw new Error("Format tanggal tidak valid");
+      }
+      
       // Prepare payload
       const payload = {
         bku_id: "bku003", // Default for now
-        tanggal: tanggal, // Already in YYYY-MM-DD format
+        tanggal: formattedTanggal, // YYYY-MM-DD format
         uraian: uraian,
+        no_bukti: noBukti || null,
         pemotongan: pemotonganAmount,
         penyetoran: penyetoranAmount,
       };
-
-      // Submit to API - use update if editId exists, otherwise create
+      
+      console.log("Payload:", payload);
+      
+      // Submit to API
       if (editId) {
-        // PUT http://localhost:8081/api/kas-pembantu/pajak/{id}
         const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/pajak/${editId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`HTTP ${response.status}: ${errorData.error || errorData.message || 'Unknown error'}`);
+        }
       } else {
-        // POST http://localhost:8081/api/kas-pembantu/pajak
         const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/pajak`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`HTTP ${response.status}: ${errorData.error || errorData.message || 'Unknown error'}`);
+        }
       }
-
-      // Success - check if "buat lagi" is enabled
+      
+      // Success
       if (buatLagi && !editId) {
         handleCreate();
       } else {
-        // Redirect to list
         router.push("/Kas-pembantu-pajak");
       }
     } catch (err) {
@@ -195,26 +249,21 @@ export default function Page() {
   }, []);
 
   // Helper untuk input Rupiah (dipakai berulang kali)
-  const RupiahInput = useCallback(
-    ({ label, placeholder, value, onChange }) => {
-      return (
-        <div className="relative">
-          <label className="mb-1 block text-sm text-gray-800">{label}</label>
-          <span className="absolute top-[34px] left-3 text-sm text-gray-400">
-            Rp
-          </span>
-          <input
-            type="number"
-            placeholder={placeholder || "0"}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
-          />
-        </div>
-      );
-    },
-    []
-  );
+  const RupiahInput = useCallback(({ label, placeholder, value, onChange }) => {
+    return (
+      <div className="relative">
+        <label className="mb-1 block text-sm text-gray-800">{label}</label>
+        <span className="absolute top-[34px] left-3 text-sm text-gray-400">Rp</span>
+        <input
+          type="number"
+          placeholder={placeholder || "0"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
+        />
+      </div>
+    );
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -259,7 +308,7 @@ export default function Page() {
                   />
 
                   <span className="pointer-events-none text-sm text-gray-800 uppercase select-none">
-                    {tanggal ? formatTanggal(tanggal) : "DD/MM/YYYY"}
+                    {tanggal ? formatTanggalDisplay(tanggal) : "DD/MM/YYYY"}
                   </span>
                 </div>
               </div>
@@ -309,6 +358,8 @@ export default function Page() {
               <input
                 type="text"
                 placeholder="12345"
+                value={noBukti}
+                onChange={(e) => setNoBukti(e.target.value)}
                 className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
               />
             </div>

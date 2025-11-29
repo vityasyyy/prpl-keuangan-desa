@@ -498,22 +498,31 @@ export default function createKasPembantuService(repo) {
     },
 
     async createPajak(input) {
-      const { id: rawId, bku_id, tanggal, uraian } = input || {};
-
+      const {id:rawId, bku_id, tanggal, uraian, no_bukti } = input || {};
+      
+      // Required fields validation
       if (!tanggal) throw { status: 400, message: "tanggal is required" };
       if (!uraian) throw { status: 400, message: "uraian is required" };
-
+      
       // tanggal harus YYYY-MM-DD
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(tanggal))) {
         throw { status: 400, message: "tanggal must be in YYYY-MM-DD format" };
       }
-
+      
+      // validate no_bukti if provided
+      if (no_bukti !== undefined && no_bukti !== null) {
+        if (typeof no_bukti !== 'string' || no_bukti.trim() === '') {
+          throw {
+            status: 400,
+            message: "no_bukti must be a non-empty string",
+          };
+        }
+      }
+      
       // numeric fields
-      const pemotongan =
-        input.pemotongan !== undefined ? Number(input.pemotongan) : 0;
-      const penyetoran =
-        input.penyetoran !== undefined ? Number(input.penyetoran) : 0;
-
+      const pemotongan = input.pemotongan !== undefined ? Number(input.pemotongan) : 0;
+      const penyetoran = input.penyetoran !== undefined ? Number(input.penyetoran) : 0;
+      
       if (Number.isNaN(pemotongan) || pemotongan < 0) {
         throw {
           status: 400,
@@ -526,32 +535,33 @@ export default function createKasPembantuService(repo) {
           message: "penyetoran must be a non-negative number",
         };
       }
-
+      
       // cek bku_id kalau disediakan
       if (bku_id && typeof repo.checkBkuExists === "function") {
         const ok = await repo.checkBkuExists(bku_id);
         if (!ok) throw { status: 400, message: `bku_id ${bku_id} not found` };
       }
-
-      // saldo_after: default pakai running saldo global pajak (lastSaldo + pemotongan - penyetoran)
+      
+      // saldo_after: default pakai running saldo global pajak
       const lastSaldo =
         typeof repo.getLastSaldoPajak === "function"
           ? await repo.getLastSaldoPajak()
           : 0;
-
+          
       let saldo_after;
       if (input.saldo_after !== undefined) {
         saldo_after = Number(input.saldo_after);
       } else {
         saldo_after = Number((lastSaldo + pemotongan - penyetoran).toFixed(2));
       }
+      
       if (Number.isNaN(saldo_after)) {
         throw { status: 400, message: "saldo_after must be numeric" };
       }
-
+      
       // generate id kalau tidak disediakan
       const id = rawId ? String(rawId) : `pajak${Date.now()}`;
-
+      
       // kalau id disediakan, pastikan belum ada
       if (rawId) {
         const exists = await repo.getPajakById(id);
@@ -561,28 +571,29 @@ export default function createKasPembantuService(repo) {
             message: `Pajak entry with id ${id} already exists`,
           };
       }
-
+      
       const payload = {
         id,
         bku_id: bku_id ?? null,
         tanggal,
         uraian,
+        no_bukti: no_bukti ?? null,
         pemotongan,
         penyetoran,
         saldo_after,
       };
-
+      
       const inserted = await repo.insertPajak(payload);
       return inserted;
     },
 
     async editPajak(id, updates) {
       if (!id) throw { status: 400, message: "id is required" };
-      if (!updates || Object.keys(updates).length === 0) {
+      
+      if (!updates || Object.keys(updates).length === 0)
         throw { status: 400, message: "no update fields provided" };
-      }
-
-      // validate tanggal kalau ada
+      
+      // validate tanggal if provided
       if (updates.tanggal !== undefined) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(String(updates.tanggal))) {
           throw {
@@ -591,34 +602,83 @@ export default function createKasPembantuService(repo) {
           };
         }
       }
-
-      // validate numeric fields
+      
+      // validate no_bukti if provided
+      if (updates.no_bukti !== undefined && updates.no_bukti !== null) {
+        if (typeof updates.no_bukti !== 'string' || updates.no_bukti.trim() === '') {
+          throw {
+            status: 400,
+            message: "no_bukti must be a non-empty string",
+          };
+        }
+      }
+      
+      // validate uraian if provided
+      if (updates.uraian !== undefined) {
+        if (typeof updates.uraian !== 'string' || updates.uraian.trim() === '') {
+          throw {
+            status: 400,
+            message: "uraian must be a non-empty string",
+          };
+        }
+      }
+      
+      // validate numeric fields if provided
       if (updates.pemotongan !== undefined) {
         const p = Number(updates.pemotongan);
-        if (Number.isNaN(p) || p < 0) {
+        if (Number.isNaN(p) || p < 0)
           throw {
             status: 400,
             message: "pemotongan must be a non-negative number",
           };
-        }
       }
+      
       if (updates.penyetoran !== undefined) {
-        const s = Number(updates.penyetoran);
-        if (Number.isNaN(s) || s < 0) {
+        const ps = Number(updates.penyetoran);
+        if (Number.isNaN(ps) || ps < 0)
           throw {
             status: 400,
             message: "penyetoran must be a non-negative number",
           };
-        }
       }
+      
       if (updates.saldo_after !== undefined) {
-        const sa = Number(updates.saldo_after);
-        if (Number.isNaN(sa)) {
+        const s = Number(updates.saldo_after);
+        if (Number.isNaN(s))
           throw { status: 400, message: "saldo_after must be numeric" };
-        }
       }
-
-      // optional: cek bku_id baru
+      
+      // compute final saldo_after if not provided
+      let finalPemotongan =
+        updates.pemotongan !== undefined ? Number(updates.pemotongan) : undefined;
+      let finalPenyetoran =
+        updates.penyetoran !== undefined ? Number(updates.penyetoran) : undefined;
+      
+      // fetch current row to compute missing values
+      const existing = await repo.getPajakById(id);
+      if (!existing)
+        throw { status: 404, message: `Pajak entry with id ${id} not found` };
+      
+      if (finalPemotongan === undefined)
+        finalPemotongan = Number(existing.pemotongan ?? 0);
+      if (finalPenyetoran === undefined)
+        finalPenyetoran = Number(existing.penyetoran ?? 0);
+      
+      const finalSaldo =
+        updates.saldo_after !== undefined
+          ? Number(updates.saldo_after)
+          : finalPemotongan - finalPenyetoran;
+      
+      // business rule: saldo cannot be negative
+      if (finalSaldo < 0) {
+        throw {
+          status: 409,
+          message:
+            "Update would cause negative saldo_after (conflict with business rules)",
+        };
+      }
+      
+      // optional: validate bku_id exists if repo has checkBkuExists
       if (
         updates.bku_id !== undefined &&
         typeof repo.checkBkuExists === "function"
@@ -627,13 +687,15 @@ export default function createKasPembantuService(repo) {
         if (!ok)
           throw { status: 400, message: `bku_id ${updates.bku_id} not found` };
       }
-
+      
+      // delegate update to repo
       const updated = await repo.updatePajakById(id, updates);
       if (!updated)
         throw { status: 404, message: `Pajak entry with id ${id} not found` };
+      
       return updated;
     },
-
+    
     // Category/Master Data Methods
     async getKodeFungsi(parentId = null) {
       const categories = await repo.getKodeFungsi(parentId);
