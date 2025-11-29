@@ -61,6 +61,7 @@ export default function createKasPembantuService(repo) {
         type_enum: row.type_enum,
         tanggal: row.tanggal,
         uraian: row.uraian,
+        no_bukti: row.no_bukti,
         penerimaan: row.penerimaan,
         pengeluaran: row.pengeluaran,
         saldo_after: row.saldo_after,
@@ -84,7 +85,7 @@ export default function createKasPembantuService(repo) {
     },
     async createKegiatan(payload) {
       // validasi minimal
-      const required = ["bku_id", "type_enum", "tanggal", "uraian"];
+      const required = ["bku_id", "type_enum", "tanggal", "uraian", "no_bukti"];
       for (const r of required) {
         if (!payload[r]) throw new Error(`${r} is required`);
       }
@@ -116,6 +117,7 @@ export default function createKasPembantuService(repo) {
         type_enum: payload.type_enum,
         tanggal: payload.tanggal,
         uraian: payload.uraian,
+        no_bukti: payload.no_bukti,
         penerimaan,
         pengeluaran,
         saldo_after,

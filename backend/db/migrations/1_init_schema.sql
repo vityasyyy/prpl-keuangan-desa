@@ -156,6 +156,7 @@ CREATE TABLE buku_kas_pembantu (
     type_enum TEXT,
     tanggal DATE NOT NULL,
     uraian TEXT,
+    no_bukti TEXT,
     penerimaan NUMERIC(18,2) DEFAULT 0,
     pengeluaran NUMERIC(18,2) DEFAULT 0,
     saldo_after NUMERIC(18,2) DEFAULT 0,

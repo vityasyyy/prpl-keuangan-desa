@@ -39,7 +39,7 @@ export default function createRepo(db) {
 
     const offset = (page - 1) * limit;
     const sql = `
-      SELECT id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after
+      SELECT id, bku_id, type_enum, tanggal, uraian, no_bukti, penerimaan, pengeluaran, saldo_after
       FROM buku_kas_pembantu
       ${where.length ? "WHERE " + where.join(" AND ") : ""}
       ORDER BY tanggal, id
@@ -51,7 +51,7 @@ export default function createRepo(db) {
   }
   async function getKegiatanById(id) {
     const sql = `
-      SELECT id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after
+      SELECT id, bku_id, type_enum, tanggal, uraian, no_bukti, penerimaan, pengeluaran, saldo_after
       FROM buku_kas_pembantu
       WHERE id = ${P(1)}
       LIMIT 1
@@ -167,8 +167,8 @@ export default function createRepo(db) {
   async function insertKegiatan(payload) {
     const q = `
       INSERT INTO buku_kas_pembantu
-        (id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after)
-      VALUES (${P(1)},${P(2)},${P(3)},${P(4)},${P(5)},${P(6)},${P(7)},${P(8)})
+        (id, bku_id, type_enum, tanggal, uraian, no_bukti, penerimaan, pengeluaran, saldo_after)
+      VALUES (${P(1)},${P(2)},${P(3)},${P(4)},${P(5)},${P(6)},${P(7)},${P(8)},${P(9)})
       RETURNING *`;
     const values = [
       payload.id,
@@ -176,6 +176,7 @@ export default function createRepo(db) {
       payload.type_enum,
       payload.tanggal,
       payload.uraian,
+      payload.no_bukti,
       payload.penerimaan ?? 0,
       payload.pengeluaran ?? 0,
       payload.saldo_after,
@@ -191,7 +192,7 @@ export default function createRepo(db) {
 
       // ambil row lama
       const qOld = `
-        SELECT id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after
+        SELECT id, bku_id, type_enum, tanggal, uraian, no_bukti, penerimaan, pengeluaran, saldo_after
         FROM buku_kas_pembantu
         WHERE id = ${P(1)}
         LIMIT 1
@@ -206,6 +207,7 @@ export default function createRepo(db) {
       // nilai baru (pakai nilai lama bila tidak di-provide)
       const newTanggal = updates.tanggal ?? oldRow.tanggal;
       const newUraian = updates.uraian ?? oldRow.uraian;
+      const newNoBukti = updates.no_bukti ?? oldRow.no_bukti;
       const newPenerimaan =
         updates.penerimaan !== undefined
           ? Number(updates.penerimaan)
@@ -243,16 +245,18 @@ export default function createRepo(db) {
         UPDATE buku_kas_pembantu
         SET tanggal = ${P(1)},
             uraian = ${P(2)},
-            penerimaan = ${P(3)},
-            pengeluaran = ${P(4)},
-            saldo_after = ${P(5)},
-            type_enum = ${P(6)}
-        WHERE id = ${P(7)}
-        RETURNING id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after
+            no_bukti = ${P(3)},
+            penerimaan = ${P(4)},
+            pengeluaran = ${P(5)},
+            saldo_after = ${P(6)},
+            type_enum = ${P(7)}
+        WHERE id = ${P(8)}
+        RETURNING id, bku_id, type_enum, tanggal, uraian, no_bukti, penerimaan, pengeluaran, saldo_after
       `;
       const valuesUpdate = [
         newTanggal,
         newUraian,
+        newNoBukti,
         newPenerimaan,
         newPengeluaran,
         newSaldoAfter,

@@ -262,14 +262,14 @@ async function seedDatabase() {
     // Seed buku_kas_pembantu
     console.log('Seeding buku_kas_pembantu...');
     await client.query(`
-      INSERT INTO buku_kas_pembantu (id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after) VALUES
-      ('bkp001', 'bku003', 'honorarium', '2024-01-15', 'Honorarium Kepala Desa Januari', 0.00, 1000000.00, 1000000.00),
-      ('bkp002', 'bku004', 'honorarium', '2024-01-15', 'Honorarium Perangkat Desa Januari', 0.00, 3000000.00, 4000000.00),
-      ('bkp003', 'bku005', 'operasional', '2024-02-01', 'ATK untuk kantor desa', 0.00, 500000.00, 4500000.00),
-      ('bkp004', 'bku006', 'pembangunan', '2024-03-01', 'Material pembangunan jalan', 0.00, 25000000.00, 29500000.00),
-      ('bkp005', 'bku007', 'pembangunan', '2024-04-01', 'Biaya pembuatan sumur bor', 0.00, 12500000.00, 42000000.00),
-      ('bkp006', 'bku009', 'pemberdayaan', '2024-05-01', 'Biaya pelatihan masyarakat', 0.00, 5000000.00, 47000000.00),
-      ('bkp007', 'bku010', 'pembangunan', '2024-06-01', 'Upah pembangunan jalan', 0.00, 25000000.00, 72000000.00)
+      INSERT INTO buku_kas_pembantu (id, bku_id, type_enum, tanggal, uraian, no_bukti, penerimaan, pengeluaran, saldo_after) VALUES
+      ('bkp001', 'bku003', '1.1.01', '2024-01-15', 'Honorarium Kepala Desa Januari','NB1', 0.00, 1000000.00, 1000000.00),
+      ('bkp002', 'bku004', '1.1.02', '2024-01-15', 'Honorarium Perangkat Desa Januari','NB2', 0.00, 3000000.00, 4000000.00),
+      ('bkp003', 'bku005', '1.1.04', '2024-02-01', 'ATK untuk kantor desa','NB3', 0.00, 500000.00, 4500000.00),
+      ('bkp004', 'bku006', '2.3.10', '2024-03-01', 'Material pembangunan jalan','NB4', 0.00, 25000000.00, 29500000.00),
+      ('bkp005', 'bku007', '2.4.11', '2024-04-01', 'Biaya pembuatan sumur bor','NB5', 0.00, 12500000.00, 42000000.00),
+      ('bkp006', 'bku009', '4.7.04', '2024-05-01', 'Biaya pelatihan masyarakat','NB6', 0.00, 5000000.00, 47000000.00),
+      ('bkp007', 'bku010', '2.3.10', '2024-06-01', 'Upah pembangunan jalan','NB7', 0.00, 25000000.00, 72000000.00)
     `);
     
     // Seed buku_kas_pajak

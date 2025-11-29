@@ -99,13 +99,10 @@ export default function Page() {
           setBelanjaModal("0");
           
           // Set type_enum to kegiatan dropdown if available
-          setKegiatan(data.type_enum || "");
-          
-          // Set default values for fields that aren't stored in DB
-          setKodeRek("");
+          setKodeRek(data.type_enum || "");
           setBidang("");
           setSubBidang("");
-          setNomorBukti("");
+          setNomorBukti(data.no_bukti || ""); 
           setJumlahPengembalian("0");
           
         } catch (err) {
@@ -182,6 +179,7 @@ export default function Page() {
   useEffect(() => {
     if (kegiatan && kegiatanOptions.length > 0) {
       const selected = kegiatanOptions.find(opt => opt.id === kegiatan);
+      setKodeRek(selected?.id || "");
       setIdKegiatan(selected?.id || "");
     }
     else {
@@ -249,6 +247,7 @@ export default function Page() {
     setSubBidang("");
     setKegiatan("");
     setUraian("");
+    setNomorBukti("");
     setDariBendahara("");
     setSwadaya("");
     setBelanjaBarang("");
@@ -258,7 +257,7 @@ export default function Page() {
     setError(null);
     setCalculatedSaldo(0);
   };
-
+  
   const handleSave = async (e) => {
     e.preventDefault();
 
@@ -278,7 +277,6 @@ export default function Page() {
 
       // Map classification to type_enum
       const type_enum = kegiatan || "kegiatan";
-      
       const bku_id = await getBKUidByKodeFungsi(idKegiatan);
       if(bku_id === null) return ;
 
@@ -288,6 +286,7 @@ export default function Page() {
         type_enum: type_enum,
         tanggal: tanggal, // Already in YYYY-MM-DD format
         uraian: uraian,
+        no_bukti: nomorBukti,
         penerimaan: penerimaan,
         pengeluaran: pengeluaran,
       };
@@ -530,7 +529,7 @@ export default function Page() {
                 <span className="absolute top-[34px] left-3 text-sm text-gray-400">No</span>
                 <input
                   type="text"
-                  placeholder="12345"
+                  placeholder="nomor bukti"
                   value={nomorBukti}
                   onChange={(e) => setNomorBukti(e.target.value)}
                   className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
