@@ -293,7 +293,7 @@ export default function createRabRepo(db) {
   async function updateRABTotal(rabid, client = db) {
     try {
       const sql =
-        "UPDATE rab_header SET total_amount = (SELECT COALESCE(SUM(jumlah), 0) FROM rab_line WHERE rab_id = $1) WHERE id = $1 RETURNING *";
+        "UPDATE rab SET total_amount = (SELECT COALESCE(SUM(jumlah), 0) FROM rab_line WHERE rab_id = $1) WHERE id = $1 RETURNING *";
       const { rows } = await client.query(sql, [rabid]); // Gunakan client, bukan db
       return rows[0];
     } catch (err) {
