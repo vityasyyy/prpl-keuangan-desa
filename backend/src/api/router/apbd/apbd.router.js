@@ -52,6 +52,7 @@ export default function createApbdRouter(apbdHandler) {
   ); // GET /api/apbd/draft/penjabaran/summary
 
   //POST
+  r.post("/draft", apbdHandler.createApbdesDraft); // POST /api/apbd/draft
   r.post("/draft/rincian", apbdHandler.createApbdesRincian); // POST /api/apbd/draft/rincian
   r.post("/draft/rincian/post", apbdHandler.postDraftApbdes); // POST /api/apbd/draft/rincian/post
   r.post(

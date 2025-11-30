@@ -1,6 +1,16 @@
 // src/api/handler/apbd/apbd.handler.js
 export default function createApbdHandler(ApbdService) {
   //create
+  const createApbdesDraft = async (req, res, next) => {
+    try {
+      const { tahun } = req.body;
+      const result = await ApbdService.createApbdesDraft(tahun);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   const createApbdesRincian = async (req, res, next) => {
     try {
       const result = await ApbdService.createApbdesRincian(req.body);
@@ -184,7 +194,11 @@ export default function createApbdHandler(ApbdService) {
 
   const createApbdesRincianPenjabaran = async (req, res, next) => {
     try {
-      const result = await ApbdService.createApbdesRincianPenjabaran(req.body);
+      const payload = {
+        ...req.body,
+        rincian_id: req.params.id,
+      };
+      const result = await ApbdService.createApbdesRincianPenjabaran(payload);
       res.status(201).json(result);
     } catch (e) {
       next(e);
@@ -254,28 +268,42 @@ export default function createApbdHandler(ApbdService) {
     try {
       const { kodeRekening } = req.query;
       if (!kodeRekening) {
-        return res.status(400).json({ success: false, message: "kodeRekening_required" });
+        return res
+          .status(400)
+          .json({ success: false, message: "kodeRekening_required" });
       }
-      const data = await ApbdService.getDropdownOptionsByKodeRekening(kodeRekening);
+      const data = await ApbdService.getDropdownOptionsByKodeRekening(
+        kodeRekening
+      );
       res.json({ success: true, data });
     } catch (e) {
       console.error("Error getDropdownOptionsByKodeRekening:", e);
-      res.status(e.status || 500).json({ success: false, message: e.message || "internal_error", error: e.error });
+      res.status(e.status || 500).json({
+        success: false,
+        message: e.message || "internal_error",
+        error: e.error,
+      });
     }
   };
 
-    const getAllDropdownOptions = async (_req, res, next) => {
+  const getAllDropdownOptions = async (_req, res, next) => {
     try {
       const data = await ApbdService.getAllDropdownOptions();
       res.json({ success: true, data });
     } catch (e) {
       console.error("Error getAllDropdownOptions:", e);
-      res.status(e.status || 500).json({ success: false, message: e.message || "internal_error", error: e.error });
+      res.status(e.status || 500).json({
+        success: false,
+        message: e.message || "internal_error",
+        error: e.error,
+      });
     }
   };
 
-
   return {
+    //tabel apbdes
+    createApbdesDraft,
+
     //input form apbdes rincian
     getBidang,
     getKodeFungsi,

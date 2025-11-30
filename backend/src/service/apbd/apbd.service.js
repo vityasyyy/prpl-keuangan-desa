@@ -26,17 +26,35 @@ export default function createApbdService(ApbdRepo) {
 
   const getKegiatan = async () => ApbdRepo.listKegiatan();
 
-  const createApbdesRincian = async (payload) => {
-    const newItem = await ApbdRepo.createApbdesRincian(payload);
-    const apbdesId = await ApbdRepo.getApbdesIdByKegiatanId(
-      payload.kegiatan_id
-    );
-    if (!apbdesId) throw { status: 400, error: "invalid_kegiatan_id" };
+  const createApbdesDraft = async (tahun) => {
+    tahun = tahun || new Date().getFullYear();
 
+    let draft = await ApbdRepo.getDraftApbdesByYear(tahun);
+    if (!draft) draft = await ApbdRepo.createApbdesDraft(tahun);
+
+    return {
+      message: "Draft APBDes berhasil dibuat",
+      data: draft,
+    };
+  };
+
+  const createApbdesRincian = async (payload) => {
+    let apbdesId = payload.apbdes_id;
+    // Jika tidak ada apbdes_id → buat draft baru
+    if (!apbdesId) {
+      const tahun = new Date().getFullYear();
+      const draft = await ApbdRepo.createApbdesDraft(tahun);
+      apbdesId = draft.id;
+    }
+    // Tambahkan apbdes_id ke payload
+    payload.apbdes_id = apbdesId;
+    // Insert rincian
+    const rincian = await ApbdRepo.createApbdesRincian(payload);
+    // Hitung ulang total
     const total = await ApbdRepo.recalculateDraftApbdesTotals(apbdesId);
     return {
-      message: "Data APBDes berhasil ditambahkan",
-      data: newItem,
+      message: "Rincian berhasil ditambahkan",
+      data: rincian,
       total,
     };
   };
@@ -79,13 +97,13 @@ export default function createApbdService(ApbdRepo) {
   const updateDraftApbdesItem = async (id, data) => {
     const updatedItem = await ApbdRepo.updateDraftApbdesItem(id, data);
     const q = `
-      SELECT k.apbdes_id
-      FROM kegiatan k
-      JOIN apbdes_rincian r ON r.kegiatan_id = k.id
-      WHERE r.id = $1;
+      SELECT r.apbdes_id
+      FROM apbdes_rincian r
+      WHERE r.id = $1
     `;
     const { rows } = await db.query(q, [id]);
     const apbdesId = rows?.[0]?.apbdes_id;
+
     const total = await ApbdRepo.recalculateDraftApbdesTotals(apbdesId);
     return { updatedItem, total };
   };
@@ -117,11 +135,24 @@ export default function createApbdService(ApbdRepo) {
   };
 
   const createApbdesRincianPenjabaran = async (payload) => {
+    // Insert penjabaran
     const newItem = await ApbdRepo.createApbdesRincianPenjabaran(payload);
-    const apbdesId = await ApbdRepo.getApbdesIdByRincianId(payload.rincian_id);
-    const total = await ApbdRepo.recalculatePenjabaranApbdesTotals(apbdesId);
+    // Cari apbdes_id dari rincian
+    let apbdesId = await ApbdRepo.getApbdesIdByRincianId(payload.rincian_id);
+    // Kalau tidak ada → buat draft baru
+    if (!apbdesId) {
+      const tahun = new Date().getFullYear();
+      const draft = await ApbdRepo.createApbdesDraft(tahun);
+      apbdesId = draft.id;
+    }
+    // Jika ingin update kode_fungsi atau kode_ekonomi dari penjabaran
+    if (payload.kode_fungsi_id || payload.kode_ekonomi_id) {
+      await ApbdRepo.updateKodeFungsiEkonomiFromPenjabaran(newItem.id, payload);
+    }
+    // Hitung total ulang
+    const total = await ApbdRepo.recalculateDraftApbdesTotals(apbdesId);
     return {
-      message: "APBDes rincian penjabaran berhasil dibuat",
+      message: "Penjabaran berhasil ditambahkan",
       data: newItem,
       total,
     };
@@ -167,22 +198,28 @@ export default function createApbdService(ApbdRepo) {
 
   const updatePenjabaranApbdesItem = async (id, data) => {
     const updatedItem = await ApbdRepo.updatePenjabaranApbdesItem(id, data);
+
+    // Jika ada perubahan kode_fungsi/kode_ekonomi, update rincian induknya
+    if (data.kode_fungsi_id || data.kode_ekonomi_id) {
+      await ApbdRepo.updateKodeFungsiEkonomiFromPenjabaran(id, data);
+    }
+
     const q = `
-      SELECT a.id AS apbdes_id
-      FROM apbdes a
-      JOIN kegiatan k ON k.apbdes_id = a.id
-      JOIN apbdes_rincian r ON r.kegiatan_id = k.id
-      WHERE r.id = $1
+      SELECT r.apbdes_id
+      FROM apbdes_rincian_penjabaran p
+      JOIN apbdes_rincian r ON r.id = p.rincian_id
+      WHERE p.id = $1
     `;
-    const { rows } = await db.query(q, [updatedItem.rincian_id]);
+    const { rows } = await db.query(q, [id]);
     const apbdesId = rows?.[0]?.apbdes_id;
-    const total = await ApbdRepo.recalculatePenjabaranApbdesTotals(apbdesId);
+
+    const total = await ApbdRepo.recalculateDraftApbdesTotals(apbdesId);
     return { updatedItem, total };
   };
 
   const deletePenjabaranApbdesItem = async (id) => {
     const deletedItem = await ApbdRepo.deletePenjabaranApbdesItem(id);
-    const total = await ApbdRepo.recalculatePenjabaranApbdesTotals(
+    const total = await ApbdRepo.recalculateDraftApbdesTotals(
       deletedItem.penjabaran_id
     ); // Hitung ulang total
     return { deletedItem, total };
@@ -234,7 +271,11 @@ export default function createApbdService(ApbdRepo) {
       }
     }
 
-    throw { status: 400, error: "invalid_kode_rekening", message: "Kode rekening tidak ditemukan atau tidak valid." };
+    throw {
+      status: 400,
+      error: "invalid_kode_rekening",
+      message: "Kode rekening tidak ditemukan atau tidak valid.",
+    };
   };
 
   const getAllDropdownOptions = async () => {
@@ -258,6 +299,9 @@ export default function createApbdService(ApbdRepo) {
   };
 
   return {
+    //tabel apbdes
+    createApbdesDraft,
+
     //input form apbdes rincian
     getBidang,
     getKodeFungsi,

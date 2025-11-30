@@ -7,7 +7,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
-    "seed": "node db/seed/seed.js"
+    "seed": "node db/seed/seed.js",
+    "migrate": "node db/migrations/run-migrations.js"
   },
   "keywords": [
     "monolithic",
