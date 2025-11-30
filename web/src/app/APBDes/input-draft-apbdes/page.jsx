@@ -594,7 +594,7 @@ export default function InputDraftAPBDes() {
     window.dispatchEvent(new CustomEvent("apbdes:update"));
 
     if (!buatLagi) {
-      router.push("/APBDes/OutputDraftAPBDes");
+      router.push("/APBDes/output-draft-apbdes");
     } else {
       setFormData({
         id: Date.now(),
@@ -627,7 +627,7 @@ export default function InputDraftAPBDes() {
       localStorage.setItem("apbdesData", JSON.stringify(dataLokal));
       alert("🗑️ Data berhasil dihapus!");
       window.dispatchEvent(new Event("storage"));
-      router.push("/APBDes/OutputDraftAPBDes");
+      router.push("/APBDes/output-draft-apbdes");
     } else {
       setFormData({
         id: Date.now(),

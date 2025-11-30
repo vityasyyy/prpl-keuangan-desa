@@ -9,6 +9,7 @@ import { ArrowUpRight, Download, Plus, SquarePlus } from "@/components/icons";
 export default function OutputAPBDes() {
   const router = useRouter();
   const [data, setData] = useState([]);
+  const [penjabaranData, setPenjabaranData] = useState([]);
 
   // Helpers: sanitize anggaran and tolerant category matching
   const sanitizeNumber = (val) => {
@@ -29,14 +30,21 @@ export default function OutputAPBDes() {
 
   // Load data input draft APBDes and listen for updates
   useEffect(() => {
-    const read = () => JSON.parse(localStorage.getItem("apbdesData") || "[]");
-    setData(read());
+    const readApbdes = () => JSON.parse(localStorage.getItem("apbdesData") || "[]");
+    const readPenjabaran = () => JSON.parse(localStorage.getItem("penjabaranData") || "[]");
+    setData(readApbdes());
+    setPenjabaranData(readPenjabaran());
 
-    const onUpdate = () => setData(read());
+    const onUpdate = () => {
+      setData(readApbdes());
+      setPenjabaranData(readPenjabaran());
+    };
     window.addEventListener('apbdes:update', onUpdate);
+    window.addEventListener('penjabaran:update', onUpdate);
     window.addEventListener('storage', onUpdate);
     return () => {
       window.removeEventListener('apbdes:update', onUpdate);
+      window.removeEventListener('penjabaran:update', onUpdate);
       window.removeEventListener('storage', onUpdate);
     };
   }, []);
@@ -49,7 +57,14 @@ export default function OutputAPBDes() {
         const val = ((item.kategori || item.pendapatanBelanja) || "").toString().toLowerCase();
         return val.includes(kategori.toLowerCase());
       })
-      .reduce((sum, item) => sum + (typeof item.anggaran === 'number' ? item.anggaran : sanitizeNumber(item.anggaran)), 0);
+      .reduce((sum, item) => {
+        // sum penjabaran for this parent
+        const penjabaranSum = (penjabaranData || [])
+          .filter((p) => String(p.rincian_id) === String(item.id))
+          .reduce((s, p) => s + sanitizeNumber(p.anggaran || 0), 0);
+        const parentTotal = Math.max((typeof item.anggaran === 'number' ? item.anggaran : sanitizeNumber(item.anggaran)), penjabaranSum);
+        return sum + parentTotal;
+      }, 0);
   };
 
   // Ambil item per kategori
@@ -70,7 +85,7 @@ export default function OutputAPBDes() {
 
     localStorage.setItem("apbdesPosted", JSON.stringify(data));
     alert("APBDes berhasil diposting ke Buku APBDes.");
-    router.push("/APBDes/BukuAPBDes");
+    router.push("/APBDes/buku-apbdes");
   };
 
   const renderBox = (title, kategori) => {
@@ -95,7 +110,7 @@ export default function OutputAPBDes() {
 
           <button
             className="absolute right-5 text-gray-600 hover:text-gray-900 transition"
-            onClick={() => router.push("/APBDes/InputDraftAPBDes")}
+            onClick={() => router.push("/APBDes/input-draft-apbdes")}
           >
             <SquarePlus width={20} height={20} />
           </button>
@@ -105,34 +120,41 @@ export default function OutputAPBDes() {
         <div className="overflow-y-auto max-h-[180px]">
           {items.length > 0 ? (
             <div className="divide-y divide-gray-300">
-              {items.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between py-2 px-2 hover:bg-gray-50"
-                >
-                  <div className="flex items-center text-sm text-gray-800 space-x-1">
+              {items.map((item, idx) => {
+                // compute penjabaran sum and parentTotal
+                const itemPenjabaran = (penjabaranData || []).filter((p) => String(p.rincian_id) === String(item.id));
+                const penjabaranSum = itemPenjabaran.reduce((s, p) => s + sanitizeNumber(p.anggaran || 0), 0);
+                const parentTotal = Math.max((typeof item.anggaran === 'number' ? item.anggaran : sanitizeNumber(item.anggaran)), penjabaranSum);
+
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between py-2 px-2 hover:bg-gray-50"
+                  >
+                    <div className="flex items-center text-sm text-gray-800 space-x-1">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/APBDes/input-draft-apbdes?id=${item.id}`)}
+                        className="flex items-center space-x-1 text-left"
+                        title="Edit item"
+                      >
+                        <span>{item.objek || item.jenis || item.kelompok || item.pendapatanBelanja || "Tidak ada uraian"}</span>
+                        <span className="text-gray-400 text-xs">✎</span>
+                      </button>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => router.push(`/APBDes/InputDraftAPBDes?id=${item.id}`)}
-                      className="flex items-center space-x-1 text-left"
-                      title="Edit item"
+                      onClick={() => router.push(`/APBDes/input-draft-apbdes?id=${item.id}`)}
+                      className="text-sm font-light text-black"
+                      title="Edit amount"
                     >
-                      <span>{item.objek || item.jenis || item.kelompok || item.pendapatanBelanja || "Tidak ada uraian"}</span>
-                      <span className="text-gray-400 text-xs">✎</span>
+                      Rp{parentTotal.toLocaleString("id-ID", {
+                        minimumFractionDigits: 2,
+                      })}
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => router.push(`/APBDes/InputDraftAPBDes?id=${item.id}`)}
-                    className="text-sm font-light text-black"
-                    title="Edit amount"
-                  >
-                    Rp{sanitizeNumber(item.anggaran || 0).toLocaleString("id-ID", {
-                      minimumFractionDigits: 2,
-                    })}
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-gray-400 text-sm italic px-2 py-3">
@@ -186,7 +208,7 @@ export default function OutputAPBDes() {
           <Button
             variant="solid"
             className="bg-[#069250] hover:bg-[#058544] text-white flex items-center justify-between px-4 py-2 rounded-lg w-48 shadow-sm"
-            onClick={() => router.push("/APBDes/InputDraftAPBDes")}
+            onClick={() => router.push("/APBDes/input-draft-apbdes")}
           >
             <span>Input Data</span>
             <Plus width={18} height={18} />

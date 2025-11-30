@@ -11,6 +11,7 @@ export default function OutputAPBDes() {
   const pathname = usePathname();
   const [data, setData] = useState([]);
   const [penjabaranData, setPenjabaranData] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Load data input draft APBDes dan penjabaran
   useEffect(() => {
@@ -39,34 +40,49 @@ export default function OutputAPBDes() {
       loadData();
     };
 
+    // Listen untuk apbdes updates
+    const handleApbdesUpdate = () => {
+      console.log("📝 APBDes updated - reloading data");
+      loadData();
+    };
+
     // Listen untuk visibility change
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         console.log("👁️ Tab visible - reloading data");
         loadData();
+        // Force re-render
+        setRefreshKey(prev => prev + 1);
       }
     };
 
     window.addEventListener("storage", handleStorageChange);
     window.addEventListener("penjabaran:update", handlePenjabaranUpdate);
-    window.addEventListener("apbdes:update", handleStorageChange);
+    window.addEventListener("apbdes:update", handleApbdesUpdate);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     // Cleanup listeners
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("penjabaran:update", handlePenjabaranUpdate);
-      window.removeEventListener("apbdes:update", handleStorageChange);
+      window.removeEventListener("apbdes:update", handleApbdesUpdate);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [pathname]);
+  }, [pathname, refreshKey]);
 
   // Hitung total per kategori
   const total = (kategori) => {
     if (!data || data.length === 0) return 0;
     return data
       .filter((item) => (item.pendapatanBelanja || "").toLowerCase() === kategori.toLowerCase())
-      .reduce((sum, item) => sum + Number(item.anggaran || 0), 0);
+      .reduce((sum, item) => {
+        // hitung juga total penjabaran untuk item ini
+        const penjabaranSum = (penjabaranData || [])
+          .filter((p) => String(p.rincian_id) === String(item.id))
+          .reduce((s, p) => s + Number(p.anggaran || 0), 0);
+        const parentTotal = Math.max(Number(item.anggaran || 0), penjabaranSum);
+        return sum + parentTotal;
+      }, 0);
   };
 
   // Ambil item per kategori
@@ -84,7 +100,7 @@ export default function OutputAPBDes() {
 
     localStorage.setItem("apbdesPosted", JSON.stringify(data));
     alert("✅ APBDes berhasil diposting ke Buku APBDes.");
-    router.push("/APBDes/BukuAPBDes");
+    router.push("/APBDes/buku-apbdes");
   };
 
   const renderBox = (title, kategori) => {
@@ -114,30 +130,36 @@ export default function OutputAPBDes() {
             <div className="divide-y divide-gray-300">
               {items.map((item, idx) => {
                 // Filter penjabaran untuk item ini - konversi ke string untuk matching
-                const itemPenjabaran = penjabaranData.filter(p => String(p.rincian_id) === String(item.id));
+                const itemPenjabaran = penjabaranData.filter((p) => String(p.rincian_id) === String(item.id));
+                // jumlahkan semua anggaran penjabaran untuk parent ini
+                const penjabaranSum = (itemPenjabaran || []).reduce((s, p) => s + Number(p.anggaran || 0), 0);
+                // jika penjabaran sum lebih besar, tunjukkan penjabaranSum sebagai total parent
+                const parentTotal = Math.max(Number(item.anggaran || 0), penjabaranSum);
                 console.log(`🔍 Item ${item.id}:`, {
                   item: item.objek || item.jenis || item.kelompok,
                   rincian_id: item.id,
                   rincian_id_type: typeof item.id,
                   penjabaranCount: itemPenjabaran.length,
-                  penjabaran: itemPenjabaran
+                  penjabaran: itemPenjabaran,
+                  penjabaranSum,
+                  parentTotal,
                 });
-                
+
                 return (
                   <div key={item.id || idx}>
                     {/* Item Draft APBDes */}
                     <div className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-md transition">
                       <div className="flex items-center text-sm text-gray-800 space-x-2">
-                        <span>{item.objek || item.jenis || item.kelompok || item.pendapatanBelanja || "Tidak ada uraian"}</span>
+                        <span>{item.kelompok || "Tidak ada uraian"}</span>
                         <button
                           className="ml-1 text-gray-600 hover:text-gray-900 transition"
-                          onClick={() => router.push(`/APBDes/InputDraftPenjabaran?rincian_id=${item.id}`)}
+                          onClick={() => router.push(`/APBDes/input-draft-penjabaran?rincian_id=${item.id}`)}
                         >
                           <SquarePlus width={20} height={20} />
                         </button>
                       </div>
                       <div className="text-sm font-light text-black">
-                        Rp{Number(item.anggaran || 0).toLocaleString("id-ID", {
+                        Rp{parentTotal.toLocaleString("id-ID", {
                           minimumFractionDigits: 2,
                         })}
                       </div>
@@ -155,7 +177,7 @@ export default function OutputAPBDes() {
                               <span>{penjabaran.objek || penjabaran.jenis || penjabaran.kelompok || "Penjabaran"}</span>
                               <button
                                 className="ml-1 text-blue-600 hover:text-blue-800 transition"
-                                onClick={() => router.push(`/APBDes/InputDraftPenjabaran?id=${penjabaran.id}&rincian_id=${item.id}`)}
+                                onClick={() => router.push(`/APBDes/input-draft-penjabaran?id=${penjabaran.id}&rincian_id=${item.id}`)}
                                 title="Edit penjabaran"
                               >
                                 <Pencil width={16} height={16} />

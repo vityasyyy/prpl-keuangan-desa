@@ -656,7 +656,7 @@ export default function InputDraftPenjabaran() {
       window.dispatchEvent(new CustomEvent("penjabaran:update"));
 
       if (!buatLagi) {
-        router.push("/APBDes/DraftPenjabaran");
+        router.push("/APBDes/output-draft-penjabaran");
       } else {
         setFormData({
           id: Date.now(),
@@ -714,7 +714,7 @@ export default function InputDraftPenjabaran() {
     window.dispatchEvent(new CustomEvent("apbdes:update"));
 
     if (!buatLagi) {
-      router.push("/APBDes/OutputDraftAPBDes");
+      router.push("/APBDes/output-draft-apbdes");
     } else {
       setFormData({
         id: Date.now(),
@@ -753,7 +753,7 @@ export default function InputDraftPenjabaran() {
         localStorage.setItem("penjabaranData", JSON.stringify(penjabaranLokal));
         alert("🗑️ Data penjabaran berhasil dihapus!");
         window.dispatchEvent(new Event("storage"));
-        router.push("/APBDes/DraftPenjabaran");
+        router.push("/APBDes/output-draft-penjabaran");
       } else {
         // Hapus dari apbdesData
         let dataLokal = JSON.parse(localStorage.getItem("apbdesData") || "[]");
@@ -761,7 +761,7 @@ export default function InputDraftPenjabaran() {
         localStorage.setItem("apbdesData", JSON.stringify(dataLokal));
         alert("🗑️ Data berhasil dihapus!");
         window.dispatchEvent(new Event("storage"));
-        router.push("/APBDes/OutputDraftAPBDes");
+        router.push("/APBDes/output-draft-apbdes");
       }
     } else {
       setFormData({

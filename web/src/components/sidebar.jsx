@@ -16,9 +16,9 @@ export default function Sidebar() {
 
   // pastikan route sesuai struktur project
   const navRoutes = {
-    "Draft APBDes": "/APBDes/OutputDraftAPBDes",
-    "Draft Penjabaran APBDes": "/APBDes/DraftPenjabaran",
-    "Buku APBDes": "/APBDes/BukuAPBDes",
+    "Draft APBDes": "/APBDes/output-draft-apbdes",
+    "Draft Penjabaran APBDes": "/APBDes/output-draft-penjabaran",
+    "Buku APBDes": "/APBDes/buku-apbdes",
     "Rencana Kegiatan dan Anggaran": "/Rencana/RKA",
     "Rencana Kerja Kegiatan": "/Rencana/RKK",
     "Rencana Anggaran Biaya": "/Rencana/RAB",
