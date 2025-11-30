@@ -12,6 +12,8 @@ export default function InputDraftPenjabaran() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id"); // Get id from query if editing
+  const rincian_id = searchParams.get("rincian_id"); // Get rincian_id jika menambah penjabaran
+  const [parentItem, setParentItem] = useState(null);
   const sumberDanaOptions = ["PBH", "DDS", "ADD", "DLL", "PBP"];
 
   // States to hold the currently displayed options for dropdowns
@@ -47,9 +49,12 @@ export default function InputDraftPenjabaran() {
   const [selectedJenisId, setSelectedJenisId] = useState(null);
 
   const [isLoadingEditData, setIsLoadingEditData] = useState(false);
+  const [kodeEkoError, setKodeEkoError] = useState("");
+  const [kodeRekError, setKodeRekError] = useState("");
 
   const [formData, setFormData] = useState({
     id: Date.now(),
+    rincian_id: rincian_id || null,
     kodeRekEkonomi: "",
     pendapatanBelanja: "",
     jenis: "",
@@ -66,50 +71,120 @@ export default function InputDraftPenjabaran() {
     satuanInput: "",
   });
 
-  // Helper to format kode rekening with dots based on type
-  const formatKodeRekening = (value, type) => {
-    if (!value) return "";
-  
-    // Remove any non-digit characters first
-    let cleanedValue = value.replace(/[^0-9]/g, "");
-  
-    if (type === "ekonomi") {
-      if (cleanedValue.length > 5) {
-        cleanedValue = cleanedValue.slice(0, 5);
-      }
-      // Format for Kode Ekonomi: X.X.X.XX (e.g., 4.2.1.01)
-      if (cleanedValue.length > 1) {
-        cleanedValue = cleanedValue.slice(0, 1) + "." + cleanedValue.slice(1);
-      }
-      if (cleanedValue.length > 3) {
-        cleanedValue = cleanedValue.slice(0, 3) + "." + cleanedValue.slice(3);
-      }
-      if (cleanedValue.length > 5) {
-        cleanedValue = cleanedValue.slice(0, 5) + "." + cleanedValue.slice(5);
-      }
-    } else if (type === "bidang") {
-      if (cleanedValue.length > 4) {
-        cleanedValue = cleanedValue.slice(0, 4);
-      }
-      // Format for Kode Fungsi (Bidang Kegiatan): X.X.XX (e.g., 1.1.01)
-      if (cleanedValue.length > 1) {
-        cleanedValue = cleanedValue.slice(0, 1) + "." + cleanedValue.slice(1);
-      }
-      if (cleanedValue.length > 3) {
-        cleanedValue = cleanedValue.slice(0, 3) + "." + cleanedValue.slice(3);
+  // Load parent item info jika ada rincian_id
+  useEffect(() => {
+    if (rincian_id) {
+      const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+      const parent = allData.find((item) => item.id == rincian_id);
+      if (parent) {
+        setParentItem(parent);
       }
     }
-    return cleanedValue;
+  }, [rincian_id]);
+
+  // ====== PARSING & FORMATTING UTILITIES (dari InputDraftAPBDes) ======
+  
+  // Parse "4.1.1.01" atau "4.1.1.90-99" → ["4","1","1","01"] atau ["4","1","1","90-99"]
+  const ekoParse = (s) =>
+    (s || "")
+      .toString()
+      .replace(/\./g, " ")
+      .replace(/[^\d \-]+/g, "") // Allow dash for ranges like 90-99
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+  // Format ke "A B C DD" (Objek/token ke-4 dipad 2 digit atau range seperti 90-99)
+  const ekoFormat = (parts) => {
+    const [a = "", b = "", c = "", d = ""] = parts;
+    const out = [];
+    if (a) out.push(String(parseInt(a, 10)));
+    if (b) out.push(String(parseInt(b, 10)));
+    if (c) out.push(String(parseInt(c, 10)));
+    if (d) {
+      // Handle ranges like '90-99' or regular numbers
+      if (d.includes('-')) {
+        out.push(d); // Keep range as-is
+      } else {
+        out.push(String(d).padStart(2, "0")); // Pad single numbers
+      }
+    }
+    return out.join(" ");
   };
 
-  // Debounce function
-  const debounce = (func, delay) => {
-    let timeout;
-    return function (...args) {
-      const context = this;
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func.apply(context, args), delay);
-    };
+  // Validator sederhana untuk A B C DD (termasuk range seperti 90-99)
+  const validateKodeEko = (kode) => {
+    if (!kode) return "";
+    const clean = kode.replace(/\./g, " ").trim();
+    // Allow ranges like '90-99' in the DD position
+    const pattern = /^\d+(\s+\d+(\s+\d+(\s+(\d{1,2}|\d{1,2}-\d{1,2}))?)?)?$/; // A [B [C [DD or DD-DD]]]
+    if (!pattern.test(clean)) return "Format harus 'A B C DD' (contoh: 4 1 1 01 atau 4 1 1 90-99)";
+    const p = clean.split(/\s+/);
+    if (p[0] && p[0].length > 1) return "Akun (A) 1 digit";
+    if (p[1] && p[1].length > 1) return "Kelompok (B) 1 digit";
+    if (p[2] && p[2].length > 1) return "Jenis (C) 1 digit";
+    if (p[3]) {
+      // Validate DD: either 1-2 digits or a range like DD-DD
+      if (p[3].includes('-')) {
+        const rangeParts = p[3].split('-');
+        if (rangeParts.length !== 2 || 
+            rangeParts[0].length > 2 || rangeParts[1].length > 2 ||
+            !/^\d+$/.test(rangeParts[0]) || !/^\d+$/.test(rangeParts[1])) {
+          return "Range objek harus format DD-DD (contoh: 90-99)";
+        }
+      } else if (p[3].length > 2) {
+        return "Objek (DD) max 2 digit";
+      }
+    }
+    return "";
+  };
+
+  // Format dari full_code API (bisa bertitik) → spasi
+  const formatEkoFromFullCode = (full) => ekoFormat(ekoParse(full));
+
+  // Validator untuk x x xx (termasuk range seperti 1 1 90-99)
+  const validateKodeRek = (kode) => {
+    if (!kode) return "";
+    const cleanKode = kode.replace(/\./g, " ").trim();
+    // Allow ranges like '90-99' in the xx position
+    const pattern = /^\d+(\s+\d+(\s+(\d{1,2}|\d{1,2}-\d{1,2}))?)?$/; // x [x [xx or xx-xx]]
+    if (!pattern.test(cleanKode)) {
+      return "Format kode harus 'x x xx' (contoh: 1 2 03 atau 1 1 90-99)";
+    }
+    const parts = cleanKode.split(/\s+/);
+    if (parts[0] && parts[0].length > 1) return "Kode bidang harus 1 digit";
+    if (parts[1] && parts[1].length > 1) return "Kode sub-bidang harus 1 digit";
+    if (parts[2]) {
+      // Validate xx: either 1-2 digits or a range like xx-xx
+      if (parts[2].includes('-')) {
+        const rangeParts = parts[2].split('-');
+        if (rangeParts.length !== 2 || 
+            rangeParts[0].length > 2 || rangeParts[1].length > 2 ||
+            !/^\d+$/.test(rangeParts[0]) || !/^\d+$/.test(rangeParts[1])) {
+          return "Range kegiatan harus format xx-xx (contoh: 90-99)";
+        }
+      } else if (parts[2].length > 2) {
+        return "Kode kegiatan max 2 digit";
+      }
+    }
+    return "";
+  };
+
+  // Format kode bidang ke format yang benar (x x xx atau x x xx-xx)
+  const formatKodeRek = (kode) => {
+    const cleanKode = kode.replace(/\./g, " ");
+    const parts = cleanKode.split(/\s+/);
+    const formattedParts = parts.map((part, index) => {
+      if (index === 2) {
+        // Handle ranges like '90-99' or regular numbers
+        if (part.includes('-')) {
+          return part;
+        }
+        return part.padStart(2, "0");
+      }
+      return parseInt(part);
+    });
+    return formattedParts.join(" ");
   };
 
   // Fetch all dropdown options on component mount
@@ -267,7 +342,14 @@ export default function InputDraftPenjabaran() {
   useEffect(() => {
     if (id && akunData.length > 0 && bidangData.length > 0 && subBidangData.length > 0 && 
         kelompokData.length > 0 && jenisData.length > 0) {
-      const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+      // Cek dulu di penjabaranData (jika ada rincian_id)
+      let allData;
+      if (rincian_id) {
+        allData = JSON.parse(localStorage.getItem("penjabaranData") || "[]");
+      } else {
+        allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+      }
+      
       const existing = allData.find((item) => item.id == id);
       if (existing) {
         setIsLoadingEditData(true);
@@ -287,12 +369,17 @@ export default function InputDraftPenjabaran() {
         }
       }
     }
-  }, [id, akunData, bidangData, subBidangData, kelompokData, jenisData]);
+  }, [id, rincian_id, akunData, bidangData, subBidangData, kelompokData, jenisData]);
 
   // Set Sub-Bidang ID setelah subBidangOptions ter-update
   useEffect(() => {
     if (isLoadingEditData && id && subBidangOptions.length > 0) {
-      const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+      let allData;
+      if (rincian_id) {
+        allData = JSON.parse(localStorage.getItem("penjabaranData") || "[]");
+      } else {
+        allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+      }
       const existing = allData.find((item) => item.id == id);
       if (existing && existing.subBidang) {
         const selectedSubBidang = subBidangData.find(
@@ -303,12 +390,17 @@ export default function InputDraftPenjabaran() {
         }
       }
     }
-  }, [isLoadingEditData, subBidangOptions, id]);
+  }, [isLoadingEditData, subBidangOptions, id, rincian_id]);
 
   // Set Kelompok ID setelah kelompokOptions ter-update
   useEffect(() => {
     if (isLoadingEditData && id && kelompokOptions.length > 0) {
-      const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+      let allData;
+      if (rincian_id) {
+        allData = JSON.parse(localStorage.getItem("penjabaranData") || "[]");
+      } else {
+        allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+      }
       const existing = allData.find((item) => item.id == id);
       if (existing && existing.kelompok) {
         const selectedKelompok = kelompokData.find(
@@ -319,11 +411,16 @@ export default function InputDraftPenjabaran() {
         }
       }
     }
-  }, [isLoadingEditData, kelompokOptions, id]);
+  }, [isLoadingEditData, kelompokOptions, id, rincian_id]);
   // Set Jenis ID setelah jenisOptions ter-update
   useEffect(() => {
     if (isLoadingEditData && id && jenisOptions.length > 0) {
-      const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+      let allData;
+      if (rincian_id) {
+        allData = JSON.parse(localStorage.getItem("penjabaranData") || "[]");
+      } else {
+        allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+      }
       const existing = allData.find((item) => item.id == id);
       if (existing && existing.jenis) {
         const selectedJenis = jenisData.find(
@@ -334,7 +431,7 @@ export default function InputDraftPenjabaran() {
         }
       }
     }
-  }, [isLoadingEditData, jenisOptions, id]);
+  }, [isLoadingEditData, jenisOptions, id, rincian_id]);
   // Selesai loading edit data setelah semua options ter-update
   useEffect(() => {
     if (isLoadingEditData && objekOptions.length > 0 && kegiatanOptions.length > 0) {
@@ -352,164 +449,238 @@ export default function InputDraftPenjabaran() {
     }));
   };
 
-  // Debounced API call for Kode Rek Ekonomi
-  const fetchEkonomiOptionsDebounced = useCallback(
-    debounce(async (kodeRekening) => {
-      if (!kodeRekening) {
-        handleOnChange("pendapatanBelanja", "");
-        handleOnChange("jenis", "");
-        handleOnChange("objek", "");
-        setAkunOptions([]);
-        setJenisOptions([]);
-        setObjekOptions([]);
-        setKelompokOptions([]);
-        return;
-      }
-      try {
-        const response = await fetch(
-          `http://localhost:8081/api/apbd/dropdown-options?kodeRekening=${kodeRekening}`
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const result = await response.json();
-        if (result.success && result.data.type === "kode_ekonomi") {
-          const { akun, kelompok, jenis, objek, allKelompok, allJenis, allObjek } = result.data;
-
-          // Update Akun dropdown
-          setAkunOptions([akun.uraian]);
-          handleOnChange("pendapatanBelanja", akun.uraian);
-
-          // Update Jenis dropdown
-          setJenisOptions(allJenis.map(item => item.uraian));
-          handleOnChange("jenis", jenis.uraian); // Assuming 'jenis' is the selected value for Jenis
-
-          // Update Objek dropdown
-          setObjekOptions(allObjek.map(item => item.uraian));
-          handleOnChange("objek", objek.uraian); // Assuming 'objek' is the selected value for Objek
-          // Update Sumber Dana dropdown
-          setKelompokOptions(allKelompok.map(item => item.uraian));
-          handleOnChange("kelompok", kelompok.uraian); // Assuming 'kelompok' is the selected value for Kelompok
-
-        } else {
-          handleOnChange("pendapatanBelanja", "");
-          handleOnChange("jenis", "");
-          handleOnChange("objek", "");
-          setAkunOptions([]);
-          setJenisOptions([]);
-          setObjekOptions([]);
-          setKelompokOptions([]);
-        }
-      } catch (error) {
-        console.error("Failed to fetch ekonomi options:", error);
-        handleOnChange("pendapatanBelanja", "");
-        handleOnChange("jenis", "");
-        handleOnChange("objek", "");
-        setAkunOptions([]);
-        setJenisOptions([]);
-        setObjekOptions([]);
-        setKelompokOptions([]);
-      }
-    }, 500),
-    []
-  );
-
+  // Handle Kode Rek Ekonomi change dengan parsing logic (dari InputDraftAPBDes)
   const handleKodeRekEkonomiChange = (value) => {
-    const formattedValue = formatKodeRekening(value, "ekonomi");
-    handleOnChange("kodeRekEkonomi", formattedValue);
-    fetchEkonomiOptionsDebounced(formattedValue);
+    if (value === formData.kodeRekEkonomi) return;
+    
+    const err = validateKodeEko(value);
+    setKodeEkoError(err);
+    handleOnChange("kodeRekEkonomi", value);
+
+    // Jika user menghapus seluruh input kode → reset total dropdown & state
+    if (!value || value.trim() === "") {
+      handleOnChange("pendapatanBelanja", "");
+      handleOnChange("kelompok", "");
+      handleOnChange("jenis", "");
+      handleOnChange("objek", "");
+      setAkunOptions(allAkunOptions);
+      setKelompokOptions(allKelompokOptions);
+      setJenisOptions(allJenisOptions);
+      setObjekOptions(allObjekOptions);
+      setSelectedAkunId(null);
+      setSelectedKelompokId(null);
+      setSelectedJenisId(null);
+      return; // Tidak lanjut parsing
+    }
+
+    if (!err) {
+      const parts = ekoParse(value); // ["A","B","C","DD"]
+
+      // 1) AKUN = token[0]
+      if (parts[0] && akunData.length > 0) {
+        const matchedAkun = akunData.find((x) => {
+          const xParts = ekoParse(x.full_code);
+          return xParts[0] === parts[0];
+        });
+        if (matchedAkun) {
+          setAkunOptions([matchedAkun.uraian]);
+          handleOnChange("pendapatanBelanja", matchedAkun.uraian);
+          setSelectedAkunId(matchedAkun.id);
+        }
+      }
+
+      // 2) KELOMPOK = token[0..1]
+      if (parts.length >= 2 && kelompokData.length > 0) {
+        const matchedKelompok = kelompokData.find((x) => {
+          const xParts = ekoParse(x.full_code);
+          return xParts[0] === parts[0] && xParts[1] === parts[1];
+        });
+        if (matchedKelompok) {
+          setKelompokOptions([matchedKelompok.uraian]);
+          handleOnChange("kelompok", matchedKelompok.uraian);
+          setSelectedKelompokId(matchedKelompok.id);
+        }
+      }
+
+      // 3) JENIS = token[0..2]
+      if (parts.length >= 3 && jenisData.length > 0) {
+        const matchedJenis = jenisData.find((x) => {
+          const xParts = ekoParse(x.full_code);
+          return xParts[0] === parts[0] && xParts[1] === parts[1] && xParts[2] === parts[2];
+        });
+        if (matchedJenis) {
+          setJenisOptions([matchedJenis.uraian]);
+          handleOnChange("jenis", matchedJenis.uraian);
+          setSelectedJenisId(matchedJenis.id);
+        }
+      }
+
+      // 4) OBJEK = token[0..3] (termasuk range seperti 90-99)
+      if (parts.length >= 4 && objekData.length > 0) {
+        const matchedObjek = objekData.find((x) => {
+          const xParts = ekoParse(x.full_code);
+          return xParts[0] === parts[0] && xParts[1] === parts[1] && 
+                 xParts[2] === parts[2] && xParts[3] === parts[3];
+        });
+        if (matchedObjek) {
+          setObjekOptions([matchedObjek.uraian]);
+          handleOnChange("objek", matchedObjek.uraian);
+        }
+      }
+
+      // Jika kosong total → kosongkan dropdown
+      if (parts.length === 0) {
+        setAkunOptions(allAkunOptions);
+        setKelompokOptions(allKelompokOptions);
+        setJenisOptions(allJenisOptions);
+        setObjekOptions(allObjekOptions);
+      }
+    }
   };
 
-  const fetchBidangOptionsDebounced = useCallback(
-    debounce(async (kodeRekening) => {
-      if (!kodeRekening) {
-        handleOnChange("bidang", "");
-        handleOnChange("subBidang", "");
-        handleOnChange("kegiatan", "");
-        setBidangOptions([]);
-        setSubBidangOptions([]);
-        setKegiatanOptions([]);
+  // Handle Kode Rek Bidang change dengan parsing logic (dari InputDraftAPBDes)
+  const handleKodeRekBidangChange = (value) => {
+    // Hanya proses jika ada perubahan
+    if (value === formData.kodeRekBidang) return;
+    
+    const error = validateKodeRek(value);
+    setKodeRekError(error);
+    // Update form dengan kode yang diinput
+    handleOnChange("kodeRekBidang", value);
+    
+    // Jika user menghapus seluruh input kode bidang → reset dropdown & state
+    if (!value || value.trim() === "") {
+      handleOnChange("bidang", "");
+      handleOnChange("subBidang", "");
+      handleOnChange("kegiatan", "");
+      setBidangOptions(allBidangOptions);
+      setSubBidangOptions(allSubBidangOptions);
+      setKegiatanOptions(allKegiatanOptions);
+      setSelectedBidangId(null);
+      setSelectedSubBidangId(null);
+      return; // Stop lanjut parsing
+    }
+    
+    if (!error) {
+      // Format: ubah titik jadi spasi dan trim
+      const cleanKode = value.replace(/\./g, " ").trim();
+      const parts = cleanKode.split(/\s+/).filter(Boolean);
+      
+      // Jika kosong total → kosongkan semua dropdown dan selected IDs
+      if (parts.length === 0 || !value.trim()) {
+        setBidangOptions(allBidangOptions);
+        setSubBidangOptions(allSubBidangOptions);
+        setKegiatanOptions(allKegiatanOptions);
         setSelectedBidangId(null);
         setSelectedSubBidangId(null);
         return;
       }
-      try {
-        const response = await fetch(
-          `http://localhost:8081/api/apbd/dropdown-options?kodeRekening=${kodeRekening}`
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+      
+      if (parts[0]) {
+        // 1) BIDANG = token[0]
+        const matchedBidang = bidangData.find((b) => {
+          const bParts = b.full_code.replace(/\./g, " ").trim().split(/\s+/);
+          return bParts[0] === parts[0];
+        });
+        if (matchedBidang) {
+          setBidangOptions([matchedBidang.uraian]);
+          handleOnChange("bidang", matchedBidang.uraian);
+          setSelectedBidangId(matchedBidang.id);
         }
-        const result = await response.json();
-        if (result.success && result.data.type === "kode_fungsi") {
-          const { bidang, subBidang, kegiatan } = result.data;
 
-          // Update Bidang dropdown
-          setBidangOptions([bidang.uraian]);
-          handleOnChange("bidang", bidang.uraian);
-          setSelectedBidangId(bidang.id);
-
-          // Update Sub-Bidang dropdown
-          if (subBidang) {
-            const subBidangResponse = await fetch(
-              `http://localhost:8081/api/apbd/sub-bidang?bidangId=${bidang.id}`
-            );
-            const subBidangData = await subBidangResponse.json();
-            setSubBidangOptions(subBidangData.map(item => item.uraian));
-            handleOnChange("subBidang", subBidang.uraian);
-            setSelectedSubBidangId(subBidang.id);
-          } else {
-            setSubBidangOptions([]);
-            handleOnChange("subBidang", "");
-            setSelectedSubBidangId(null);
+        // 2) SUB-BIDANG = token[0..1]
+        if (parts.length >= 2) {
+          const matchedSubBidang = subBidangData.find((s) => {
+            const sParts = s.full_code.replace(/\./g, " ").trim().split(/\s+/);
+            return sParts[0] === parts[0] && sParts[1] === parts[1];
+          });
+          if (matchedSubBidang) {
+            setSubBidangOptions([matchedSubBidang.uraian]);
+            handleOnChange("subBidang", matchedSubBidang.uraian);
+            setSelectedSubBidangId(matchedSubBidang.id);
           }
-
-          // Update Kegiatan dropdown
-          if (kegiatan) {
-            const kegiatanResponse = await fetch(
-              `http://localhost:8081/api/apbd/kegiatan?subBidangId=${subBidang.id}`
-            );
-            const kegiatanData = await kegiatanResponse.json();
-            setKegiatanOptions(kegiatanData.map(item => item.uraian));
-            handleOnChange("kegiatan", kegiatan.uraian);
-          } else {
-            setKegiatanOptions([]);
-            handleOnChange("kegiatan", "");
-          }
-        } else {
-          handleOnChange("bidang", "");
-          handleOnChange("subBidang", "");
-          handleOnChange("kegiatan", "");
-          setBidangOptions([]);
-          setSubBidangOptions([]);
-          setKegiatanOptions([]);
-          setSelectedBidangId(null);
-          setSelectedSubBidangId(null);
         }
-      } catch (error) {
-        console.error("Failed to fetch bidang options:", error);
-        handleOnChange("bidang", "");
-        handleOnChange("subBidang", "");
-        handleOnChange("kegiatan", "");
-        setBidangOptions([]);
-        setSubBidangOptions([]);
-        setKegiatanOptions([]);
-        setSelectedBidangId(null);
-        setSelectedSubBidangId(null);
+
+        // 3) KEGIATAN = token[0..2] (termasuk range seperti 90-99)
+        if (parts.length >= 3) {
+          const matchedKegiatan = kegiatanData.find((k) => {
+            const kParts = k.full_code.replace(/\./g, " ").trim().split(/\s+/);
+            return kParts[0] === parts[0] && kParts[1] === parts[1] && kParts[2] === parts[2];
+          });
+          if (matchedKegiatan) {
+            setKegiatanOptions([matchedKegiatan.uraian]);
+            handleOnChange("kegiatan", matchedKegiatan.uraian);
+          }
+        }
       }
-    }, 500),
-    []
-  );
-
-
-  const handleKodeRekBidangChange = (value) => {
-    const formattedValue = formatKodeRekening(value, "bidang");
-    handleOnChange("kodeRekBidang", formattedValue);
-    fetchBidangOptionsDebounced(formattedValue);
+    }
   };
 
   const handleSimpan = (e) => {
     e.preventDefault();
+    
+    // Jika ada rincian_id, simpan ke penjabaranData
+    if (rincian_id) {
+      let penjabaranLokal = JSON.parse(localStorage.getItem("penjabaranData") || "[]");
+
+      if (id) {
+        // mode edit penjabaran
+        penjabaranLokal = penjabaranLokal.map((item) =>
+          item.id == id
+            ? {
+                ...item,
+                ...formData,
+                rincian_id: rincian_id,
+                anggaran: sanitizeNumber(formData.anggaran),
+                kategori: normalizeKategori(formData.pendapatanBelanja),
+              }
+            : item
+        );
+        alert("✅ Data penjabaran berhasil diperbarui!");
+      } else {
+        // mode tambah baru penjabaran
+        const newItem = {
+          ...formData,
+          id: Date.now(),
+          rincian_id: rincian_id,
+          anggaran: sanitizeNumber(formData.anggaran),
+          kategori: normalizeKategori(formData.pendapatanBelanja),
+        };
+        penjabaranLokal.push(newItem);
+        alert("✅ Data penjabaran berhasil disimpan!");
+      }
+
+      localStorage.setItem("penjabaranData", JSON.stringify(penjabaranLokal));
+      console.log("💾 Data penjabaran disimpan:", penjabaranLokal);
+      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new CustomEvent("penjabaran:update"));
+
+      if (!buatLagi) {
+        router.push("/APBDes/DraftPenjabaran");
+      } else {
+        setFormData({
+          id: Date.now(),
+          rincian_id: rincian_id,
+          kodeRekEkonomi: "",
+          pendapatanBelanja: "",
+          kelompok: "",
+          jenis: "",
+          objek: "",
+          kodeRekBidang: "",
+          bidang: "",
+          subBidang: "",
+          kegiatan: "",
+          anggaran: "",
+          volumeOutput: "",
+          volumeInput: "",
+          satuanOutput: "",
+          satuanInput: "",
+        });
+      }
+      return;
+    }
+    
+    // Jika tidak ada rincian_id, simpan ke apbdesData (draft APBDes biasa)
     let dataLokal = JSON.parse(localStorage.getItem("apbdesData") || "[]");
 
     if (id) {
@@ -547,6 +718,7 @@ export default function InputDraftPenjabaran() {
     } else {
       setFormData({
         id: Date.now(),
+        rincian_id: rincian_id || null,
         kodeRekEkonomi: "",
         pendapatanBelanja: "",
         kelompok: "",
@@ -574,15 +746,27 @@ export default function InputDraftPenjabaran() {
     if (!confirmDelete) return;
 
     if (id) {
-      let dataLokal = JSON.parse(localStorage.getItem("apbdesData") || "[]");
-      dataLokal = dataLokal.filter((item) => item.id != id);
-      localStorage.setItem("apbdesData", JSON.stringify(dataLokal));
-      alert("🗑️ Data berhasil dihapus!");
-      window.dispatchEvent(new Event("storage"));
-      router.push("/APBDes/OutputDraftAPBDes");
+      if (rincian_id) {
+        // Hapus dari penjabaranData
+        let penjabaranLokal = JSON.parse(localStorage.getItem("penjabaranData") || "[]");
+        penjabaranLokal = penjabaranLokal.filter((item) => item.id != id);
+        localStorage.setItem("penjabaranData", JSON.stringify(penjabaranLokal));
+        alert("🗑️ Data penjabaran berhasil dihapus!");
+        window.dispatchEvent(new Event("storage"));
+        router.push("/APBDes/DraftPenjabaran");
+      } else {
+        // Hapus dari apbdesData
+        let dataLokal = JSON.parse(localStorage.getItem("apbdesData") || "[]");
+        dataLokal = dataLokal.filter((item) => item.id != id);
+        localStorage.setItem("apbdesData", JSON.stringify(dataLokal));
+        alert("🗑️ Data berhasil dihapus!");
+        window.dispatchEvent(new Event("storage"));
+        router.push("/APBDes/OutputDraftAPBDes");
+      }
     } else {
       setFormData({
         id: Date.now(),
+        rincian_id: rincian_id || null,
         kodeRekEkonomi: "",
         pendapatanBelanja: "",
         kelompok: "",
@@ -607,8 +791,22 @@ export default function InputDraftPenjabaran() {
       <BreadCrumb category="APBDes" title="Input Draft Penjabaran" />
 
       <h1 className="mb-6 text-base font-semibold text-black">
-        {id ? "Edit Data Penjabaran" : "Input Data Penjabaran"}
+        {id ? "Edit Data Penjabaran" : rincian_id ? "Tambah Penjabaran Item" : "Input Data Penjabaran"}
       </h1>
+
+      {/* Tampilkan info parent item jika menambah penjabaran */}
+      {parentItem && (
+        <div className="mb-6 rounded-lg border-2 border-blue-300 bg-blue-50 px-4 py-3">
+          <p className="text-sm font-medium text-blue-900">
+            📋 Menambahkan penjabaran untuk:
+          </p>
+          <p className="text-sm text-blue-800 mt-1">
+            <span className="font-semibold">{parentItem.objek || parentItem.jenis || parentItem.kelompok || parentItem.pendapatanBelanja}</span>
+            {" - "}
+            <span>Rp{Number(parentItem.anggaran || 0).toLocaleString("id-ID", { minimumFractionDigits: 2 })}</span>
+          </p>
+        </div>
+      )}
 
       {/* ===== KODE REKENING DAN URAIAN ===== */}
       <div className="mb-6 rounded-2xl border border-gray-400 px-6 py-6 overflow-x-auto">
@@ -635,9 +833,32 @@ export default function InputDraftPenjabaran() {
                 options={akunOptions}
                 value={formData.pendapatanBelanja}
                 onChange={(val) => {
-                  handleOnChange("pendapatanBelanja", val);
-                  const selected = akunData.find((item) => item.uraian === val);
-                  setSelectedAkunId(selected ? selected.id : null);
+                  if (!val) {
+                    // Reset semua jika kosong
+                    handleOnChange("pendapatanBelanja", "");
+                    handleOnChange("kelompok", "");
+                    handleOnChange("jenis", "");
+                    handleOnChange("objek", "");
+                    handleOnChange("kodeRekEkonomi", "");
+                    setSelectedAkunId(null);
+                    setSelectedKelompokId(null);
+                    setSelectedJenisId(null);
+                    setKodeEkoError("");
+                    return;
+                  }
+                  const a = akunData.find((x) => x.uraian === val);
+                  if (a) {
+                    const kodeAkun = ekoFormat(ekoParse(a.full_code).slice(0, 1));
+                    handleOnChange("pendapatanBelanja", val);
+                    handleOnChange("kelompok", "");
+                    handleOnChange("jenis", "");
+                    handleOnChange("objek", "");
+                    handleOnChange("kodeRekEkonomi", kodeAkun);
+                    setSelectedAkunId(a.id);
+                    setSelectedKelompokId(null);
+                    setSelectedJenisId(null);
+                    setKodeEkoError("");
+                  }
                 }}
               />
             </div>
@@ -647,9 +868,36 @@ export default function InputDraftPenjabaran() {
                 options={kelompokOptions}
                 value={formData.kelompok}
                 onChange={(val) => {
-                  handleOnChange("kelompok", val);
-                  const selected = kelompokData.find((item) => item.uraian === val);
-                  setSelectedKelompokId(selected ? selected.id : null);
+                  if (!val) {
+                    if (formData.pendapatanBelanja) {
+                      const a = akunData.find((x) => x.uraian === formData.pendapatanBelanja);
+                      const kodeAkun = a ? ekoFormat(ekoParse(a.full_code).slice(0, 1)) : "";
+                      handleOnChange("kelompok", "");
+                      handleOnChange("jenis", "");
+                      handleOnChange("objek", "");
+                      handleOnChange("kodeRekEkonomi", kodeAkun);
+                    } else {
+                      handleOnChange("kelompok", "");
+                      handleOnChange("jenis", "");
+                      handleOnChange("objek", "");
+                      handleOnChange("kodeRekEkonomi", "");
+                    }
+                    setSelectedKelompokId(null);
+                    setSelectedJenisId(null);
+                    setKodeEkoError("");
+                    return;
+                  }
+                  const k = kelompokData.find((x) => x.uraian === val);
+                  if (k) {
+                    const kodeKelompok = ekoFormat(ekoParse(k.full_code).slice(0, 2));
+                    handleOnChange("kelompok", val);
+                    handleOnChange("jenis", "");
+                    handleOnChange("objek", "");
+                    handleOnChange("kodeRekEkonomi", kodeKelompok);
+                    setSelectedKelompokId(k.id);
+                    setSelectedJenisId(null);
+                    setKodeEkoError("");
+                  }
                 }}
               />
             </div>
@@ -659,11 +907,31 @@ export default function InputDraftPenjabaran() {
                 options={jenisOptions}
                 value={formData.jenis}
                 onChange={(val) => {
-                  handleOnChange("jenis", val);
-                  const selected = jenisData.find(
-                    (item) => item.uraian === val && item.parent_id === selectedKelompokId
-                  );
-                  setSelectedJenisId(selected ? selected.id : null);
+                  if (!val) {
+                    if (formData.kelompok) {
+                      const k = kelompokData.find((x) => x.uraian === formData.kelompok);
+                      const kodeKelompok = k ? ekoFormat(ekoParse(k.full_code).slice(0, 2)) : "";
+                      handleOnChange("jenis", "");
+                      handleOnChange("objek", "");
+                      handleOnChange("kodeRekEkonomi", kodeKelompok);
+                    } else {
+                      handleOnChange("jenis", "");
+                      handleOnChange("objek", "");
+                      handleOnChange("kodeRekEkonomi", "");
+                    }
+                    setSelectedJenisId(null);
+                    setKodeEkoError("");
+                    return;
+                  }
+                  const j = jenisData.find((x) => x.uraian === val);
+                  if (j) {
+                    const kodeJenis = ekoFormat(ekoParse(j.full_code).slice(0, 3));
+                    handleOnChange("jenis", val);
+                    handleOnChange("objek", "");
+                    handleOnChange("kodeRekEkonomi", kodeJenis);
+                    setSelectedJenisId(j.id);
+                    setKodeEkoError("");
+                  }
                 }}
                 disabled={!selectedKelompokId}
               />
@@ -673,7 +941,26 @@ export default function InputDraftPenjabaran() {
                 label="Objek"
                 options={objekOptions}
                 value={formData.objek}
-                onChange={(val) => handleOnChange("objek", val)}
+                onChange={(val) => {
+                  if (!val) {
+                    if (formData.jenis) {
+                      const j = jenisData.find((x) => x.uraian === formData.jenis);
+                      const kodeJenis = j ? ekoFormat(ekoParse(j.full_code).slice(0, 3)) : "";
+                      handleOnChange("objek", "");
+                      handleOnChange("kodeRekEkonomi", kodeJenis);
+                    } else {
+                      handleOnChange("objek", "");
+                    }
+                    setKodeEkoError("");
+                    return;
+                  }
+                  const o = objekData.find((x) => x.uraian === val);
+                  if (o) {
+                    handleOnChange("objek", val);
+                    handleOnChange("kodeRekEkonomi", formatEkoFromFullCode(o.full_code));
+                    setKodeEkoError("");
+                  }
+                }}
                 disabled={!selectedJenisId}
               />
             </div>
@@ -699,11 +986,28 @@ export default function InputDraftPenjabaran() {
                 options={bidangOptions}
                 value={formData.bidang}
                 onChange={(val) => {
-                  handleOnChange("bidang", val);
-                  const selected = bidangData.find((item) => item.uraian === val);
-                  setSelectedBidangId(selected ? selected.id : null);
-                  handleOnChange("subBidang", "");
-                  handleOnChange("kegiatan", "");
+                  if (!val) {
+                    handleOnChange("bidang", "");
+                    handleOnChange("subBidang", "");
+                    handleOnChange("kegiatan", "");
+                    handleOnChange("kodeRekBidang", "");
+                    setSelectedBidangId(null);
+                    setSelectedSubBidangId(null);
+                    setKodeRekError("");
+                    return;
+                  }
+                  const selectedBidang = bidangData.find((b) => b.uraian === val);
+                  if (selectedBidang) {
+                    const parts = selectedBidang.full_code.replace(/\./g, " ").trim().split(/\s+/);
+                    const formattedCode = `${parseInt(parts[0])}`;
+                    handleOnChange("bidang", val);
+                    handleOnChange("subBidang", "");
+                    handleOnChange("kegiatan", "");
+                    handleOnChange("kodeRekBidang", formattedCode);
+                    setSelectedBidangId(selectedBidang.id);
+                    setSelectedSubBidangId(null);
+                    setKodeRekError("");
+                  }
                 }}
               />
             </div>
@@ -713,11 +1017,35 @@ export default function InputDraftPenjabaran() {
                 options={subBidangOptions}
                 value={formData.subBidang}
                 onChange={(val) => {
-                  handleOnChange("subBidang", val);
-                  const selected = subBidangData.find(
-                    (item) => item.uraian === val && item.parent_id === selectedBidangId
-                  );
-                  setSelectedSubBidangId(selected ? selected.id : null);
+                  if (!val) {
+                    if (formData.bidang) {
+                      const selectedBidang = bidangData.find((b) => b.uraian === formData.bidang);
+                      if (selectedBidang) {
+                        const parts = selectedBidang.full_code.replace(/\./g, " ").trim().split(/\s+/);
+                        const formattedCode = `${parseInt(parts[0])}`;
+                        handleOnChange("subBidang", "");
+                        handleOnChange("kegiatan", "");
+                        handleOnChange("kodeRekBidang", formattedCode);
+                      }
+                    } else {
+                      handleOnChange("subBidang", "");
+                      handleOnChange("kegiatan", "");
+                      handleOnChange("kodeRekBidang", "");
+                    }
+                    setSelectedSubBidangId(null);
+                    setKodeRekError("");
+                    return;
+                  }
+                  const selectedSubBidang = subBidangData.find((s) => s.uraian === val);
+                  if (selectedSubBidang) {
+                    const parts = selectedSubBidang.full_code.replace(/\./g, " ").trim().split(/\s+/);
+                    const formattedCode = `${parseInt(parts[0])} ${parseInt(parts[1])}`;
+                    handleOnChange("subBidang", val);
+                    handleOnChange("kegiatan", "");
+                    handleOnChange("kodeRekBidang", formattedCode);
+                    setSelectedSubBidangId(selectedSubBidang.id);
+                    setKodeRekError("");
+                  }
                 }}
               />
             </div>
@@ -726,7 +1054,33 @@ export default function InputDraftPenjabaran() {
                 label="Kegiatan"
                 options={kegiatanOptions}
                 value={formData.kegiatan}
-                onChange={(val) => handleOnChange("kegiatan", val)}
+                onChange={(val) => {
+                  if (!val) {
+                    if (formData.subBidang) {
+                      const selectedSubBidang = subBidangData.find((s) => s.uraian === formData.subBidang);
+                      if (selectedSubBidang) {
+                        const parts = selectedSubBidang.full_code.replace(/\./g, " ").trim().split(/\s+/);
+                        const formattedCode = `${parseInt(parts[0])} ${parseInt(parts[1])}`;
+                        handleOnChange("kegiatan", "");
+                        handleOnChange("kodeRekBidang", formattedCode);
+                      }
+                    } else {
+                      handleOnChange("kegiatan", "");
+                      handleOnChange("kodeRekBidang", "");
+                    }
+                    setKodeRekError("");
+                    return;
+                  }
+                  const selectedKegiatan = kegiatanData.find((k) => k.uraian === val);
+                  if (selectedKegiatan) {
+                    const parts = selectedKegiatan.full_code.replace(/\./g, " ").trim().split(/\s+/);
+                    const kegiatanCode = parts[2].includes('-') ? parts[2] : parts[2].padStart(2, "0");
+                    const formattedCode = `${parseInt(parts[0])} ${parseInt(parts[1])} ${kegiatanCode}`;
+                    handleOnChange("kegiatan", val);
+                    handleOnChange("kodeRekBidang", formattedCode);
+                    setKodeRekError("");
+                  }
+                }}
               />
             </div>
           </div>
