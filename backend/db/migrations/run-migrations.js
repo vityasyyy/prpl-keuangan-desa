@@ -19,6 +19,7 @@ const migrations = [
   "2_kode_rekening.sql",
   "3_user.sql",
   "4_update_tabel_rincian.sql",
+  "5_update_tabel_penjabaran.sql",
 ];
 
 console.log("Running run-migrations.js...");

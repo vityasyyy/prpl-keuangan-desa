@@ -145,10 +145,6 @@ export default function createApbdService(ApbdRepo) {
       const draft = await ApbdRepo.createApbdesDraft(tahun);
       apbdesId = draft.id;
     }
-    // Jika ingin update kode_fungsi atau kode_ekonomi dari penjabaran
-    if (payload.kode_fungsi_id || payload.kode_ekonomi_id) {
-      await ApbdRepo.updateKodeFungsiEkonomiFromPenjabaran(newItem.id, payload);
-    }
     // Hitung total ulang
     const total = await ApbdRepo.recalculateDraftApbdesTotals(apbdesId);
     return {
@@ -198,12 +194,6 @@ export default function createApbdService(ApbdRepo) {
 
   const updatePenjabaranApbdesItem = async (id, data) => {
     const updatedItem = await ApbdRepo.updatePenjabaranApbdesItem(id, data);
-
-    // Jika ada perubahan kode_fungsi/kode_ekonomi, update rincian induknya
-    if (data.kode_fungsi_id || data.kode_ekonomi_id) {
-      await ApbdRepo.updateKodeFungsiEkonomiFromPenjabaran(id, data);
-    }
-
     const q = `
       SELECT r.apbdes_id
       FROM apbdes_rincian_penjabaran p

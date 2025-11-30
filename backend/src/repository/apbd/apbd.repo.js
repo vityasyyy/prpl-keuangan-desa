@@ -270,13 +270,15 @@ export default function createApbdRepo(arg) {
   const createApbdesRincianPenjabaran = async (payload) => {
     const q = `
       INSERT INTO apbdes_rincian_penjabaran
-      (rincian_id, volume, satuan, jumlah_anggaran, sumber_dana)
-      VALUES ($1,$2,$3,$4,$5)
+      (rincian_id, kode_fungsi_id, kode_ekonomi_id, volume, satuan, jumlah_anggaran, sumber_dana)
+      VALUES ($1,$2,$3,$4,$5,$6,$7) 
       RETURNING *;
     `;
 
     const params = [
       payload.rincian_id,
+      payload.kode_fungsi_id || null,
+      payload.kode_ekonomi_id || null,
       payload.volume || null,
       payload.satuan || null,
       payload.jumlah_anggaran,
@@ -370,7 +372,14 @@ export default function createApbdRepo(arg) {
     const values = [];
     let i = 1;
 
-    for (const key of ["volume", "satuan", "jumlah_anggaran", "sumber_dana"]) {
+    for (const key of [
+      "kode_fungsi_id",
+      "kode_ekonomi_id",
+      "volume",
+      "satuan",
+      "jumlah_anggaran",
+      "sumber_dana",
+    ]) {
       if (data[key] !== undefined) {
         fields.push(`${key} = $${i}`);
         values.push(data[key]);
@@ -387,47 +396,6 @@ export default function createApbdRepo(arg) {
       RETURNING *;
     `;
     values.push(id);
-    const { rows } = await db.query(q, values);
-    return rows[0];
-  };
-
-  const updateKodeFungsiEkonomiFromPenjabaran = async (
-    rincian_penjabaran_id,
-    data
-  ) => {
-    const fields = [];
-    const values = [];
-    let i = 1;
-
-    if (data.kode_fungsi_id !== undefined) {
-      fields.push(`kode_fungsi_id = $${i}`);
-      values.push(data.kode_fungsi_id);
-      i++;
-    }
-
-    if (data.kode_ekonomi_id !== undefined) {
-      fields.push(`kode_ekonomi_id = $${i}`);
-      values.push(data.kode_ekonomi_id);
-      i++;
-    }
-
-    if (!fields.length) return null;
-
-    // ambil rincian_id dari penjabaran
-    const { rows: rRows } = await db.query(
-      "SELECT rincian_id FROM apbdes_rincian_penjabaran WHERE id = $1",
-      [rincian_penjabaran_id]
-    );
-    const rincian_id = rRows?.[0]?.rincian_id;
-    if (!rincian_id) return null;
-
-    const q = `
-      UPDATE apbdes_rincian
-      SET ${fields.join(", ")}
-      WHERE id = $${i}
-      RETURNING *;
-    `;
-    values.push(rincian_id);
     const { rows } = await db.query(q, values);
     return rows[0];
   };
@@ -462,7 +430,7 @@ export default function createApbdRepo(arg) {
       return acc;
     }, {});
     return result;
-  }; */
+  };*/
 
   const getKodeFungsiDetailsByFullCode = async (fullCode) => {
     const parts = fullCode.split(" ");
@@ -565,7 +533,6 @@ export default function createApbdRepo(arg) {
     getDraftPenjabaranApbdesById,
     getDraftPenjabaranApbdesSummary,
     updatePenjabaranApbdesItem,
-    updateKodeFungsiEkonomiFromPenjabaran,
     deletePenjabaranApbdesItem,
     //recalculatePenjabaranApbdesTotals,
     postDraftPenjabaranApbdes,
