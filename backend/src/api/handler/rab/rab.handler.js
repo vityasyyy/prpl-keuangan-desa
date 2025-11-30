@@ -205,6 +205,12 @@ export default function createRabHandler(rabService) {
             error: "Uraian harus diisi",
           });
         }
+        if (!updateData.satuan) {
+          return res.status(400).json({
+            success: false,
+            error: "Satuan harus diisi",
+          });
+        }
 
         const result = await rabService.updateRABLineService(
           rabLineId,
@@ -214,7 +220,7 @@ export default function createRabHandler(rabService) {
         res.json({
           success: true,
           data: result,
-          message: "RAB line berhasil diupdate",
+          message: result.message || "RAB line berhasil diupdate",
         });
       } catch (err) {
         console.error("HANDLER ERROR updateRABLine:", err);
@@ -232,8 +238,8 @@ export default function createRabHandler(rabService) {
 
         res.json({
           success: true,
-          data: result,
-          message: "RAB line berhasil dihapus",
+          data: result.deleted,
+          message: result.message || "RAB line berhasil dihapus",
         });
       } catch (err) {
         console.error("HANDLER ERROR deleteRABLine:", err);

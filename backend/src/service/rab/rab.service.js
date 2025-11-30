@@ -127,14 +127,13 @@ export default function createRabService(rabRepo) {
       throw new Error("rabId harus diisi");
     }
 
-    const rabExists = await rabRepo.getRABbyId(rabId);
-    if (!rabExists) {
-      throw new Error(`RAB dengan id ${rabId} tidak ditemukan`);
-    }
-
     try {
-      const lines = await rabRepo.getRABline(rabId);
+      const rabExists = await rabRepo.getRABbyId(rabId);
+      if (!rabExists) {
+        throw new Error(`RAB dengan id ${rabId} tidak ditemukan`);
+      }
 
+      const lines = await rabRepo.getRABline(rabId);
       // Transform numeric fields
       return lines.map((line) => ({
         ...line,
@@ -218,86 +217,89 @@ export default function createRabService(rabRepo) {
     if (!satuan) {
       throw new Error("Satuan harus diisi");
     }
-
-    const existingLine = await rabRepo.getRABLineById(rabLineId);
-    if (!existingLine) {
-      throw new Error(`RAB line dengan id ${rabLineId} tidak ditemukan`);
-    }
-
-    const rabExists = await rabRepo.getRABbyId(existingLine.rab_id);
-    if (rabExists.status_rab !== "belum diajukan") {
-      throw new Error("Sudah Tidak dapat mengubah RAB line");
-    }
-
-    let calculatedData = { ...updateData };
-
-    // Auto-recalculate jika volume atau harga_satuan diupdate
-    if (volume !== undefined || harga_satuan !== undefined) {
-      const volumeNum = parseFloat(volume);
-      const hargaSatuanNum = parseFloat(harga_satuan);
-
-      if (isNaN(volumeNum) || volumeNum <= 0) {
-        throw new Error("Volume harus berupa angka dan lebih besar dari 0");
-      }
-      if (isNaN(hargaSatuanNum) || hargaSatuanNum <= 0) {
-        throw new Error(
-          "Harga satuan harus berupa angka dan lebih besar dari 0"
-        );
-      }
-
-      // PERHITUNGAN OTOMATIS: jumlah = volume * harga_satuan
-      calculatedData.jumlah = volumeNum * hargaSatuanNum;
-      calculatedData.volume = volumeNum;
-      calculatedData.harga_satuan = hargaSatuanNum;
-    }
-
     try {
-      const result = await rabRepo.updateRABLine(rabLineId, calculatedData);
-
-      if (!result.success) {
-        throw new Error(result.message);
+      // 1. Dapatkan existing line untuk cek status RAB
+      const existingLine = await rabRepo.getRABLineById(rabLineId);
+      if (!existingLine) {
+        throw new Error(`RAB line dengan id ${rabLineId} tidak ditemukan`);
       }
 
+      // 2. Validasi status RAB (business logic)
+      const rabExists = await rabRepo.getRABbyId(existingLine.rab_id);
+      if (rabExists.status_rab !== "belum diajukan") {
+        throw new Error("Tidak dapat mengubah RAB line");
+      }
+
+      // 3. Validasi dan transformasi data numerik
+      let calculatedData = { ...updateData };
+
+      if (volume !== undefined || harga_satuan !== undefined) {
+        const volumeNum = parseFloat(
+          volume !== undefined ? volume : existingLine.volume
+        );
+        const hargaSatuanNum = parseFloat(
+          harga_satuan !== undefined ? harga_satuan : existingLine.harga_satuan
+        );
+
+        if (isNaN(volumeNum) || volumeNum <= 0) {
+          throw new Error("Volume harus berupa angka dan lebih besar dari 0");
+        }
+        if (isNaN(hargaSatuanNum) || hargaSatuanNum <= 0) {
+          throw new Error(
+            "Harga satuan harus berupa angka dan lebih besar dari 0"
+          );
+        }
+
+        // Auto-calculation
+        calculatedData.jumlah = volumeNum * hargaSatuanNum;
+        calculatedData.volume = volumeNum;
+        calculatedData.harga_satuan = hargaSatuanNum;
+      }
+
+      // 4. Panggil repository
+      const updatedLine = await rabRepo.updateRABLine(
+        rabLineId,
+        calculatedData
+      );
+
+      // 5. Transform response
       return {
-        ...result,
-        data: {
-          ...result.data,
-          volume: parseFloat(result.data.volume),
-          harga_satuan: parseFloat(result.data.harga_satuan),
-          jumlah: parseFloat(result.data.jumlah),
-        },
+        ...updatedLine,
+        volume: parseFloat(updatedLine.volume),
+        harga_satuan: parseFloat(updatedLine.harga_satuan),
+        jumlah: parseFloat(updatedLine.jumlah),
         message: "RAB line berhasil diupdate",
       };
     } catch (err) {
       console.error("SERVICE ERROR updateRABLineService:", err);
-      throw new Error("Gagal mengperbarui RAB line");
+      throw new Error(err.message);
     }
   }
+
   async function deleteRABLineService(rabLineId) {
-    const existingLine = await rabRepo.getRABLineById(rabLineId);
-    if (!existingLine) {
-      throw new Error(`RAB line dengan id ${rabLineId} tidak ditemukan`);
-    }
-
-    const rabExists = await rabRepo.getRABbyId(existingLine.rab_id);
-    if (rabExists.status_rab !== "belum diajukan") {
-      throw new Error("Tidak dapat menghapus RAB line");
-    }
-
     try {
-      const result = await rabRepo.deleteRABLine(rabLineId);
-
-      if (!result.success) {
-        throw new Error(result.message);
+      // 1. Dapatkan existing line untuk cek status RAB
+      const existingLine = await rabRepo.getRABLineById(rabLineId);
+      if (!existingLine) {
+        throw new Error(`RAB line dengan id ${rabLineId} tidak ditemukan`);
       }
 
+      // 2. Validasi status RAB (business logic)
+      const rabExists = await rabRepo.getRABbyId(existingLine.rab_id);
+      if (rabExists.status_rab !== "belum diajukan") {
+        throw new Error("Tidak dapat menghapus RAB line");
+      }
+
+      // 3. Panggil repository
+      const deletedLine = await rabRepo.deleteRABLine(rabLineId);
+
       return {
-        ...result,
+        deleted: deletedLine,
         message: "RAB line berhasil dihapus",
       };
     } catch (err) {
       console.error("SERVICE ERROR deleteRABLineService:", err);
-      throw new Error("Gagal menghapus RAB line");
+      throw new Error(err.message);
     }
   }
   async function getRABbyStatusService(year, role) {
@@ -563,7 +565,9 @@ export default function createRabService(rabRepo) {
 
     if (!validStatuses.includes(newStatus)) {
       throw new Error(
-        `Status tidak valid. Status harus salah satu dari: ${validStatuses.join(", ")}`
+        `Status tidak valid. Status harus salah satu dari: ${validStatuses.join(
+          ", "
+        )}`
       );
     }
 

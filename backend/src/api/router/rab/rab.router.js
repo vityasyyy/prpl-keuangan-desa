@@ -5,11 +5,10 @@ export default function createRabRouter(rabHandler) {
   const router = express.Router();
 
   // All routes are protected
-  //   router.use(verifyAccessToken);
+  // router.use(verifyAccessToken);
 
   // ==================== RAB ROUTES ====================
 
-  router.post("/", rabHandler.createRAB.bind(rabHandler)); // Create Root
   // Get list tahun available RAB
   router.get("/years", rabHandler.getRAByear.bind(rabHandler));
 
@@ -19,16 +18,8 @@ export default function createRabRouter(rabHandler) {
   // Get RAB by status
   router.get("/status/:status", rabHandler.getRABbyStatus.bind(rabHandler));
 
-  // Create new RAB
+  // Create new RAB - HAPUS DUPLIKASI
   router.post("/", rabHandler.createRAB.bind(rabHandler));
-
-  // ==================== RAB LINE ROUTES ====================
-
-  // Update RAB line
-  router.put("/lines/:rabLineId", rabHandler.updateRABLine.bind(rabHandler));
-
-  // Delete RAB line
-  router.delete("/lines/:rabLineId", rabHandler.deleteRABLine.bind(rabHandler));
 
   // ==================== KODE REKENING ROUTES ====================
 
@@ -69,10 +60,18 @@ export default function createRabRouter(rabHandler) {
   // Validate RAB data
   router.post("/validate", rabHandler.validateRABData.bind(rabHandler));
 
+  // ==================== RAB LINE ROUTES (SPECIFIC) ====================
+
+  // Update RAB line - PASTIKAN SEBELUM WILDCARD
+  router.put("/lines/:rabLineId", rabHandler.updateRABLine.bind(rabHandler));
+
+  // Delete RAB line - PASTIKAN SEBELUM WILDCARD
+  router.delete("/lines/:rabLineId", rabHandler.deleteRABLine.bind(rabHandler));
+
+  // ==================== RAB-SPECIFIC ROUTES (WILDCARDS) ====================
+
   // Update RAB status
   router.put("/:rabId/status", rabHandler.updateRABStatus.bind(rabHandler));
-
-  // ==================== UID-BASED ROUTES (WILDCARDS) ====================
 
   // Get RAB by ID
   router.get("/:rabId", rabHandler.getRABbyId.bind(rabHandler));

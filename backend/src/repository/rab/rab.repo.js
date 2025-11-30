@@ -211,11 +211,14 @@ export default function createRabRepo(db) {
     return rows;
   }
   async function getRABLineById(rabLineId) {
+    // ⚠️ PERHATIAN: Fungsi ini menggunakan db.query (global connection)
+    // JANGAN gunakan dalam transaction context
+    // Untuk transaction, gunakan query langsung dengan client
+    if (!rabLineId) throw new Error("rabLineId required");
+
     try {
       const sql = "SELECT * FROM rab_line WHERE id = $1";
       const { rows } = await db.query(sql, [rabLineId]);
-
-      if (!rabLineId) throw new Error("rabLineId required");
 
       if (rows.length === 0) {
         return null;
@@ -287,23 +290,13 @@ export default function createRabRepo(db) {
       throw err;
     }
   }
-  async function updateRABTotal(rabId, client = db) {
+  async function updateRABTotal(rabid, client = db) {
     try {
-      const sql = `
-        UPDATE rab 
-        SET total_amount = (
-          SELECT COALESCE(SUM(jumlah), 0) 
-          FROM rab_line 
-          WHERE rab_id = $1
-        )
-        WHERE id = $1
-        RETURNING *
-      `;
-
-      const { rows } = await db.query(sql, [rabId]);
+      const sql =
+        "UPDATE rab_header SET total_amount = (SELECT COALESCE(SUM(jumlah), 0) FROM rab_line WHERE rab_id = $1) WHERE id = $1 RETURNING *";
+      const { rows } = await client.query(sql, [rabid]); // Gunakan client, bukan db
       return rows[0];
     } catch (err) {
-      console.error("ERROR updateRABTotal:", err);
       throw err;
     }
   }
@@ -428,13 +421,12 @@ export default function createRabRepo(db) {
 
       const { uraian, volume, harga_satuan, jumlah, satuan } = updateData;
 
-      const existingLine = await getRABLineById(rabLineId);
+      const getLineQuery = "SELECT * FROM rab_line WHERE id = $1";
+      const getLineResult = await client.query(getLineQuery, [rabLineId]);
+      const existingLine = getLineResult.rows[0];
+
       if (!existingLine) {
-        await client.query("ROLLBACK");
-        return {
-          success: false,
-          message: `RAB line dengan id ${rabLineId} tidak ditemukan`,
-        };
+        throw new Error(`RAB line dengan id ${rabLineId} tidak ditemukan`);
       }
 
       const sql = `
@@ -453,32 +445,32 @@ export default function createRabRepo(db) {
         rabLineId,
       ]);
 
-      // AUTO-RECALCULATE TOTAL RAB (tetap penting)
+      // AUTO-RECALCULATE TOTAL RAB
       await updateRABTotal(existingLine.rab_id, client);
 
       await client.query("COMMIT");
-      return { success: true, data: rows[0] };
+      return rows[0]; // Return data langsung, tanpa wrapper object
     } catch (err) {
       await client.query("ROLLBACK");
       console.error("ERROR updateRABLine:", err);
-      return { success: false, message: `Terjadi error: ${err.message}` };
+      throw err; // Lempar error ke layer service
     } finally {
       client.release();
     }
   }
+
   async function deleteRABLine(rabLineId) {
     const client = await db.connect();
     try {
       await client.query("BEGIN");
 
       // Get line data before deletion
-      const existingLine = await getRABLineById(rabLineId);
+      const getLineQuery = "SELECT * FROM rab_line WHERE id = $1";
+      const getLineResult = await client.query(getLineQuery, [rabLineId]);
+      const existingLine = getLineResult.rows[0];
+
       if (!existingLine) {
-        await client.query("ROLLBACK");
-        return {
-          success: false,
-          message: `RAB line dengan id ${rabLineId} tidak ditemukan`,
-        };
+        throw new Error(`RAB line dengan id ${rabLineId} tidak ditemukan`);
       }
 
       const sql = "DELETE FROM rab_line WHERE id = $1 RETURNING *";
@@ -488,15 +480,11 @@ export default function createRabRepo(db) {
       await updateRABTotal(existingLine.rab_id, client);
 
       await client.query("COMMIT");
-      return {
-        success: true,
-        message: `RAB line berhasil dihapus`,
-        deleted: rows[0],
-      };
+      return rows[0]; // Konsisten return data langsung
     } catch (err) {
       await client.query("ROLLBACK");
       console.error("ERROR deleteRABLine:", err);
-      return { success: false, message: `Terjadi error: ${err.message}` };
+      throw err; // Konsisten throw error
     } finally {
       client.release();
     }
@@ -550,7 +538,9 @@ export default function createRabRepo(db) {
         WHERE r.id = $1
       `;
 
-      const { rows: [detailRow] } = await db.query(detailQuery, [rows[0].id]);
+      const {
+        rows: [detailRow],
+      } = await db.query(detailQuery, [rows[0].id]);
       return detailRow;
     } catch (err) {
       console.error("ERROR updateRABStatus:", err);
