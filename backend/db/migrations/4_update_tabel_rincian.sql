@@ -1,5 +1,5 @@
 -- =========================================
--- 4_update_tabel_rincian.sql (idempotent)
+-- 4_update_tabel_rincian.sql
 -- =========================================
 
 -- Ubah struktur tabel apbdes_rincian
