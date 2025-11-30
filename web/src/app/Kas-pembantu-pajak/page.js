@@ -6,8 +6,9 @@ import Header from "@/features/kas-pembantu/Header";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { ChevronDown, ChevronRight, Download, Plus } from "lucide-react";
 import MonthCard from "@/features/kas-pembantu/MonthCard";
+import { useAuth } from "@/lib/auth";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
 
 // Utility functions (inline)
 function formatCurrency(value) {
@@ -32,9 +33,9 @@ export default function KasPembantuPajak() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
-  const pathname = usePathname(); // deteksi halaman sekarang
+  const pathname = usePathname();
+  const { user, token } = useAuth() || {};
 
-  // path form otomatis disesuaikan
   const formPath = `${pathname}/Form`;
 
   // Fetch data from API on component mount
@@ -42,15 +43,41 @@ export default function KasPembantuPajak() {
     async function fetchData() {
       try {
         setLoading(true);
-        // GET http://localhost:8081/api/kas-pembantu/pajak (assuming same pattern)
-        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/pajak`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        setError(null);
+
+        // Buat headers dengan token jika ada
+        const headers = {
+          "Content-Type": "application/json",
+        };
+
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+
+        const response = await fetch(
+          `${API_BASE_URL}/kas-pembantu/pajak`,
+          {
+            method: "GET",
+            headers: headers,
+            credentials: "include",
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `HTTP ${response.status}: ${errorText || response.statusText}`
+          );
+        }
+
         const result = await response.json();
 
         // Transform API response to match UI data structure
         const transformed = transformToMonthCards(result);
         setData(transformed);
       } catch (err) {
+        console.error("Fetch error:", err);
         setError(err.message);
         setData([]);
       } finally {
@@ -59,7 +86,7 @@ export default function KasPembantuPajak() {
     }
 
     fetchData();
-  }, []);
+  }, [token]);
 
   // Format bulan + tahun langsung
   function formatMonthYearDisplay(month, year) {
@@ -161,7 +188,7 @@ export default function KasPembantuPajak() {
               key={index}
               bulan={item.bulan}
               total={item.total}
-              saldo={item.saldo}
+              saldo={item.isCurrentMonth}
               formPath={formPath}
               moduleType="pajak"
               month={item.month}

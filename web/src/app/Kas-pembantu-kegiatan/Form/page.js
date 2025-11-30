@@ -5,8 +5,9 @@ import Sidebar from "@/features/kas-pembantu/Sidebar";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { Calendar } from "lucide-react";
 import Footer from "@/features/kas-pembantu/Footer";
+import { useAuth } from "@/lib/auth";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
 
 // Utility functions (inline)
 function formatCurrency(value) {
@@ -66,6 +67,7 @@ export default function Page() {
   const searchParams = useSearchParams();
   const dateInputRef = useRef(null);
   const editId = searchParams.get("id");
+  const { user, token } = useAuth() || {};
 
   // Form state
   const [tanggal, setTanggal] = useState("");
@@ -92,9 +94,23 @@ export default function Page() {
   const [subBidangOptions, setSubBidangOptions] = useState([]);
   const [kegiatanOptions, setKegiatanOptions] = useState([]);
 
+  // Helper function to create headers with token
+  const getHeaders = useCallback(() => {
+    const headers = {
+      "Content-Type": "application/json",
+    };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    return headers;
+  }, [token]);
+
   async function getBKUidByKodeFungsi(kode) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/get-bku-id-by-kode-fungsi/${kode}`);
+      const response = await fetch(`${API_BASE_URL}/kas-pembantu/kegiatan/get-bku-id-by-kode-fungsi/${kode}`, {
+        headers: getHeaders(),
+        credentials: "include",
+      });
       const result = await response.json();
       if (!response.ok || result.success === false) {
         setError(result.message || `Gagal mendapatkan ID Buku Kas Umum dari kode fungsi ${kode}`);
@@ -111,47 +127,67 @@ export default function Page() {
   // Fetch data if in edit mode
   useEffect(() => {
     async function fetchKegiatanData() {
-      if (editId) {
-        try {
-          setLoading(true);
-          const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/${editId}`);
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const result = await response.json();
-          const data = result.data;
-          
-          // Convert tanggal to YYYY-MM-DD format for input
-          setTanggal(toYYYYMMDD(data.tanggal));
-          setUraian(data.uraian || "");
-          
-          // Map stored data back to form fields
-          setDariBendahara(String(data.penerimaan_bendahara || 0));
-          setSwadaya(String(data.penerimaan_swadaya || 0));
-          setBelanjaBarang(String(data.pengeluaran_barang_dan_jasa || 0));  
-          setBelanjaModal(String(data.pengeluaran_modal || 0));
-          
-          // Set type_enum to kegiatan dropdown if available
-          setKodeRek(data.type_enum || "");
-          setBidang("");
-          setSubBidang("");
-          setNomorBukti(data.no_bukti || ""); 
-          setJumlahPengembalian("0");
-          
-        } catch (err) {
-          setError(err.message);
-        } finally {
-          setLoading(false);
+      if (!editId) return;
+      
+      try {
+        setLoading(true);
+        const headers = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
         }
+        
+        const response = await fetch(`${API_BASE_URL}/kas-pembantu/kegiatan/${editId}`, {
+          headers: headers,
+          credentials: "include",
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const result = await response.json();
+        const data = result.data;
+        
+        // Convert tanggal to YYYY-MM-DD format for input
+        setTanggal(toYYYYMMDD(data.tanggal));
+        setUraian(data.uraian || "");
+        
+        // Map stored data back to form fields
+        setDariBendahara(String(data.penerimaan_bendahara || 0));
+        setSwadaya(String(data.penerimaan_swadaya || 0));
+        setBelanjaBarang(String(data.pengeluaran_barang_dan_jasa || 0));  
+        setBelanjaModal(String(data.pengeluaran_modal || 0));
+        
+        // Set type_enum to kegiatan dropdown if available
+        setKodeRek(data.type_enum || "");
+        setBidang("");
+        setSubBidang("");
+        setNomorBukti(data.no_bukti || ""); 
+        setJumlahPengembalian("0");
+        
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
     }
 
     fetchKegiatanData();
-  }, [editId]);
+  }, [editId, token]);
 
   // Fetch initial bidang options
   useEffect(() => {
     async function fetchBidang() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/bidang`);
+        const headers = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/kas-pembantu/kegiatan/bidang`, {
+          headers: headers,
+          credentials: "include",
+        });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const result = await response.json();
         setBidangOptions(result.data || []);
@@ -161,14 +197,24 @@ export default function Page() {
       }
     }
     fetchBidang();
-  }, []);
+  }, [token]);
 
   // Fetch sub-bidang when bidang changes
   useEffect(() => {
     if (bidang) {
       async function fetchSubBidang() {
         try {
-          const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/sub-bidang/${bidang}`);
+          const headers = {
+            "Content-Type": "application/json",
+          };
+          if (token) {
+            headers.Authorization = `Bearer ${token}`;
+          }
+          
+          const response = await fetch(`${API_BASE_URL}/kas-pembantu/kegiatan/sub-bidang/${bidang}`, {
+            headers: headers,
+            credentials: "include",
+          });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const result = await response.json();
           setSubBidangOptions(result.data || []);
@@ -184,14 +230,24 @@ export default function Page() {
       setSubBidangOptions([]);
       setKegiatanOptions([]);
     }
-  }, [bidang]);
+  }, [bidang, token]);
 
   // Fetch kegiatan when sub-bidang changes
   useEffect(() => {
     if (subBidang) {
       async function fetchKegiatanData() {
         try {
-          const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/sub-bidang/kegiatan/${subBidang}`);
+          const headers = {
+            "Content-Type": "application/json",
+          };
+          if (token) {
+            headers.Authorization = `Bearer ${token}`;
+          }
+          
+          const response = await fetch(`${API_BASE_URL}/kas-pembantu/kegiatan/sub-bidang/kegiatan/${subBidang}`, {
+            headers: headers,
+            credentials: "include",
+          });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const result = await response.json();
           setKegiatanOptions(result.data || []);
@@ -205,7 +261,7 @@ export default function Page() {
     } else {
       setKegiatanOptions([]);
     }
-  }, [subBidang]);
+  }, [subBidang, token]);
 
   useEffect(() => {
     if (kegiatan && kegiatanOptions.length > 0) {
@@ -250,9 +306,10 @@ export default function Page() {
         try {
           setLoading(true);
           setError(null);
-          const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/${editId}`, {
+          const response = await fetch(`${API_BASE_URL}/kas-pembantu/kegiatan/${editId}`, {
             method: "DELETE",
-            headers: { "Content-Type": "application/json" },
+            headers: getHeaders(),
+            credentials: "include",
           });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           router.push("/Kas-pembantu-kegiatan");
@@ -319,9 +376,10 @@ export default function Page() {
 
       // Submit to API - use update if editId exists, otherwise create
       if (editId) {
-        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan/${editId}`, {
+        const response = await fetch(`${API_BASE_URL}/kas-pembantu/kegiatan/${editId}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: getHeaders(),
+          credentials: "include",
           body: JSON.stringify(payload),
         });
         
@@ -330,9 +388,10 @@ export default function Page() {
           throw new Error(`HTTP ${response.status}: ${errorData.error || errorData.message || 'Unknown error'}`);
         }
       } else {
-        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan`, {
+        const response = await fetch(`${API_BASE_URL}/kas-pembantu/kegiatan`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getHeaders(),
+          credentials: "include",
           body: JSON.stringify(payload),
         });
         

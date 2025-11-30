@@ -943,15 +943,6 @@ export default function createKasPembantuService(repo) {
           ? Number(updates.saldo_after)
           : finalPemberian - finalPertanggungjawaban;
       
-      // business rule: saldo cannot be negative
-      if (finalSaldo < 0) {
-        throw {
-          status: 409,
-          message:
-            "Update would cause negative saldo_after (conflict with business rules)",
-        };
-      }
-      
       // optional: validate bku_id exists if repo has checkBkuExists
       if (
         updates.bku_id !== undefined &&
@@ -1090,6 +1081,7 @@ export default function createKasPembantuService(repo) {
       }
       
       // saldo_after: default pakai running saldo global pajak
+      let saldo_after;
       if (input.saldo_after !== undefined) {
         saldo_after = Number(input.saldo_after);
       } else {
@@ -1123,7 +1115,6 @@ export default function createKasPembantuService(repo) {
         penyetoran,
         saldo_after,
       };
-      
       const inserted = await repo.insertPajak(payload);
       return inserted;
     },
@@ -1209,15 +1200,6 @@ export default function createKasPembantuService(repo) {
         updates.saldo_after !== undefined
           ? Number(updates.saldo_after)
           : finalPemotongan - finalPenyetoran;
-      
-      // business rule: saldo cannot be negative
-      if (finalSaldo < 0) {
-        throw {
-          status: 409,
-          message:
-            "Update would cause negative saldo_after (conflict with business rules)",
-        };
-      }
       
       // optional: validate bku_id exists if repo has checkBkuExists
       if (

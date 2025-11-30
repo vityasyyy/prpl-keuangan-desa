@@ -6,8 +6,9 @@ import Header from "@/features/kas-pembantu/Header";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { ChevronDown, ChevronRight, Download, Plus } from "lucide-react";
 import MonthCard from "@/features/kas-pembantu/MonthCard";
+import { useAuth } from "@/lib/auth";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
 
 // 1. parse aman (hapus Rp, koma)
 function parseToNumber(value) {
@@ -25,6 +26,7 @@ function formatCurrency(value) {
     maximumFractionDigits: 2,
   }).format(num);
 }
+
 function formatMonthDisplay(monthNumber) {
   return `Bulan ${monthNumber}`;
 }
@@ -35,9 +37,9 @@ export default function KasPembantuKegiatan() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
-  const pathname = usePathname(); // deteksi halaman sekarang
+  const pathname = usePathname();
+  const { user, token } = useAuth() || {};
 
-  // path form otomatis disesuaikan
   const formPath = `${pathname}/Form`;
 
   // Fetch data from API on component mount
@@ -45,17 +47,38 @@ export default function KasPembantuKegiatan() {
     async function fetchData() {
       try {
         setLoading(true);
-        // GET http://localhost:8081/api/kas-pembantu/kegiatan?showAll=true
-        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan?showAll=true`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        setError(null);
+        const headers = {
+          "Content-Type": "application/json",
+        };
+
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+        const response = await fetch(
+          `${API_BASE_URL}/kas-pembantu/kegiatan?showAll=true`,
+          {
+            method: "GET",
+            headers: headers,
+            credentials: "include",
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `HTTP ${response.status}: ${errorText || response.statusText}`
+          );
+        }
         const result = await response.json();
 
         // Transform API response to match UI data structure
         const transformed = transformToMonthCards(result);
         setData(transformed);
       } catch (err) {
+        console.error("Fetch error:", err);
         setError(err.message);
-        // Fallback to empty array on error
         setData([]);
       } finally {
         setLoading(false);
@@ -63,9 +86,7 @@ export default function KasPembantuKegiatan() {
     }
 
     fetchData();
-  }, []);
-
-  
+  }, [token]); // Dependency array dengan token agar re-fetch saat token berubah
 
   // Format bulan + tahun langsung
   function formatMonthYearDisplay(month, year) {
@@ -87,7 +108,7 @@ export default function KasPembantuKegiatan() {
       return ta - tb;
     });
 
-    // 2) Hitung prefix sum global 
+    // 2) Hitung prefix sum global
     let runningSaldo = 0;
     const allWithSaldo = all.map((trx) => {
       const delta = (parseFloat(trx.penerimaan_bendahara) || 0) + (parseFloat(trx.penerimaan_swadaya) || 0)
@@ -141,9 +162,6 @@ export default function KasPembantuKegiatan() {
       transactions: group.transactions,
     }));
   }
-
-  
-
 
   return (
     <div className="flex h-screen bg-gray-100">

@@ -5,8 +5,9 @@ import Sidebar from "@/features/kas-pembantu/Sidebar";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { Calendar } from "lucide-react";
 import Footer from "@/features/kas-pembantu/Footer";
+import { useAuth } from "@/lib/auth";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
 
 // Utility functions (inline)
 function formatCurrency(value) {
@@ -73,6 +74,7 @@ export default function Page() {
   const searchParams = useSearchParams();
   const dateInputRef = useRef(null);
   const editId = searchParams.get("id");
+  const { user, token } = useAuth() || {};
 
   // Form state
   const [tanggal, setTanggal] = useState("");
@@ -90,37 +92,56 @@ export default function Page() {
   // Fetch data if in edit mode
   useEffect(() => {
     async function fetchPajak() {
-      if (editId) {
-        try {
-          setLoading(true);
-          // GET http://localhost:8081/api/kas-pembantu/pajak/{id}
-          const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/pajak/${editId}`);
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const result = await response.json();
-          const data = result.data;
-          
-          // Convert tanggal to YYYY-MM-DD format for input
-          setTanggal(toYYYYMMDD(data.tanggal));
-          setUraian(data.uraian);
-          setPemotongan(data.pemotongan ? String(data.pemotongan) : "");
-          setPenyetoran(data.penyetoran ? String(data.penyetoran) : "");
-          setNoBukti(data.no_bukti || "");
-        } catch (err) {
-          setError(err.message);
-        } finally {
-          setLoading(false);
+      if (!editId) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const headers = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
         }
+        
+        const response = await fetch(`${API_BASE_URL}/kas-pembantu/pajak/${editId}`, {
+          method: "GET",
+          headers: headers,
+          credentials: "include",
+          cache: "no-store",
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
+        }
+        
+        const result = await response.json();
+        const data = result.data;
+        
+        // Convert tanggal to YYYY-MM-DD format for input
+        setTanggal(toYYYYMMDD(data.tanggal));
+        setUraian(data.uraian);
+        setPemotongan(data.pemotongan ? String(data.pemotongan) : "");
+        setPenyetoran(data.penyetoran ? String(data.penyetoran) : "");
+        setNoBukti(data.no_bukti || "");
+      } catch (err) {
+        console.error("Fetch error:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
     }
 
     fetchPajak();
-  }, [editId]);
+  }, [editId, token]);
 
   // Calculate saldo automatically when input values change
   useEffect(() => {
     const pemotonganAmount = parseFloat(pemotongan || 0);
     const penyetoranAmount = parseFloat(penyetoran || 0);
-    const saldo = pemotonganAmount - penyetoranAmount;
+    const saldo = penyetoran - pemotonganAmount;
     setCalculatedSaldo(saldo);
   }, [pemotongan, penyetoran]);
 
@@ -130,10 +151,18 @@ export default function Page() {
         try {
           setLoading(true);
           setError(null);
-          // DELETE http://localhost:8081/api/kas-pembantu/pajak/{id}
-          const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/pajak/${editId}`, {
+          
+          const headers = {
+            "Content-Type": "application/json",
+          };
+          if (token) {
+            headers.Authorization = `Bearer ${token}`;
+          }
+          
+          const response = await fetch(`${API_BASE_URL}/kas-pembantu/pajak/${editId}`, {
             method: "DELETE",
-            headers: { "Content-Type": "application/json" },
+            headers: headers,
+            credentials: "include",
           });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           router.push("/Kas-pembantu-pajak");
@@ -190,6 +219,13 @@ export default function Page() {
         throw new Error("Format tanggal tidak valid");
       }
       
+      const headers = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+      
       // Prepare payload
       const payload = {
         bku_id: "bku003", // Default for now
@@ -198,13 +234,15 @@ export default function Page() {
         no_bukti: noBukti || null,
         pemotongan: pemotonganAmount,
         penyetoran: penyetoranAmount,
+        saldo_after: calculatedSaldo,
       };
       
       // Submit to API
       if (editId) {
-        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/pajak/${editId}`, {
+        const response = await fetch(`${API_BASE_URL}/kas-pembantu/pajak/${editId}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: headers,
+          credentials: "include",
           body: JSON.stringify(payload),
         });
         
@@ -213,9 +251,10 @@ export default function Page() {
           throw new Error(`HTTP ${response.status}: ${errorData.error || errorData.message || 'Unknown error'}`);
         }
       } else {
-        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/pajak`, {
+        const response = await fetch(`${API_BASE_URL}/kas-pembantu/pajak`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: headers,
+          credentials: "include",
           body: JSON.stringify(payload),
         });
         
@@ -274,7 +313,13 @@ export default function Page() {
           {editId ? "Edit Data Pembantu Pajak" : "Input Data Pembantu Pajak"}
         </h1>
 
-        <form className="space-y-5" onSubmit={handleSave}>
+        {/* Show loading state when fetching data in edit mode */}
+        {editId && loading ? (
+          <div className="rounded-md border border-gray-200 bg-white p-8 text-center">
+            <p className="text-gray-600">Memuat data...</p>
+          </div>
+        ) : (
+          <div className="space-y-5">
           {/* Error Alert */}
           {error && (
             <div className="rounded-md border border-red-200 bg-red-50 p-4">
@@ -388,7 +433,8 @@ export default function Page() {
             onSave={handleSave}
             isLoading={loading}
           />
-        </form>
+        </div>
+        )}
       </div>
     </div>
   );

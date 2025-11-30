@@ -6,8 +6,9 @@ import Header from "@/features/kas-pembantu/Header";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { ChevronDown, ChevronRight, Download, Plus } from "lucide-react";
 import MonthCard from "@/features/kas-pembantu/MonthCard";
+import { useAuth } from "@/lib/auth";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
 
 // Utility functions (inline)
 function formatCurrency(value) {
@@ -32,9 +33,9 @@ export default function KasPembantuPanjar() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
-  const pathname = usePathname(); // deteksi halaman sekarang
+  const pathname = usePathname();
+  const { user, token } = useAuth() || {};
 
-  // path form otomatis disesuaikan
   const formPath = `${pathname}/Form`;
 
   // Fetch data from API on component mount
@@ -42,15 +43,41 @@ export default function KasPembantuPanjar() {
     async function fetchData() {
       try {
         setLoading(true);
-        // GET http://localhost:8081/api/kas-pembantu/panjar
-        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/panjar`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        setError(null);
+
+        // Buat headers dengan token jika ada
+        const headers = {
+          "Content-Type": "application/json",
+        };
+
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+
+        const response = await fetch(
+          `${API_BASE_URL}/kas-pembantu/panjar`,
+          {
+            method: "GET",
+            headers: headers,
+            credentials: "include",
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `HTTP ${response.status}: ${errorText || response.statusText}`
+          );
+        }
+
         const result = await response.json();
 
         // Transform API response to match UI data structure
         const transformed = transformToMonthCards(result);
         setData(transformed);
       } catch (err) {
+        console.error("Fetch error:", err);
         setError(err.message);
         setData([]);
       } finally {
@@ -59,7 +86,7 @@ export default function KasPembantuPanjar() {
     }
 
     fetchData();
-  }, []);
+  }, [token]);
 
   // Format bulan + tahun langsung
   function formatMonthYearDisplay(month, year) {
@@ -81,7 +108,7 @@ export default function KasPembantuPanjar() {
       return ta - tb;
     });
 
-    // 2) Hitung prefix sum global 
+    // 2) Hitung prefix sum global
     let runningSaldo = 0;
     const allWithSaldo = all.map((trx) => {
       const delta = (parseFloat(trx.pemberian) || 0) - (parseFloat(trx.pertanggungjawaban) || 0); 
@@ -89,8 +116,8 @@ export default function KasPembantuPanjar() {
 
       return {
         ...trx,
-        delta,                              // selisih bulan yg sebenarnya
-        saldo_hitung: runningSaldo,         // PREFIX SUM SALDO
+        delta, // selisih bulan yg sebenarnya
+        saldo_hitung: runningSaldo, // PREFIX SUM SALDO
         delta_formatted: formatCurrency(delta),
         saldo_hitung_formatted: formatCurrency(runningSaldo),
       };
@@ -135,7 +162,6 @@ export default function KasPembantuPanjar() {
     }));
   }
 
-
   return (
     <div className="flex h-screen bg-gray-100">
       <Sidebar />
@@ -153,7 +179,12 @@ export default function KasPembantuPanjar() {
 
         <div className="space-y-3">
           {loading && <p className="text-gray-600">Memuat data...</p>}
-          {error && <p className="text-red-600">Error: {error}</p>}
+          {error && (
+            <div className="rounded-lg bg-red-50 p-4 text-red-600">
+              <p className="font-semibold">Error:</p>
+              <p>{error}</p>
+            </div>
+          )}
           {!loading && data.length === 0 && !error && (
             <p className="text-gray-600">Tidak ada data.</p>
           )}
@@ -162,7 +193,7 @@ export default function KasPembantuPanjar() {
               key={index}
               bulan={item.bulan}
               total={item.total}
-              saldo={item.saldo}
+              saldo={item.isCurrentMonth}
               formPath={formPath}
               moduleType="panjar"
               month={item.month}

@@ -2,7 +2,7 @@
 import { useRouter, usePathname } from "next/navigation";
 import { Download, Plus } from "lucide-react";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
 
 export default function Header({ title }) {
   const router = useRouter();
@@ -20,16 +20,12 @@ export default function Header({ title }) {
 
     // Map pathname ke endpoint export
     if(lastSegment === "kas-pembantu-pajak") {
-      exportUrl = `${API_BASE_URL}/api/kas-pembantu/pajak/export`;
+      exportUrl = `${API_BASE_URL}/kas-pembantu/pajak/export`;
     } else if (lastSegment === "kas-pembantu-panjar") {
-      exportUrl = `${API_BASE_URL}/api/kas-pembantu/panjar/export`;
+      exportUrl = `${API_BASE_URL}/kas-pembantu/panjar/export`;
     } else if (lastSegment === "kas-pembantu-kegiatan") {
-      exportUrl = `${API_BASE_URL}/api/kas-pembantu/kegiatan/export`;
+      exportUrl = `${API_BASE_URL}/kas-pembantu/kegiatan/export`;
     }
-
-    console.log("Downloading from URL:", exportUrl);
-    console.log("Current pathname:", pathname);
-    console.log("Detected segment:", lastSegment);
 
     // Trigger download
     window.location.href = exportUrl;
