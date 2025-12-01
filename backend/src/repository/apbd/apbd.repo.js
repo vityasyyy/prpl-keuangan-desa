@@ -126,12 +126,13 @@ export default function createApbdRepo(arg) {
   };
 
   const createApbdesDraft = async (tahun) => {
+    const id = `apbdes_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const q = `
-      INSERT INTO apbdes (tahun, status)
-      VALUES ($1, 'draft')
+      INSERT INTO apbdes (id, tahun, status)
+      VALUES ($1, $2, 'draft')
       RETURNING *;
     `;
-    const { rows } = await db.query(q, [tahun]);
+    const { rows } = await db.query(q, [id, tahun]);
     return rows[0];
   };
 
@@ -142,17 +143,19 @@ export default function createApbdRepo(arg) {
   };
 
   const createApbdesRincian = async (payload) => {
+    const id = `rincian_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const q = `
       INSERT INTO apbdes_rincian (
-        kegiatan_id, kode_fungsi_id, kode_ekonomi_id, jumlah_anggaran, sumber_dana, apbdes_id
-      ) VALUES ($1,$2,$3,$4,$5,$6)
+        id, kegiatan_id, kode_fungsi_id, kode_ekonomi_id, jumlah_anggaran, sumber_dana, apbdes_id
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7)
       RETURNING *;
     `;
 
     const params = [
-      payload.kegiatan_id || null, // bisa null
-      payload.kode_fungsi_id || null, // bisa null
-      payload.kode_ekonomi_id || null, // bisa null
+      id,
+      payload.kegiatan_id || null,
+      payload.kode_fungsi_id || null,
+      payload.kode_ekonomi_id || null,
       payload.jumlah_anggaran,
       payload.sumber_dana || null,
       payload.apbdes_id || null,
@@ -216,14 +219,18 @@ export default function createApbdRepo(arg) {
       "jumlah_anggaran",
       "sumber_dana",
     ]) {
-      if (data[key] !== undefined) {
+      // Only include if the value exists and is not null/undefined
+      if (data[key] !== undefined && data[key] !== null && data[key] !== "") {
         fields.push(`${key} = $${i}`);
         values.push(data[key]);
         i++;
       }
     }
 
-    if (!fields.length) return null;
+    if (!fields.length) {
+      // If no fields to update, just return the existing record
+      return getDraftApbdesById(id);
+    }
 
     const q = `
       UPDATE apbdes_rincian
@@ -268,14 +275,16 @@ export default function createApbdRepo(arg) {
   };
 
   const createApbdesRincianPenjabaran = async (payload) => {
+    const id = `penjabaran_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const q = `
       INSERT INTO apbdes_rincian_penjabaran
-      (rincian_id, kode_fungsi_id, kode_ekonomi_id, volume, satuan, jumlah_anggaran, sumber_dana)
-      VALUES ($1,$2,$3,$4,$5,$6,$7) 
+      (id, rincian_id, kode_fungsi_id, kode_ekonomi_id, volume, satuan, jumlah_anggaran, sumber_dana)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
       RETURNING *;
     `;
 
     const params = [
+      id,
       payload.rincian_id,
       payload.kode_fungsi_id || null,
       payload.kode_ekonomi_id || null,
@@ -380,14 +389,18 @@ export default function createApbdRepo(arg) {
       "jumlah_anggaran",
       "sumber_dana",
     ]) {
-      if (data[key] !== undefined) {
+      // Only include if the value exists and is not null/undefined
+      if (data[key] !== undefined && data[key] !== null && data[key] !== "") {
         fields.push(`${key} = $${i}`);
         values.push(data[key]);
         i++;
       }
     }
 
-    if (!fields.length) return null;
+    if (!fields.length) {
+      // If no fields to update, just return the existing record
+      return getDraftPenjabaranApbdesById(id).then(rows => rows[0]);
+    }
 
     const q = `
       UPDATE apbdes_rincian_penjabaran
@@ -497,6 +510,31 @@ export default function createApbdRepo(arg) {
     return { akun, kelompok, jenis, objek };
   };
 
+  // Helper: Convert full_code (spasi) ke id (titik)
+  const getIdByFullCode = async (fullCode, tableName) => {
+    if (!fullCode) return null;
+    
+    // Normalize: bisa terima "5 3 2 01" atau "5.3.2.01"
+    const normalized = fullCode.trim().replace(/\s+/g, ' ');
+    
+    const q = `
+      SELECT id FROM ${tableName}
+      WHERE full_code = $1
+      LIMIT 1
+    `;
+    
+    const { rows } = await db.query(q, [normalized]);
+    return rows[0]?.id || null;
+  };
+
+  const getKodeEkonomiIdByFullCode = async (fullCode) => {
+    return getIdByFullCode(fullCode, 'kode_ekonomi');
+  };
+
+  const getKodeFungsiIdByFullCode = async (fullCode) => {
+    return getIdByFullCode(fullCode, 'kode_fungsi');
+  };
+
   return {
     //tabel apbdes
     createApbdesDraft,
@@ -544,5 +582,7 @@ export default function createApbdRepo(arg) {
     //dropdown helper
     getKodeFungsiDetailsByFullCode,
     getKodeEkonomiDetailsByFullCode,
+    getKodeEkonomiIdByFullCode,
+    getKodeFungsiIdByFullCode,
   };
 }

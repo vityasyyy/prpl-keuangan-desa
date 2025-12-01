@@ -13,6 +13,7 @@ export default function InputDraftAPBDes() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id"); // Get id from query if editing
   const sumberDanaOptions = ["PBH", "DDS", "ADD", "DLL", "PBP"];
+  const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   // States to hold the currently displayed options for dropdowns
   const [akunOptions, setAkunOptions] = useState([]);
@@ -176,7 +177,7 @@ export default function InputDraftAPBDes() {
   useEffect(() => {
     async function fetchAllDropdownOptions() {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/all-dropdown-options`);
+        const response = await fetch(`${API}/all-dropdown-options`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -326,81 +327,244 @@ export default function InputDraftAPBDes() {
   useEffect(() => {
     if (id && akunData.length > 0 && bidangData.length > 0 && subBidangData.length > 0 && 
         kelompokData.length > 0 && jenisData.length > 0) {
-      const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
-      const existing = allData.find((item) => item.id == id);
-      if (existing) {
-        setIsLoadingEditData(true);
-        setFormData(existing);
-        
-        // Set selected IDs berdasarkan data yang dimuat
-        // 1. Set Akun ID untuk filter Sumber Dana
-        const selectedAkun = akunData.find((item) => item.uraian === existing.pendapatanBelanja);
-        if (selectedAkun) {
-          setSelectedAkunId(selectedAkun.id);
+      
+      // Fetch data dari API
+      const fetchEditData = async () => {
+        try {
+          const res = await fetch(`${API}/draft/rincian/${id}`);
+          if (!res.ok) throw new Error("Failed to fetch data");
+          
+          const result = await res.json();
+          const existing = result.data || result;
+          
+          console.log("📝 Loading edit data:", existing);
+          
+          if (existing) {
+            setIsLoadingEditData(true);
+            
+            console.log("Debug: existing.jumlah_anggaran =", existing.jumlah_anggaran);
+
+            // Map kode_ekonomi_id ke format form
+            const ekonomiInfo = kelompokData.find(k => k.id === existing.kode_ekonomi_id) 
+              || jenisData.find(j => j.id === existing.kode_ekonomi_id)
+              || objekData.find(o => o.id === existing.kode_ekonomi_id)
+              || akunData.find(a => a.id === existing.kode_ekonomi_id);
+            
+            // Map kode_fungsi_id ke format form  
+            const fungsiInfo = bidangData.find(b => b.id === existing.kode_fungsi_id)
+              || subBidangData.find(s => s.id === existing.kode_fungsi_id)
+              || kegiatanData.find(k => k.id === existing.kode_fungsi_id);
+            
+            // Convert ID ke full_code untuk display
+            const kodeRekEkonomi = ekonomiInfo?.full_code || "";
+            const kodeRekBidang = fungsiInfo?.full_code || "";
+            
+            setFormData({
+              id: existing.id,
+              kodeRekEkonomi: kodeRekEkonomi,
+              pendapatanBelanja: "", // Will be set after finding akun
+              kelompok: "",
+              jenis: "",
+              objek: "",
+              kodeRekBidang: kodeRekBidang,
+              bidang: "",
+              subBidang: "",
+              kegiatan: "",
+              anggaran: String(existing.jumlah_anggaran || "").replace(/[^0-9]/g, ""),
+              sumberDana: existing.sumber_dana || "",
+            });
+            
+            // Set selected IDs based on the fetched kode IDs
+            if (existing.kode_ekonomi_id) {
+              // Find the akun parent
+              const findAkunParent = (kodeId) => {
+                // Try to find in different levels
+                const item = akunData.find(a => a.id === kodeId) 
+                  || kelompokData.find(k => k.id === kodeId)
+                  || jenisData.find(j => j.id === kodeId)
+                  || objekData.find(o => o.id === kodeId);
+                
+                if (!item) return null;
+                
+                // If it's already akun level, return it
+                if (item.level === 'akun') return item;
+                
+                // Otherwise find its parent
+                if (item.parent_id) {
+                  return findAkunParent(item.parent_id);
+                }
+                return null;
+              };
+              
+              const akunParent = findAkunParent(existing.kode_ekonomi_id);
+              if (akunParent) {
+                setSelectedAkunId(akunParent.id);
+                setFormData(prev => ({ ...prev, pendapatanBelanja: akunParent.uraian }));
+              }
+              
+              // Set kelompok if exists
+              const kelompokItem = kelompokData.find(k => k.id === existing.kode_ekonomi_id);
+              if (kelompokItem) {
+                setSelectedKelompokId(kelompokItem.id);
+                setFormData(prev => ({ ...prev, kelompok: kelompokItem.uraian }));
+              }
+            }
+            
+            if (existing.kode_fungsi_id) {
+              // Find bidang parent
+              const findBidangParent = (kodeId) => {
+                const item = bidangData.find(b => b.id === kodeId)
+                  || subBidangData.find(s => s.id === kodeId)
+                  || kegiatanData.find(k => k.id === kodeId);
+                
+                if (!item) return null;
+                if (item.level === 'bidang') return item;
+                if (item.parent_id) return findBidangParent(item.parent_id);
+                return null;
+              };
+              
+              const bidangParent = findBidangParent(existing.kode_fungsi_id);
+              if (bidangParent) {
+                setSelectedBidangId(bidangParent.id);
+                setFormData(prev => ({ ...prev, bidang: bidangParent.uraian }));
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error loading edit data:", error);
+          alert(`Gagal memuat data: ${error.message}`);
         }
-        
-        // 2. Set Bidang ID untuk filter Sub-Bidang
-        const selectedBidang = bidangData.find((item) => item.uraian === existing.bidang);
-        if (selectedBidang) {
-          setSelectedBidangId(selectedBidang.id);
-        }
-      }
+      };
+      
+      fetchEditData();
     }
   }, [id, akunData, bidangData, subBidangData, kelompokData, jenisData]);
 
   // Set Sub-Bidang ID setelah subBidangOptions ter-update
   useEffect(() => {
     if (isLoadingEditData && id && subBidangOptions.length > 0) {
-      const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
-      const existing = allData.find((item) => item.id == id);
-      if (existing && existing.subBidang) {
-        const selectedSubBidang = subBidangData.find(
-          (item) => item.uraian === existing.subBidang
-        );
-        if (selectedSubBidang) {
-          setSelectedSubBidangId(selectedSubBidang.id);
+      const fetchEditData = async () => {
+        try {
+          const res = await fetch(`${API}/draft/rincian/${id}`);
+          if (!res.ok) return;
+          
+          const result = await res.json();
+          const existing = result.data || result;
+          
+          if (existing && existing.kode_fungsi_id) {
+            const selectedSubBidang = subBidangData.find(
+              (item) => item.id === existing.kode_fungsi_id || item.parent_id === existing.kode_fungsi_id
+            );
+            if (selectedSubBidang && selectedSubBidang.level === 'sub_bidang') {
+              setSelectedSubBidangId(selectedSubBidang.id);
+              setFormData(prev => ({ ...prev, subBidang: selectedSubBidang.uraian }));
+            }
+          }
+        } catch (error) {
+          console.error("Error setting sub-bidang:", error);
         }
-      }
+      };
+      fetchEditData();
     }
   }, [isLoadingEditData, subBidangOptions, id]);
 
   // Set Kelompok ID setelah kelompokOptions ter-update
   useEffect(() => {
     if (isLoadingEditData && id && kelompokOptions.length > 0) {
-      const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
-      const existing = allData.find((item) => item.id == id);
-      if (existing && existing.kelompok) {
-        const selectedKelompok = kelompokData.find(
-          (item) => item.uraian === existing.kelompok
-        );
-        if (selectedKelompok) {
-          setSelectedKelompokId(selectedKelompok.id);
+      const fetchEditData = async () => {
+        try {
+          const res = await fetch(`${API}/draft/rincian/${id}`);
+          if (!res.ok) return;
+          
+          const result = await res.json();
+          const existing = result.data || result;
+          
+          if (existing && existing.kode_ekonomi_id) {
+            const selectedKelompok = kelompokData.find(
+              (item) => item.id === existing.kode_ekonomi_id
+            );
+            if (selectedKelompok && selectedKelompok.level === 'kelompok') {
+              setSelectedKelompokId(selectedKelompok.id);
+              setFormData(prev => ({ ...prev, kelompok: selectedKelompok.uraian }));
+            }
+          }
+        } catch (error) {
+          console.error("Error setting kelompok:", error);
         }
-      }
+      };
+      fetchEditData();
     }
   }, [isLoadingEditData, kelompokOptions, id]);
   // Set Jenis ID setelah jenisOptions ter-update
   useEffect(() => {
     if (isLoadingEditData && id && jenisOptions.length > 0) {
-      const allData = JSON.parse(localStorage.getItem("apbdesData") || "[]");
-      const existing = allData.find((item) => item.id == id);
-      if (existing && existing.jenis) {
-        const selectedJenis = jenisData.find(
-          (item) => item.uraian === existing.jenis
-        );
-        if (selectedJenis) {
-          setSelectedJenisId(selectedJenis.id);
+      const fetchEditData = async () => {
+        try {
+          const res = await fetch(`${API}/draft/rincian/${id}`);
+          if (!res.ok) return;
+          
+          const result = await res.json();
+          const existing = result.data || result;
+          
+          if (existing && existing.kode_ekonomi_id) {
+            const selectedJenis = jenisData.find(
+              (item) => item.id === existing.kode_ekonomi_id
+            );
+            if (selectedJenis && selectedJenis.level === 'jenis') {
+              setSelectedJenisId(selectedJenis.id);
+              setFormData(prev => ({ ...prev, jenis: selectedJenis.uraian }));
+            }
+          }
+        } catch (error) {
+          console.error("Error setting jenis:", error);
         }
-      }
+      };
+      fetchEditData();
     }
   }, [isLoadingEditData, jenisOptions, id]);
   // Selesai loading edit data setelah semua options ter-update
   useEffect(() => {
     if (isLoadingEditData && objekOptions.length > 0 && kegiatanOptions.length > 0) {
-      // Beri sedikit delay untuk memastikan semua state sudah ter-update
-      setTimeout(() => {
-        setIsLoadingEditData(false);
-      }, 100);
+      const fetchEditData = async () => {
+        try {
+          const res = await fetch(`${API}/draft/rincian/${id}`);
+          if (!res.ok) return;
+          
+          const result = await res.json();
+          const existing = result.data || result;
+          
+          if (existing) {
+            // Set Objek if it's at objek level
+            if (existing.kode_ekonomi_id) {
+              const selectedObjek = objekData.find(
+                (item) => item.id === existing.kode_ekonomi_id
+              );
+              if (selectedObjek && selectedObjek.level === 'objek') {
+                setFormData(prev => ({ ...prev, objek: selectedObjek.uraian }));
+              }
+            }
+            
+            // Set Kegiatan if it's at kegiatan level
+            if (existing.kode_fungsi_id) {
+              const selectedKegiatan = kegiatanData.find(
+                (item) => item.id === existing.kode_fungsi_id
+              );
+              if (selectedKegiatan && selectedKegiatan.level === 'kegiatan') {
+                setFormData(prev => ({ ...prev, kegiatan: selectedKegiatan.uraian }));
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error setting objek/kegiatan:", error);
+        }
+      };
+      
+      fetchEditData().then(() => {
+        // Beri sedikit delay untuk memastikan semua state sudah ter-update
+        setTimeout(() => {
+          setIsLoadingEditData(false);
+        }, 100);
+      });
     }
   }, [isLoadingEditData, objekOptions, kegiatanOptions]);
 
@@ -559,43 +723,91 @@ export default function InputDraftAPBDes() {
     }
   };
 
-  const handleSimpan = (e) => {
-    e.preventDefault();
-    let dataLokal = JSON.parse(localStorage.getItem("apbdesData") || "[]");
-
-    if (id) {
-      // mode edit
-      dataLokal = dataLokal.map((item) =>
-        item.id == id
-          ? {
-              ...item,
-              ...formData,
-              anggaran: sanitizeNumber(formData.anggaran),
-              kategori: normalizeKategori(formData.pendapatanBelanja),
-            }
-          : item
-      );
-      alert("✅ Data berhasil diperbarui!");
-    } else {
-      // mode tambah baru
-      const newItem = {
-        ...formData,
-        id: Date.now(),
-        anggaran: sanitizeNumber(formData.anggaran),
-        kategori: normalizeKategori(formData.pendapatanBelanja),
+  const handleSimpan = async () => {
+    try {
+      const payload = {
+        kegiatan_id: formData.kegiatan || null,
+        kode_fungsi_id: formData.kodeRekBidang, 
+        kode_ekonomi_id: formData.kodeRekEkonomi,
+        jumlah_anggaran: sanitizeNumber(formData.anggaran),
+        sumber_dana: formData.sumberDana,
       };
-      dataLokal.push(newItem);
-      alert("✅ Data berhasil disimpan!");
+
+      console.log("📤 Sending payload:", payload);
+
+      // Determine if this is an edit (id from query param) or a new entry
+      const isEditing = !!id;
+      const url = isEditing 
+        ? `${API}/draft/rincian/${id}` 
+        : `${API}/draft/rincian`;
+      const method = isEditing ? "PUT" : "POST";
+
+      console.log(`🔧 ${method} to ${url}`);
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      // Log status dan response mentah
+      console.log("🛰️ Status:", res.status);
+      const text = await res.text();
+      console.log("📩 Raw response:", text);
+
+      // Coba parse JSON kalau bisa
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Respon bukan JSON: ${text.slice(0, 100)}...`);
+      }
+
+      if (!res.ok) {
+        console.error("❌ Backend error:", data);
+        // Display the hint if available for better user feedback
+        const errorMsg = data.hint || data.error || "Terjadi kesalahan";
+        throw new Error(errorMsg);
+      }
+
+      console.log("✅ Success:", data);
+      alert(data.message || "Data berhasil disimpan!");
+
+      // If user selected "Buat lagi", reset form for new entry
+      if (!buatLagi) {
+        router.push("/APBDes/output-draft-apbdes");
+      } else {
+        setFormData({
+          id: Date.now(),
+          kodeRekEkonomi: "",
+          pendapatanBelanja: "",
+          kelompok: "",
+          jenis: "",
+          objek: "",
+          kodeRekBidang: "",
+          bidang: "",
+          subBidang: "",
+          kegiatan: "",
+          anggaran: "",
+          sumberDana: "",
+        });
+        // Reset selected IDs
+        setSelectedBidangId(null);
+        setSelectedSubBidangId(null);
+        setSelectedAkunId(null);
+        setSelectedKelompokId(null);
+        setSelectedJenisId(null);
+      }
+    } catch (error) {
+      console.error("🚨 Caught error:", error);
+      alert(`Terjadi kesalahan: ${error.message || JSON.stringify(error)}`);
     }
+  };
 
-    localStorage.setItem("apbdesData", JSON.stringify(dataLokal));
-    // Dispatch events so other parts of the app can react immediately
-    window.dispatchEvent(new Event("storage"));
-    window.dispatchEvent(new CustomEvent("apbdes:update"));
-
-    if (!buatLagi) {
-      router.push("/APBDes/output-draft-apbdes");
-    } else {
+  // 🗑️ Hapus data + konfirmasi (seperti di kode kedua)
+  const handleHapus = async () => {
+    if (!id) {
+      // If no ID from query param, just reset the form
       setFormData({
         id: Date.now(),
         kodeRekEkonomi: "",
@@ -610,40 +822,37 @@ export default function InputDraftAPBDes() {
         anggaran: "",
         sumberDana: "",
       });
+      setSelectedBidangId(null);
+      setSelectedSubBidangId(null);
+      setSelectedAkunId(null);
+      setSelectedKelompokId(null);
+      setSelectedJenisId(null);
+      alert("🧹 Form dikosongkan (tidak ada data yang dihapus)");
+      return;
     }
-  };
 
-  // 🗑️ Hapus data + konfirmasi (seperti di kode kedua)
-  const handleHapus = () => {
     const confirmDelete = window.confirm(
       "⚠️ Apakah Anda yakin ingin menghapus data ini?"
     );
 
     if (!confirmDelete) return;
 
-    if (id) {
-      let dataLokal = JSON.parse(localStorage.getItem("apbdesData") || "[]");
-      dataLokal = dataLokal.filter((item) => item.id != id);
-      localStorage.setItem("apbdesData", JSON.stringify(dataLokal));
-      alert("🗑️ Data berhasil dihapus!");
-      window.dispatchEvent(new Event("storage"));
-      router.push("/APBDes/output-draft-apbdes");
-    } else {
-      setFormData({
-        id: Date.now(),
-        kodeRekEkonomi: "",
-        pendapatanBelanja: "",
-        kelompok: "",
-        jenis: "",
-        objek: "",
-        kodeRekBidang: "",
-        bidang: "",
-        subBidang: "",
-        kegiatan: "",
-        anggaran: "",
-        sumberDana: "",
+    try {
+      const res = await fetch(`${API}/draft/rincian/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
       });
-      alert("🧹 Form dikosongkan (tidak ada data yang dihapus)");
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Gagal menghapus data");
+      }
+
+      alert("🗑️ Data berhasil dihapus!");
+      router.push("/APBDes/output-draft-apbdes");
+    } catch (error) {
+      console.error("Error deleting:", error);
+      alert(`Gagal menghapus data: ${error.message}`);
     }
   };
 

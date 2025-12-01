@@ -46,6 +46,41 @@ export default function createApbdService(ApbdRepo) {
       const draft = await ApbdRepo.createApbdesDraft(tahun);
       apbdesId = draft.id;
     }
+    
+    // Convert full_code ke id jika diperlukan
+    // Frontend bisa kirim dalam format "5 3 2 01" (full_code) atau sudah id
+    if (payload.kode_ekonomi_id) {
+      // Cek apakah ini full_code (ada spasi) atau sudah id (ada titik)
+      if (/\s/.test(payload.kode_ekonomi_id)) {
+        // Ini full_code, convert ke id
+        const ekonomiId = await ApbdRepo.getKodeEkonomiIdByFullCode(payload.kode_ekonomi_id);
+        if (!ekonomiId) {
+          throw {
+            status: 400,
+            error: 'invalid_kode_ekonomi',
+            message: `Kode ekonomi "${payload.kode_ekonomi_id}" tidak ditemukan`,
+          };
+        }
+        payload.kode_ekonomi_id = ekonomiId;
+      }
+    }
+
+    if (payload.kode_fungsi_id) {
+      // Cek apakah ini full_code (ada spasi) atau sudah id (ada titik)
+      if (/\s/.test(payload.kode_fungsi_id)) {
+        // Ini full_code, convert ke id
+        const fungsiId = await ApbdRepo.getKodeFungsiIdByFullCode(payload.kode_fungsi_id);
+        if (!fungsiId) {
+          throw {
+            status: 400,
+            error: 'invalid_kode_fungsi',
+            message: `Kode fungsi "${payload.kode_fungsi_id}" tidak ditemukan`,
+          };
+        }
+        payload.kode_fungsi_id = fungsiId;
+      }
+    }
+
     // Tambahkan apbdes_id ke payload
     payload.apbdes_id = apbdesId;
     // Insert rincian
@@ -95,14 +130,35 @@ export default function createApbdService(ApbdRepo) {
   };
 
   const updateDraftApbdesItem = async (id, data) => {
+    // Convert full_code ke id jika diperlukan (sama seperti create)
+    if (data.kode_ekonomi_id && /\s/.test(data.kode_ekonomi_id)) {
+      const ekonomiId = await ApbdRepo.getKodeEkonomiIdByFullCode(data.kode_ekonomi_id);
+      if (!ekonomiId) {
+        throw {
+          status: 400,
+          error: 'invalid_kode_ekonomi',
+          message: `Kode ekonomi "${data.kode_ekonomi_id}" tidak ditemukan`,
+        };
+      }
+      data.kode_ekonomi_id = ekonomiId;
+    }
+
+    if (data.kode_fungsi_id && /\s/.test(data.kode_fungsi_id)) {
+      const fungsiId = await ApbdRepo.getKodeFungsiIdByFullCode(data.kode_fungsi_id);
+      if (!fungsiId) {
+        throw {
+          status: 400,
+          error: 'invalid_kode_fungsi',
+          message: `Kode fungsi "${data.kode_fungsi_id}" tidak ditemukan`,
+        };
+      }
+      data.kode_fungsi_id = fungsiId;
+    }
+
     const updatedItem = await ApbdRepo.updateDraftApbdesItem(id, data);
-    const q = `
-      SELECT r.apbdes_id
-      FROM apbdes_rincian r
-      WHERE r.id = $1
-    `;
-    const { rows } = await db.query(q, [id]);
-    const apbdesId = rows?.[0]?.apbdes_id;
+    
+    // Get apbdes_id from the updated item
+    const apbdesId = updatedItem.apbdes_id;
 
     const total = await ApbdRepo.recalculateDraftApbdesTotals(apbdesId);
     return { updatedItem, total };
@@ -135,6 +191,31 @@ export default function createApbdService(ApbdRepo) {
   };
 
   const createApbdesRincianPenjabaran = async (payload) => {
+    // Convert full_code ke id jika diperlukan (sama seperti create rincian)
+    if (payload.kode_ekonomi_id && /\s/.test(payload.kode_ekonomi_id)) {
+      const ekonomiId = await ApbdRepo.getKodeEkonomiIdByFullCode(payload.kode_ekonomi_id);
+      if (!ekonomiId) {
+        throw {
+          status: 400,
+          error: 'invalid_kode_ekonomi',
+          message: `Kode ekonomi "${payload.kode_ekonomi_id}" tidak ditemukan`,
+        };
+      }
+      payload.kode_ekonomi_id = ekonomiId;
+    }
+
+    if (payload.kode_fungsi_id && /\s/.test(payload.kode_fungsi_id)) {
+      const fungsiId = await ApbdRepo.getKodeFungsiIdByFullCode(payload.kode_fungsi_id);
+      if (!fungsiId) {
+        throw {
+          status: 400,
+          error: 'invalid_kode_fungsi',
+          message: `Kode fungsi "${payload.kode_fungsi_id}" tidak ditemukan`,
+        };
+      }
+      payload.kode_fungsi_id = fungsiId;
+    }
+
     // Insert penjabaran
     const newItem = await ApbdRepo.createApbdesRincianPenjabaran(payload);
     // Cari apbdes_id dari rincian
@@ -193,15 +274,35 @@ export default function createApbdService(ApbdRepo) {
   };
 
   const updatePenjabaranApbdesItem = async (id, data) => {
+    // Convert full_code ke id jika diperlukan (sama seperti create)
+    if (data.kode_ekonomi_id && /\s/.test(data.kode_ekonomi_id)) {
+      const ekonomiId = await ApbdRepo.getKodeEkonomiIdByFullCode(data.kode_ekonomi_id);
+      if (!ekonomiId) {
+        throw {
+          status: 400,
+          error: 'invalid_kode_ekonomi',
+          message: `Kode ekonomi "${data.kode_ekonomi_id}" tidak ditemukan`,
+        };
+      }
+      data.kode_ekonomi_id = ekonomiId;
+    }
+
+    if (data.kode_fungsi_id && /\s/.test(data.kode_fungsi_id)) {
+      const fungsiId = await ApbdRepo.getKodeFungsiIdByFullCode(data.kode_fungsi_id);
+      if (!fungsiId) {
+        throw {
+          status: 400,
+          error: 'invalid_kode_fungsi',
+          message: `Kode fungsi "${data.kode_fungsi_id}" tidak ditemukan`,
+        };
+      }
+      data.kode_fungsi_id = fungsiId;
+    }
+
     const updatedItem = await ApbdRepo.updatePenjabaranApbdesItem(id, data);
-    const q = `
-      SELECT r.apbdes_id
-      FROM apbdes_rincian_penjabaran p
-      JOIN apbdes_rincian r ON r.id = p.rincian_id
-      WHERE p.id = $1
-    `;
-    const { rows } = await db.query(q, [id]);
-    const apbdesId = rows?.[0]?.apbdes_id;
+    
+    // Get apbdes_id via rincian_id
+    const apbdesId = await ApbdRepo.getApbdesIdByRincianId(updatedItem.rincian_id);
 
     const total = await ApbdRepo.recalculateDraftApbdesTotals(apbdesId);
     return { updatedItem, total };

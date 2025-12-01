@@ -10,6 +10,9 @@ export default function OutputAPBDes() {
   const router = useRouter();
   const [data, setData] = useState([]);
   const [penjabaranData, setPenjabaranData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [kodeEkonomiMap, setKodeEkonomiMap] = useState({});
+  const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   // Helpers: sanitize anggaran and tolerant category matching
   const sanitizeNumber = (val) => {
@@ -28,64 +31,141 @@ export default function OutputAPBDes() {
     return Number(s) || 0;
   };
 
-  // Load data input draft APBDes and listen for updates
-  useEffect(() => {
-    const readApbdes = () => JSON.parse(localStorage.getItem("apbdesData") || "[]");
-    const readPenjabaran = () => JSON.parse(localStorage.getItem("penjabaranData") || "[]");
-    setData(readApbdes());
-    setPenjabaranData(readPenjabaran());
-
-    const onUpdate = () => {
-      setData(readApbdes());
-      setPenjabaranData(readPenjabaran());
-    };
-    window.addEventListener('apbdes:update', onUpdate);
-    window.addEventListener('penjabaran:update', onUpdate);
-    window.addEventListener('storage', onUpdate);
-    return () => {
-      window.removeEventListener('apbdes:update', onUpdate);
-      window.removeEventListener('penjabaran:update', onUpdate);
-      window.removeEventListener('storage', onUpdate);
-    };
-  }, []);
-
-  // Hitung total per kategori
-  const total = (kategori) => {
-    if (!data || data.length === 0) return 0;
-    return data
-      .filter((item) => {
-        const val = ((item.kategori || item.pendapatanBelanja) || "").toString().toLowerCase();
-        return val.includes(kategori.toLowerCase());
-      })
-      .reduce((sum, item) => {
-        // sum penjabaran for this parent
-        const penjabaranSum = (penjabaranData || [])
-          .filter((p) => String(p.rincian_id) === String(item.id))
-          .reduce((s, p) => s + sanitizeNumber(p.anggaran || 0), 0);
-        const parentTotal = Math.max((typeof item.anggaran === 'number' ? item.anggaran : sanitizeNumber(item.anggaran)), penjabaranSum);
-        return sum + parentTotal;
-      }, 0);
+  // Fetch kode ekonomi untuk mapping ID ke uraian
+  const fetchKodeEkonomi = async () => {
+    try {
+      const res = await fetch(`${API}/kode-ekonomi`);
+      if (!res.ok) throw new Error("Failed to fetch kode ekonomi");
+      const ekonomiData = await res.json();
+      
+      console.log("💰 Kode ekonomi data:", ekonomiData.slice(0, 5)); // Log sample
+      
+      // Create map: id -> {uraian, level}
+      const map = {};
+      ekonomiData.forEach((item) => {
+        map[item.id] = {
+          uraian: item.uraian,
+          level: item.level,
+        };
+      });
+      setKodeEkonomiMap(map);
+      console.log("🗺️ Kode ekonomi map sample:", Object.entries(map).slice(0, 5));
+    } catch (error) {
+      console.error("Error fetching kode ekonomi:", error);
+    }
   };
 
-  // Ambil item per kategori
+  // Fetch data dari API
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch rincian
+      const rincianRes = await fetch(`${API}/draft/rincian`);
+      if (!rincianRes.ok) throw new Error("Failed to fetch rincian");
+      const rincianData = await rincianRes.json();
+
+      // Fetch penjabaran
+      const penjabaranRes = await fetch(`${API}/draft/penjabaran`);
+      if (!penjabaranRes.ok) throw new Error("Failed to fetch penjabaran");
+      const penjabaranDataList = await penjabaranRes.json();
+
+      console.log("📊 Rincian data:", rincianData);
+      console.log("📋 Penjabaran data:", penjabaranDataList);
+
+      setData(rincianData);
+      setPenjabaranData(penjabaranDataList);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      alert(`Gagal memuat data: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load data on mount
+  useEffect(() => {
+    fetchKodeEkonomi();
+    fetchData();
+  }, []);
+
+  // Hitung total per kategori berdasarkan level kelompok dari kode_ekonomi
+  const total = (kategori) => {
+    if (!data || data.length === 0) return 0;
+    
+    const filtered = data.filter((item) => {
+      // Get uraian from kode_ekonomi_id
+      const ekonomiInfo = kodeEkonomiMap[item.kode_ekonomi_id];
+      
+      console.log(`🔍 Item ${item.id}: kode_ekonomi_id="${item.kode_ekonomi_id}", ekonomiInfo:`, ekonomiInfo);
+      
+      // Filter hanya item dengan level 'kelompok'
+      if (!ekonomiInfo || ekonomiInfo.level !== 'kelompok') return false;
+      
+      const uraian = ekonomiInfo.uraian.toLowerCase();
+      const matches = uraian.includes(kategori.toLowerCase());
+      
+      console.log(`   -> uraian="${ekonomiInfo.uraian}", level="${ekonomiInfo.level}", matches ${kategori}?`, matches);
+      
+      return matches;
+    });
+    
+    console.log(`📊 Total for ${kategori}: ${filtered.length} items`);
+    
+    return filtered.reduce((sum, item) => {
+      // sum penjabaran for this parent
+      const penjabaranSum = (penjabaranData || [])
+        .filter((p) => String(p.rincian_id) === String(item.id))
+        .reduce((s, p) => s + sanitizeNumber(p.jumlah_anggaran || 0), 0);
+      const parentTotal = Math.max(sanitizeNumber(item.jumlah_anggaran), penjabaranSum);
+      return sum + parentTotal;
+    }, 0);
+  };
+
+  // Ambil item per kategori dengan level kelompok
   const getItems = (kategori) => {
     if (!data || data.length === 0) return [];
     return data.filter((item) => {
-      const val = ((item.kategori || item.pendapatanBelanja) || "").toString().toLowerCase();
-      return val.includes(kategori.toLowerCase());
+      const ekonomiInfo = kodeEkonomiMap[item.kode_ekonomi_id];
+      // Filter hanya item dengan level 'kelompok'
+      if (!ekonomiInfo || ekonomiInfo.level !== 'kelompok') return false;
+      
+      const uraian = ekonomiInfo.uraian.toLowerCase();
+      return uraian.includes(kategori.toLowerCase());
     });
   };
 
-  // Simpan hasil posting ke localStorage
-  const handlePostingAPB = () => {
+  // Simpan hasil posting ke API
+  const handlePostingAPB = async () => {
     if (!data || data.length === 0) {
       alert("Belum ada data yang dapat diposting.");
       return;
     }
 
-    localStorage.setItem("apbdesPosted", JSON.stringify(data));
-    alert("APBDes berhasil diposting ke Buku APBDes.");
-    router.push("/APBDes/buku-apbdes");
+    try {
+      // Get apbdes_id from first rincian (assuming all have same apbdes_id)
+      const apbdesId = data[0]?.apbdes_id;
+      if (!apbdesId) {
+        alert("Tidak dapat menemukan ID APBDes.");
+        return;
+      }
+
+      const res = await fetch(`${API}/draft/rincian/post`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: apbdesId }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Gagal posting APBDes");
+      }
+
+      alert("APBDes berhasil diposting ke Buku APBDes.");
+      router.push("/APBDes/buku-apbdes");
+    } catch (error) {
+      console.error("Error posting APBDes:", error);
+      alert(`Gagal posting APBDes: ${error.message}`);
+    }
   };
 
   const renderBox = (title, kategori) => {
@@ -123,8 +203,12 @@ export default function OutputAPBDes() {
               {items.map((item, idx) => {
                 // compute penjabaran sum and parentTotal
                 const itemPenjabaran = (penjabaranData || []).filter((p) => String(p.rincian_id) === String(item.id));
-                const penjabaranSum = itemPenjabaran.reduce((s, p) => s + sanitizeNumber(p.anggaran || 0), 0);
-                const parentTotal = Math.max((typeof item.anggaran === 'number' ? item.anggaran : sanitizeNumber(item.anggaran)), penjabaranSum);
+                const penjabaranSum = itemPenjabaran.reduce((s, p) => s + sanitizeNumber(p.jumlah_anggaran || 0), 0);
+                const parentTotal = Math.max(sanitizeNumber(item.jumlah_anggaran), penjabaranSum);
+
+                // Get uraian from kode_ekonomi_id (use kelompok level)
+                const ekonomiInfo = kodeEkonomiMap[item.kode_ekonomi_id];
+                const displayUraian = ekonomiInfo?.uraian || "Tidak ada uraian";
 
                 return (
                   <div
@@ -138,7 +222,7 @@ export default function OutputAPBDes() {
                         className="flex items-center space-x-1 text-left"
                         title="Edit item"
                       >
-                        <span>{item.objek || item.jenis || item.kelompok || item.pendapatanBelanja || "Tidak ada uraian"}</span>
+                        <span>{displayUraian}</span>
                         <span className="text-gray-400 text-xs">✎</span>
                       </button>
                     </div>
@@ -189,6 +273,7 @@ export default function OutputAPBDes() {
             variant="solid"
             className="bg-[#0779ce] hover:bg-[#066bb8] text-white flex items-center justify-between px-4 py-2 rounded-lg w-48 shadow-sm"
             onClick={handlePostingAPB}
+            disabled={loading}
           >
             <span>Posting APB</span>
             <ArrowUpRight width={18} height={18} />
@@ -216,12 +301,19 @@ export default function OutputAPBDes() {
         </div>
       </div>
 
-      {/* Box Section */}
-      <div className="space-y-8">
-        {renderBox("Pendapatan", "Pendapatan")}
-        {renderBox("Belanja", "Belanja")}
-        {renderBox("Pembiayaan", "Pembiayaan")}
-      </div>
+      {/* Loading State */}
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500">Memuat data...</p>
+        </div>
+      ) : (
+        /* Box Section */
+        <div className="space-y-8">
+          {renderBox("Pendapatan", "Pendapatan")}
+          {renderBox("Belanja", "Belanja")}
+          {renderBox("Pembiayaan", "Pembiayaan")}
+        </div>
+      )}
     </main>
   );
 }
