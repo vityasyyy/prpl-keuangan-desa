@@ -1,0 +1,175 @@
+### ============================================
+### MODUL: BUKU KAS PEMBANTU PANJAR
+### QA Testing File
+### ============================================
+
+### --- AUTHENTICATION (Jalankan Pertama!) ---
+POST http://localhost:8081/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "kaur_keuangan",
+  "password": "kaur_keuangan_desa_6769"
+}
+
+### ============================================
+### TEST CASE 1: GET - List Semua Panjar
+### Expected: 200 OK, Array of panjar entries
+### ============================================
+
+### TC1.1: Get all panjar entries
+GET http://localhost:8081/api/kas-pembantu/panjar
+
+### ============================================
+### TEST CASE 2: GET - Panjar by ID
+### Expected: 200 OK / 404 Not Found
+### ============================================
+
+### TC2.1: Get panjar dengan ID valid
+GET http://localhost:8081/api/kas-pembantu/panjar/panjar001
+
+### TC2.2: Get panjar dengan ID tidak valid
+### Expected: 404 Not Found
+GET http://localhost:8081/api/kas-pembantu/panjar/invalid_panjar_xyz
+
+### ============================================
+### TEST CASE 3: POST - Create Panjar Entry
+### Expected: 201 Created
+### ============================================
+
+### TC3.1: Create panjar PEMBERIAN (uang diberikan)
+POST http://localhost:8081/api/kas-pembantu/panjar
+Content-Type: application/json
+
+{
+  "bku_id": "bku001",
+  "tanggal": "2025-01-15",
+  "uraian": "QA Test: Panjar untuk Perjalanan Dinas",
+  "no_bukti": "QA-PJ-001",
+  "pemberian": 2000000,
+  "pertanggungjawaban": 0
+}
+
+### TC3.2: Create panjar PERTANGGUNGJAWABAN (uang dikembalikan/dipertanggungjawabkan)
+POST http://localhost:8081/api/kas-pembantu/panjar
+Content-Type: application/json
+
+{
+  "bku_id": "bku001",
+  "tanggal": "2025-01-20",
+  "uraian": "QA Test: Pertanggungjawaban Perjalanan Dinas",
+  "no_bukti": "QA-PJ-002",
+  "pemberian": 0,
+  "pertanggungjawaban": 1800000
+}
+
+### TC3.3: Create panjar - MISSING tanggal (Negative Test)
+### Expected: 400 Bad Request
+POST http://localhost:8081/api/kas-pembantu/panjar
+Content-Type: application/json
+
+{
+  "bku_id": "bku001",
+  "uraian": "Test panjar tanpa tanggal",
+  "no_bukti": "QA-PJ-003",
+  "pemberian": 500000,
+  "pertanggungjawaban": 0
+}
+
+### TC3.4: Create panjar - MISSING bku_id (Negative Test)
+### Expected: 400 Bad Request
+POST http://localhost:8081/api/kas-pembantu/panjar
+Content-Type: application/json
+
+{
+  "tanggal": "2025-01-15",
+  "uraian": "Test panjar tanpa bku_id",
+  "no_bukti": "QA-PJ-004",
+  "pemberian": 500000,
+  "pertanggungjawaban": 0
+}
+
+### TC3.5: Create panjar - Invalid bku_id (Negative Test)
+### Expected: 400/404 Bad Request
+POST http://localhost:8081/api/kas-pembantu/panjar
+Content-Type: application/json
+
+{
+  "bku_id": "invalid_bku_xyz",
+  "tanggal": "2025-01-15",
+  "uraian": "Test panjar dengan bku_id tidak valid",
+  "no_bukti": "QA-PJ-005",
+  "pemberian": 500000,
+  "pertanggungjawaban": 0
+}
+
+### TC3.6: Create panjar - Pemberian dan Pertanggungjawaban keduanya > 0 (Business Logic Test)
+### Expected: Tergantung business rule (bisa error atau diterima)
+POST http://localhost:8081/api/kas-pembantu/panjar
+Content-Type: application/json
+
+{
+  "bku_id": "bku001",
+  "tanggal": "2025-01-15",
+  "uraian": "Test panjar dengan keduanya terisi",
+  "no_bukti": "QA-PJ-006",
+  "pemberian": 500000,
+  "pertanggungjawaban": 300000
+}
+
+### ============================================
+### TEST CASE 4: PUT - Edit Panjar Entry
+### Expected: 200 OK
+### ============================================
+
+### TC4.1: Edit panjar dengan data valid
+PUT http://localhost:8081/api/kas-pembantu/panjar/panjar001
+Content-Type: application/json
+
+{
+  "bku_id": "bku001",
+  "tanggal": "2025-01-16",
+  "uraian": "QA EDITED: Panjar Perjalanan Dinas (Revised)",
+  "no_bukti": "QA-PJ-EDIT",
+  "pemberian": 2500000,
+  "pertanggungjawaban": 0
+}
+
+### TC4.2: Edit panjar dengan ID tidak valid (Negative Test)
+### Expected: 404 Not Found
+PUT http://localhost:8081/api/kas-pembantu/panjar/invalid_panjar_xyz
+Content-Type: application/json
+
+{
+  "uraian": "Test edit dengan ID tidak valid"
+}
+
+### ============================================
+### TEST CASE 5: DELETE - Hapus Panjar Entry
+### Expected: 200 OK / 204 No Content
+### ============================================
+
+### TC5.1: Delete panjar dengan ID valid
+### NOTE: Ganti dengan ID hasil create
+DELETE http://localhost:8081/api/kas-pembantu/panjar/panjar_test_delete
+
+### TC5.2: Delete panjar dengan ID tidak valid (Negative Test)
+### Expected: 404 Not Found
+DELETE http://localhost:8081/api/kas-pembantu/panjar/invalid_panjar_xyz
+
+### ============================================
+### TEST CASE 6: Export ke Excel
+### Expected: File Excel / 200 OK
+### ============================================
+
+### TC6.1: Export buku pembantu panjar
+GET http://localhost:8081/api/kas-pembantu/panjar/export
+
+### ============================================
+### TEST CASE 7: Saldo Calculation Test
+### Skenario: Cek apakah saldo dihitung dengan benar
+### ============================================
+
+### TC7.1: Get all untuk cek saldo_after setelah beberapa transaksi
+### Verifikasi manual: saldo = pemberian kumulatif - pertanggungjawaban kumulatif
+GET http://localhost:8081/api/kas-pembantu/panjar

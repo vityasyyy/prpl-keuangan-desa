@@ -1,48 +1,48 @@
-import bcrypt from 'bcrypt';
-import { Pool } from 'pg';
-import 'dotenv/config';
-import runMigrations from '../migrations/run-migrations.js';
+import bcrypt from "bcrypt";
+import { Pool } from "pg";
+import "dotenv/config";
+import runMigrations from "../migrations/run-migrations.js";
 
 // --- Database Configuration ---
 const pool = new Pool({
   connectionString:
     process.env.DB_URL ||
-    'postgresql://prpl_koma:password@localhost:5432/keuangan_desa',
+    "postgresql://prpl_koma:password@localhost:5432/keuangan_desa",
 });
 
 // --- User Data ---
 const users = [
-  { username: 'kades', full_name: 'Kepala Desa', role: 'kepala_desa' },
-  { username: 'sekdes', full_name: 'Sekretaris Desa', role: 'sekretaris_desa' },
+  { username: "kades", full_name: "Kepala Desa", role: "kepala_desa" },
+  { username: "sekdes", full_name: "Sekretaris Desa", role: "sekretaris_desa" },
   {
-    username: 'kaur_keuangan',
-    full_name: 'Kaur Keuangan',
-    role: 'kaur_keuangan',
+    username: "kaur_keuangan",
+    full_name: "Kaur Keuangan",
+    role: "kaur_keuangan",
   },
   {
-    username: 'kaur_perencanaan',
-    full_name: 'Kaur Perencanaan',
-    role: 'kaur_perencanaan',
+    username: "kaur_perencanaan",
+    full_name: "Kaur Perencanaan",
+    role: "kaur_perencanaan",
   },
   {
-    username: 'kaur_tu_umum',
-    full_name: 'Kaur TU & Umum',
-    role: 'kaur_tu_umum',
+    username: "kaur_tu_umum",
+    full_name: "Kaur TU & Umum",
+    role: "kaur_tu_umum",
   },
   {
-    username: 'kasi_pemerintahan',
-    full_name: 'Kasi Pemerintahan',
-    role: 'kasi_pemerintahan',
+    username: "kasi_pemerintahan",
+    full_name: "Kasi Pemerintahan",
+    role: "kasi_pemerintahan",
   },
   {
-    username: 'kasi_kesejyahteraan',
-    full_name: 'Kasi Kesejahteraan',
-    role: 'kasi_kesejahteraan',
+    username: "kasi_kesejyahteraan",
+    full_name: "Kasi Kesejahteraan",
+    role: "kasi_kesejahteraan",
   },
   {
-    username: 'kasi_pelayanan',
-    full_name: 'Kasi Pelayanan',
-    role: 'kasi_pelayanan',
+    username: "kasi_pelayanan",
+    full_name: "Kasi Pelayanan",
+    role: "kasi_pelayanan",
   },
 ];
 
@@ -50,47 +50,47 @@ async function seedDatabase() {
   const client = await pool.connect();
 
   try {
-    console.log('Starting database seeding...');
+    console.log("Starting database seeding...");
 
     // Begin transaction
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
     // ========================
     // CLEANUP EXISTING DATA
     // ========================
-    console.log('Cleaning up existing data...');
+    console.log("Cleaning up existing data...");
 
     // Delete in reverse order of dependencies
-    await client.query('DELETE FROM refresh_tokens');
-    await client.query('DELETE FROM buku_bank');
-    await client.query('DELETE FROM buku_kas_pajak');
-    await client.query('DELETE FROM buku_pembantu_panjar');
-    await client.query('DELETE FROM buku_kas_pembantu');
-    await client.query('DELETE FROM buku_kas_umum');
-    await client.query('DELETE FROM rab_line');
-    await client.query('DELETE FROM rab');
-    await client.query('DELETE FROM rkk');
-    await client.query('DELETE FROM rka_penarikan');
-    await client.query('DELETE FROM rka');
-    await client.query('DELETE FROM apbdes_rincian_penjabaran');
-    await client.query('DELETE FROM apbdes_rincian');
-    await client.query('DELETE FROM kegiatan');
-    await client.query('DELETE FROM apbdes');
-    await client.query('DELETE FROM users');
+    await client.query("DELETE FROM refresh_tokens");
+    await client.query("DELETE FROM buku_bank");
+    await client.query("DELETE FROM buku_kas_pajak");
+    await client.query("DELETE FROM buku_pembantu_panjar");
+    await client.query("DELETE FROM buku_kas_pembantu");
+    await client.query("DELETE FROM buku_kas_umum");
+    await client.query("DELETE FROM rab_line");
+    await client.query("DELETE FROM rab");
+    await client.query("DELETE FROM rkk");
+    await client.query("DELETE FROM rka_penarikan");
+    await client.query("DELETE FROM rka");
+    await client.query("DELETE FROM apbdes_rincian_penjabaran");
+    await client.query("DELETE FROM apbdes_rincian");
+    await client.query("DELETE FROM kegiatan");
+    await client.query("DELETE FROM apbdes");
+    await client.query("DELETE FROM users");
     // We assume kode_fungsi and kode_ekonomi are already populated
 
-    console.log('✅ Cleanup completed');
+    console.log("✅ Cleanup completed");
 
     // Reset sequences for SERIAL columns
-    await client.query('ALTER SEQUENCE users_user_id_seq RESTART WITH 1');
+    await client.query("ALTER SEQUENCE users_user_id_seq RESTART WITH 1");
     await client.query(
-      'ALTER SEQUENCE refresh_tokens_refresh_token_id_seq RESTART WITH 1'
+      "ALTER SEQUENCE refresh_tokens_refresh_token_id_seq RESTART WITH 1"
     );
 
     // ========================
     // SEED USERS (with bcrypt)
     // ========================
-    console.log('🌱 Starting user seed...');
+    console.log("🌱 Starting user seed...");
 
     for (const u of users) {
       const plainPassword = `${u.role}_desa_6769`;
@@ -114,19 +114,19 @@ async function seedDatabase() {
       console.log(`✅ Seeded user: ${row.username} (${row.role})`);
       console.log(`   → password: ${plainPassword}`);
     }
-    console.log('🎉 All users seeded successfully!');
+    console.log("🎉 All users seeded successfully!");
 
     // ========================
     // SEED APBDES DATA
     // ========================
-    console.log('Seeding apbdes...');
+    console.log("Seeding apbdes...");
     await client.query(`
       INSERT INTO apbdes (id, tahun, status) VALUES
       ('apb001', 2024, 'approved'),
       ('apb002', 2025, 'draft')
     `);
 
-    console.log('Seeding kegiatan...');
+    console.log("Seeding kegiatan...");
     await client.query(`
       INSERT INTO kegiatan (id, apbdes_id, nama, jenis) VALUES
       ('keg001', 'apb001', 'Penyelenggaraan Pemerintahan Desa', 'rutin'),
@@ -138,7 +138,7 @@ async function seedDatabase() {
     `);
 
     // Seed apbdes_rincian (KEYS CORRECTED)
-    console.log('Seeding apbdes_rincian...');
+    console.log("Seeding apbdes_rincian...");
     await client.query(`
       INSERT INTO apbdes_rincian (id, kegiatan_id, kode_fungsi_id, kode_ekonomi_id, uraian, jumlah_anggaran, sumber_dana) VALUES
       ('rin001', 'keg001', '1.1.01', '5.1.1.01', 'Honorarium Kepala Desa', 12000000.00, 'ADD'),
@@ -151,7 +151,7 @@ async function seedDatabase() {
       ('rin008', 'keg006', '2.2.02', '5.2', 'Program Posyandu', 8000000.00, 'ADD')
     `);
 
-    console.log('Seeding apbdes_rincian_penjabaran...');
+    console.log("Seeding apbdes_rincian_penjabaran...");
     await client.query(`
       INSERT INTO apbdes_rincian_penjabaran (id, rincian_id, uraian, volume, satuan, jumlah_anggaran, sumber_dana) VALUES
       ('penj001', 'rin001', 'Honorarium Kepala Desa per bulan', 12, 'bulan', 12000000.00, 'ADD'),
@@ -167,7 +167,7 @@ async function seedDatabase() {
     // ========================
     // SEED PLANNING DATA (RKA, RKK, RAB)
     // ========================
-    console.log('Seeding rka...');
+    console.log("Seeding rka...");
     await client.query(`
       INSERT INTO rka (id, kegiatan_id, uraian, jumlah) VALUES
       ('rka001', 'keg002', 'Pembangunan Jalan Desa Tahap 1', 75000000.00),
@@ -176,7 +176,7 @@ async function seedDatabase() {
       ('rka004', 'keg005', 'Renovasi Balai Desa', 50000000.00)
     `);
 
-    console.log('Seeding rka_penarikan...');
+    console.log("Seeding rka_penarikan...");
     await client.query(`
       INSERT INTO rka_penarikan (id, rka_id, month, amount) VALUES
       ('rkap001', 'rka001', 3, 25000000.00), ('rkap002', 'rka001', 6, 25000000.00), ('rkap003', 'rka001', 9, 25000000.00),
@@ -186,7 +186,7 @@ async function seedDatabase() {
     `);
 
     // Seed rkk (KEYS CORRECTED)
-    console.log('Seeding rkk...');
+    console.log("Seeding rkk...");
     await client.query(`
       INSERT INTO rkk (id, rka_id, bidang_fungsi_id, lokasi, volume, satuan, biaya_rkk, durasi_days, mulai, selesai, pelaksana) VALUES
       ('rkk001', 'rka001', '2.3.10', 'Jalan Utama Desa RT 01', 500, 'meter', 75000000.00, 90, '2024-03-01', '2024-05-30', 'CV Karya Bersama'),
@@ -196,7 +196,7 @@ async function seedDatabase() {
     `);
 
     // Seed rab (KEYS CORRECTED)
-    console.log('Seeding rab...');
+    console.log("Seeding rab...");
     await client.query(`
     INSERT INTO rab (id, mulai, selesai, kode_fungsi_id, kode_ekonomi_id, total_amount, status_rab) VALUES
     ('rab001', '2024-01-15', '2024-03-15', '2.3.10','5.3.5', 75000000.00, 'disetujui'),
@@ -205,7 +205,7 @@ async function seedDatabase() {
     ('rab004', '2024-04-01', '2024-05-31', '1.2.03','5.3.4', 50000000.00, 'belum diajukan')
     `);
     // Seed rab_line (KEYS CORRECTED)
-    console.log('Seeding rab_line...');
+    console.log("Seeding rab_line...");
     await client.query(`
   INSERT INTO rab_line (id, rab_id, uraian, volume, harga_satuan, jumlah, satuan) VALUES
   ('rabl001', 'rab001', 'Semen 40kg', 100.00, 75000.00, 7500000.00, 'sak'),
@@ -230,7 +230,7 @@ async function seedDatabase() {
     // ========================
     // SEED EXECUTION DATA (Buku Kas)
     // ========================
-    console.log('Seeding buku_kas_umum...');
+    console.log("Seeding buku_kas_umum...");
     await client.query(`
       INSERT INTO buku_kas_umum (id, tanggal, rab_id, kode_ekonomi_id, kode_fungsi_id, uraian, no_bukti, penerimaan, pengeluaran, saldo_after) VALUES
       ('bku001', '2024-01-01', NULL, '4.2.3.01', '1', 'Penerimaan ADD Tahap I', 'TRM001', 100000000.00, 0.00, 100000000.00),
@@ -245,34 +245,39 @@ async function seedDatabase() {
       ('bku010', '2024-06-01', 'rab001', '5.3.5', '2.3.10', 'Pembayaran Upah Jalan Tahap 2', 'BKL007', 0.00, 25000000.00, 328000000.00)
     `);
 
-    console.log('Seeding buku_kas_pembantu...');
+    // Seed buku_kas_pembantu
+    console.log("Seeding buku_kas_pembantu...");
     await client.query(`
-      INSERT INTO buku_kas_pembantu (id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after) VALUES
-      ('bkp001', 'bku003', 'honorarium', '2024-01-15', 'Honorarium Kepala Desa Januari', 0.00, 1000000.00, 1000000.00),
-      ('bkp002', 'bku004', 'honorarium', '2024-01-15', 'Honorarium Perangkat Desa Januari', 0.00, 3000000.00, 4000000.00),
-      ('bkp003', 'bku005', 'operasional', '2024-02-01', 'ATK uantuk kantor desa', 0.00, 500000.00, 4500000.00),
-      ('bkp004', 'bku006', 'pembangunan', '2024-03-01', 'Material pembangunan jalan', 0.00, 25000000.00, 29500000.00),
-      ('bkp005', 'bku007', 'pembangunan', '2024-04-01', 'Biaya pembuatan sumur bor', 0.00, 12500000.00, 42000000.00),
-      ('bkp006', 'bku009', 'pemberdayaan', '2024-05-01', 'Biaya pelatihan masyarakat', 0.00, 5000000.00, 47000000.00),
-      ('bkp007', 'bku010', 'pembangunan', '2024-06-01', 'Upah pembangunan jalan', 0.00, 25000000.00, 72000000.00)
+      INSERT INTO buku_kas_pembantu (
+        id, bku_id, type_enum, tanggal, uraian, no_bukti,
+        penerimaan_bendahara, penerimaan_swadaya,
+        pengeluaran_barang_dan_jasa, pengeluaran_modal, saldo_after
+      ) VALUES
+      ('bkp001', 'bku003', '1.1.01', '2024-01-15', 'Honorarium Kepala Desa Januari','NB1', 0.00, 0.00, 123.00, 1000000.00, 1000000.00),
+      ('bkp002', 'bku004', '1.1.02', '2024-01-15', 'Honorarium Perangkat Desa Januari','NB2', 0.00, 0.00, 123.00, 3000000.00, 4000000.00),
+      ('bkp003', 'bku005', '1.1.04', '2024-02-01', 'ATK untuk kantor desa','NB3', 0.00, 0.00, 123.00, 500000.00, 4500000.00),
+      ('bkp004', 'bku006', '2.3.10', '2024-03-01', 'Material pembangunan jalan','NB4', 0.00, 0.00, 123.00, 25000000.00, 29500000.00),
+      ('bkp005', 'bku007', '2.4.11', '2024-04-01', 'Biaya pembuatan sumur bor','NB5', 0.00, 0.00, 123.00, 12500000.00, 42000000.00),
+      ('bkp006', 'bku009', '4.7.04', '2024-05-01', 'Biaya pelatihan masyarakat','NB6', 0.00, 0.00, 123.00, 5000000.00, 47000000.00),
+      ('bkp007', 'bku010', '2.3.10', '2024-06-01', 'Upah pembangunan jalan','NB7', 0.00, 0.00, 123.00, 25000000.00, 72000000.00)
     `);
 
     // Seed buku_kas_pajak (KEYS CORRECTED)
-    console.log('Seeding buku_kas_pajak...');
+    console.log("Seeding buku_kas_pajak...");
     await client.query(`
-      INSERT INTO buku_kas_pajak (id, bku_id, tanggal, uraian, pemotongan, penyetoran, saldo_after) VALUES
-      ('bkpj001', 'bku004', '2024-01-15', 'PPh 21 Honorarium Januari', 150000.00, 0.00, 150000.00),
-      ('bkpj002', NULL, '2024-02-10', 'Setor PPh 21 Januari', 0.00, 150000.00, 0.00),
-      ('bkpj003', 'bku004', '2024-02-15', 'PPh 21 Honorarium Februari', 150000.00, 0.00, 150000.00),
-      ('bkpj004', NULL, '2024-03-10', 'Setor PPh 21 Februari', 0.00, 150000.00, 0.00),
-      ('bkpj005', 'bku006', '2024-03-15', 'PPh 23 Jasa Konstruksi', 1250000.00, 0.00, 1250000.00),
-      ('bkpj006', NULL, '2024-04-10', 'Setor PPh 23 Maret', 0.00, 1250000.00, 0.00),
-      ('bkpj007', 'bku004', '2024-04-15', 'PPh 21 Honorarium April', 150000.00, 0.00, 150000.00),
-      ('bkpj008', NULL, '2024-05-10', 'Setor PPh 21 April', 0.00, 150000.00, 0.00)
+      INSERT INTO buku_kas_pajak (id, bku_id, tanggal, uraian, no_bukti, pemotongan, penyetoran, saldo_after) VALUES
+      ('bkpj001', 'bku004', '2024-01-15', 'PPh 21 Honorarium Januari', 'NB1123', 150000.00, 0.00, 150000.00),
+      ('bkpj002', NULL, '2024-02-10', 'Setor PPh 21 Januari',  'NB421', 0.00, 150000.00, 0.00),
+      ('bkpj003', 'bku004', '2024-02-15', 'PPh 21 Honorarium Februari', 'NB021', 150000.00, 0.00, 150000.00),
+      ('bkpj004', NULL, '2024-03-10', 'Setor PPh 21 Februari', 'NB12', 0.00, 150000.00, 0.00),
+      ('bkpj005', 'bku006', '2024-03-15', 'PPh 23 Jasa Konstruksi', 'NB11', 1250000.00, 0.00, 1250000.00),
+      ('bkpj006', NULL, '2024-04-10', 'Setor PPh 23 Maret', 'NB14', 0.00, 1250000.00, 0.00),
+      ('bkpj007', 'bku004', '2024-04-15', 'PPh 21 Honorarium April', 'NB21', 150000.00, 0.00, 150000.00),
+      ('bkpj008', NULL, '2024-05-10', 'Setor PPh 21 April', 'NB7', 0.00, 150000.00, 0.00)
     `);
 
     // Seed buku_bank (KEYS CORRECTED)
-    console.log('Seeding buku_bank...');
+    console.log("Seeding buku_bank...");
     await client.query(`
       INSERT INTO buku_bank (id, bku_id, tanggal, uraian, bukti_transaksi, setoran, penerimaan_bunga, penarikan, pajak, biaya_admin, saldo_after) VALUES
       ('bb001', NULL, '2024-01-01', 'Saldo Awal Tahun', 'SA2024', 0.00, 0.00, 0.00, 0.00, 0.00, 50000000.00),
@@ -287,41 +292,41 @@ async function seedDatabase() {
       ('bb010', 'bku009', '2024-04-15', 'Tarik untuk Pelatihan', 'TK003', 0.00, 0.00, 15000000.00, 0.00, 5000.00, 376129500.00)
     `);
 
-    console.log('Seeding buku_pembantu_panjar...');
+    console.log("Seeding buku_pembantu_panjar...");
     await client.query(`
-      INSERT INTO buku_pembantu_panjar (id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after) VALUES
-      ('panjar001', 'bku005', '2024-02-01', 'Panjar untuk Belanja ATK Februari', 500000.00, 0.00, 500000.00),
-      ('panjar002', 'bku005', '2024-02-03', 'Pertanggungjawaban Belanja ATK (SPJ)', 0.00, 500000.00, 0.00),
-      ('panjar003', 'bku009', '2024-04-30', 'Panjar untuk Persiapan Pelatihan Masyarakat', 1500000.00, 0.00, 1500000.00),
-      ('panjar004', 'bku009', '2024-05-02', 'Pertanggungjawaban Panjar Pelatihan', 0.00, 1500000.00, 0.00)
+      INSERT INTO buku_pembantu_panjar (id, bku_id, tanggal, uraian, no_bukti, pemberian, pertanggungjawaban, saldo_after) VALUES
+      ('panjar001', 'bku005', '2024-02-01', 'Panjar untuk Belanja ATK Februari', 'NB1', 500000.00, 0.00, 500000.00),
+      ('panjar002', 'bku005', '2024-02-03', 'Pertanggungjawaban Belanja ATK (SPJ)', 'NB2',0.00, 500000.00, 0.00),
+      ('panjar003', 'bku009', '2024-04-30', 'Panjar untuk Persiapan Pelatihan Masyarakat','NB3', 1500000.00, 0.00, 1500000.00),
+      ('panjar004', 'bku009', '2024-05-02', 'Pertanggungjawaban Panjar Pelatihan', 'NB8', 0.00, 1500000.00, 0.00)
     `);
 
     // Commit transaction
-    await client.query('COMMIT');
-    console.log('✅ Database seeding completed successfully!');
+    await client.query("COMMIT");
+    console.log("✅ Database seeding completed successfully!");
 
     // Display summary
-    console.log('\n📊 Seeding Summary:');
+    console.log("\n📊 Seeding Summary:");
     console.log(`- users: ${users.length} records`);
-    console.log('- apbdes: 2 records');
-    console.log('- kegiatan: 6 records');
-    console.log('- apbdes_rincian: 8 records');
-    console.log('- apbdes_rincian_penjabaran: 8 records');
-    console.log('- rka: 4 records');
-    console.log('- rka_penarikan: 10 records');
-    console.log('- rkk: 4 records');
-    console.log('- rab: 4 records');
-    console.log('- rab_line: 17 records');
-    console.log('- buku_kas_umum: 10 records');
-    console.log('- buku_kas_pembantu: 7 records');
-    console.log('- buku_kas_pajak: 8 records');
-    console.log('- buku_bank: 10 records');
-    console.log('- buku_pembantu_panjar: 4 records');
-    console.log('\n🎉 All tables have been populated with sample data!');
+    console.log("- apbdes: 2 records");
+    console.log("- kegiatan: 6 records");
+    console.log("- apbdes_rincian: 8 records");
+    console.log("- apbdes_rincian_penjabaran: 8 records");
+    console.log("- rka: 4 records");
+    console.log("- rka_penarikan: 10 records");
+    console.log("- rkk: 4 records");
+    console.log("- rab: 4 records");
+    console.log("- rab_line: 17 records");
+    console.log("- buku_kas_umum: 10 records");
+    console.log("- buku_kas_pembantu: 7 records");
+    console.log("- buku_kas_pajak: 8 records");
+    console.log("- buku_bank: 10 records");
+    console.log("- buku_pembantu_panjar: 4 records");
+    console.log("\n🎉 All tables have been populated with sample data!");
   } catch (error) {
     // Rollback transaction on error
-    await client.query('ROLLBACK');
-    console.error('❌ Error during seeding:', error);
+    await client.query("ROLLBACK");
+    console.error("❌ Error during seeding:", error);
     throw error;
   } finally {
     client.release();
@@ -330,28 +335,28 @@ async function seedDatabase() {
 
 async function main() {
   try {
-    console.log('🌱 Starting database seeding process...');
-    console.log('📅 Date:', new Date().toISOString());
+    console.log("🌱 Starting database seeding process...");
+    console.log("📅 Date:", new Date().toISOString());
 
     // Test database connection
     const testClient = await pool.connect();
-    await testClient.query('SELECT 1');
+    await testClient.query("SELECT 1");
     testClient.release();
-    console.log('✅ Database connection successful');
+    console.log("✅ Database connection successful");
 
     // Run migrations first
-    console.log('\n📋 Running migrations before seeding...');
+    console.log("\n📋 Running migrations before seeding...");
     await runMigrations();
-    console.log('✅ Migrations completed\n');
+    console.log("✅ Migrations completed\n");
 
     // Run seeding
     await seedDatabase();
   } catch (error) {
-    console.error('💥 Seeding failed:', error.message);
+    console.error("💥 Seeding failed:", error.message);
     process.exit(1);
   } finally {
     await pool.end();
-    console.log('🔌 Database connection closed');
+    console.log("🔌 Database connection closed");
   }
 }
 

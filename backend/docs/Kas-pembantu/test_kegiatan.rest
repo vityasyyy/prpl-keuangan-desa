@@ -1,0 +1,181 @@
+### ============================================
+### MODUL: BUKU KAS PEMBANTU KEGIATAN
+### QA Testing File
+### ============================================
+
+### --- AUTHENTICATION (Jalankan Pertama!) ---
+### Login untuk mendapatkan cookie auth
+POST http://localhost:8081/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "kaur_keuangan",
+  "password": "kaur_keuangan_desa_6769"
+}
+
+### ============================================
+### TEST CASE 1: GET - List Semua Kegiatan
+### Expected: 200 OK, Array of kegiatan
+### ============================================
+
+### TC1.1: Get all kegiatan (dengan showAll)
+GET http://localhost:8081/api/kas-pembantu/kegiatan?showAll=true
+
+### TC1.2: Get kegiatan tanpa parameter
+GET http://localhost:8081/api/kas-pembantu/kegiatan
+
+### ============================================
+### TEST CASE 2: GET - Kegiatan by ID
+### Expected: 200 OK, Single object / 404 Not Found
+### ============================================
+
+### TC2.1: Get kegiatan dengan ID valid (ganti dengan ID yang ada)
+GET http://localhost:8081/api/kas-pembantu/kegiatan/bkp001
+
+### TC2.2: Get kegiatan dengan ID tidak valid
+### Expected: 404 Not Found
+GET http://localhost:8081/api/kas-pembantu/kegiatan/invalid_id_12345
+
+### ============================================
+### TEST CASE 3: GET - Dropdown Data (Bidang, SubBidang, Kegiatan)
+### Expected: 200 OK, Array data dropdown
+### ============================================
+
+### TC3.1: Get Bidang
+GET http://localhost:8081/api/kas-pembantu/kegiatan/bidang
+
+### TC3.2: Get Sub Bidang (dengan bidangId)
+GET http://localhost:8081/api/kas-pembantu/kegiatan/sub-bidang/1
+
+### TC3.3: Get Kegiatan dalam Sub Bidang
+GET http://localhost:8081/api/kas-pembantu/kegiatan/sub-bidang/kegiatan/4.2
+
+### TC3.4: Get BKU ID by Kode Fungsi
+GET http://localhost:8081/api/kas-pembantu/kegiatan/get-bku-id-by-kode-fungsi/2.3.10
+
+### ============================================
+### TEST CASE 4: POST - Create Kegiatan
+### Expected: 201 Created
+### ============================================
+
+### TC4.1: Create kegiatan dengan data lengkap & valid
+POST http://localhost:8081/api/kas-pembantu/kegiatan
+Content-Type: application/json
+
+{
+  "bku_id": "bku010",
+  "type_enum": "2.3.10",
+  "tanggal": "2025-01-15",
+  "uraian": "QA Test: Pembelian ATK Kantor",
+  "no_bukti": "QA-TEST-001",
+  "penerimaan_bendahara": "0.00",
+  "penerimaan_swadaya": "0.00",
+  "pengeluaran_barang_dan_jasa": "500000.00",
+  "pengeluaran_modal": "0.00"
+}
+
+### TC4.2: Create kegiatan - MISSING tanggal (Negative Test)
+### Expected: 400 Bad Request
+POST http://localhost:8081/api/kas-pembantu/kegiatan
+Content-Type: application/json
+
+{
+  "bku_id": "bku010",
+  "type_enum": "2.3.10",
+  "uraian": "Test tanpa tanggal",
+  "no_bukti": "QA-TEST-002",
+  "penerimaan_bendahara": "0.00",
+  "penerimaan_swadaya": "0.00",
+  "pengeluaran_barang_dan_jasa": "100000.00",
+  "pengeluaran_modal": "0.00"
+}
+
+### TC4.3: Create kegiatan - MISSING bku_id (Negative Test)
+### Expected: 400 Bad Request
+POST http://localhost:8081/api/kas-pembantu/kegiatan
+Content-Type: application/json
+
+{
+  "type_enum": "2.3.10",
+  "tanggal": "2025-01-15",
+  "uraian": "Test tanpa bku_id",
+  "no_bukti": "QA-TEST-003"
+}
+
+### TC4.4: Create kegiatan - Invalid bku_id (Negative Test)
+### Expected: 400/404 Bad Request
+POST http://localhost:8081/api/kas-pembantu/kegiatan
+Content-Type: application/json
+
+{
+  "bku_id": "invalid_bku_xyz",
+  "type_enum": "2.3.10",
+  "tanggal": "2025-01-15",
+  "uraian": "Test dengan bku_id tidak valid",
+  "no_bukti": "QA-TEST-004",
+  "penerimaan_bendahara": "0.00",
+  "penerimaan_swadaya": "0.00",
+  "pengeluaran_barang_dan_jasa": "100000.00",
+  "pengeluaran_modal": "0.00"
+}
+
+### ============================================
+### TEST CASE 5: PUT - Edit Kegiatan
+### Expected: 200 OK
+### ============================================
+
+### TC5.1: Edit kegiatan dengan data valid
+### NOTE: Ganti ID dengan ID yang ada dari hasil TC4.1
+PUT http://localhost:8081/api/kas-pembantu/kegiatan/bkp001
+Content-Type: application/json
+
+{
+  "uraian": "QA EDITED: Pembelian ATK Kantor (Revised)",
+  "no_bukti": "QA-EDIT-001",
+  "penerimaan_bendahara": "0.00",
+  "penerimaan_swadaya": "0.00",
+  "pengeluaran_barang_dan_jasa": "550000.00",
+  "pengeluaran_modal": "0.00",
+  "type_enum": "2.3.10",
+  "tanggal": "2025-01-16"
+}
+
+### TC5.2: Edit kegiatan dengan ID tidak valid (Negative Test)
+### Expected: 404 Not Found
+PUT http://localhost:8081/api/kas-pembantu/kegiatan/invalid_id_xyz
+Content-Type: application/json
+
+{
+  "uraian": "Test edit dengan ID tidak valid"
+}
+
+### ============================================
+### TEST CASE 6: DELETE - Hapus Kegiatan
+### Expected: 200 OK / 204 No Content
+### ============================================
+
+### TC6.1: Delete kegiatan dengan ID valid
+### NOTE: Ganti dengan ID hasil create
+DELETE http://localhost:8081/api/kas-pembantu/kegiatan/bkp_test_delete
+
+### TC6.2: Delete kegiatan dengan ID tidak valid (Negative Test)
+### Expected: 404 Not Found
+DELETE http://localhost:8081/api/kas-pembantu/kegiatan/invalid_id_xyz
+
+### ============================================
+### TEST CASE 7: Export ke Excel
+### Expected: File Excel / 200 OK
+### ============================================
+
+### TC7.1: Export buku kas pembantu kegiatan
+GET http://localhost:8081/api/kas-pembantu/kegiatan/export
+
+### ============================================
+### TEST CASE 8: Unauthorized Access (Tanpa Login)
+### Expected: 401 Unauthorized
+### ============================================
+
+### TC8.1: Akses tanpa token (jalankan di browser baru/incognito)
+### Expected: 401 Unauthorized
+# GET http://localhost:8081/api/kas-pembantu/kegiatan
+# (Test manual: buka URL di browser baru tanpa login)
