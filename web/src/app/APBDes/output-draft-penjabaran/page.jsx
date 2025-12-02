@@ -70,25 +70,65 @@ export default function OutputAPBDes() {
     };
   }, [pathname, refreshKey]);
 
-  // Hitung total per kategori
+  // Hitung total per kategori - menjumlahkan semua level
   const total = (kategori) => {
     if (!data || data.length === 0) return 0;
-    return data
-      .filter((item) => (item.pendapatanBelanja || "").toLowerCase() === kategori.toLowerCase())
-      .reduce((sum, item) => {
-        // hitung juga total penjabaran untuk item ini
-        const penjabaranSum = (penjabaranData || [])
-          .filter((p) => String(p.rincian_id) === String(item.id))
-          .reduce((s, p) => s + Number(p.anggaran || 0), 0);
-        const parentTotal = Math.max(Number(item.anggaran || 0), penjabaranSum);
-        return sum + parentTotal;
-      }, 0);
+    
+    // Filter semua item dengan kategori yang sesuai (semua level)
+    const allItems = data.filter((item) => 
+      (item.pendapatanBelanja || "").toLowerCase() === kategori.toLowerCase()
+    );
+    
+    return allItems.reduce((sum, item) => {
+      // Hitung total penjabaran untuk item ini
+      const penjabaranSum = (penjabaranData || [])
+        .filter((p) => String(p.rincian_id) === String(item.id))
+        .reduce((s, p) => s + Number(p.anggaran || 0), 0);
+      
+      // Ambil nilai terbesar antara anggaran item atau total penjabarannya
+      const itemTotal = Math.max(Number(item.anggaran || 0), penjabaranSum);
+      return sum + itemTotal;
+    }, 0);
   };
 
   // Ambil item per kategori
   const getItems = (kategori) => {
     if (!data || data.length === 0) return [];
-    return data.filter((item) => (item.pendapatanBelanja || "").toLowerCase() === kategori.toLowerCase());
+    
+    // Filter items dengan kategori yang sesuai
+    const filtered = data.filter((item) => 
+      (item.pendapatanBelanja || "").toLowerCase() === kategori.toLowerCase()
+    );
+    
+    // Jika ada data dengan level, filter hanya kelompok atau yang tidak punya parent
+    const hasLevelProperty = filtered.some(item => item.level);
+    if (hasLevelProperty) {
+      return filtered.filter(item => 
+        (item.level || "").toLowerCase() === "kelompok" || 
+        !item.parent_id  // atau yang tidak punya parent (data lama)
+      );
+    }
+    
+    // Jika tidak ada property level, return semua (untuk backward compatibility)
+    return filtered;
+  };
+
+  // Ambil item jenis untuk parent tertentu
+  const getJenisItems = (parentId) => {
+    if (!data || data.length === 0) return [];
+    return data.filter((item) => 
+      String(item.parent_id) === String(parentId) && 
+      (item.level || "").toLowerCase() === "jenis"
+    );
+  };
+
+  // Ambil item objek untuk parent tertentu
+  const getObjekItems = (parentId) => {
+    if (!data || data.length === 0) return [];
+    return data.filter((item) => 
+      String(item.parent_id) === String(parentId) && 
+      (item.level || "").toLowerCase() === "objek"
+    );
   };
 
   // Simpan hasil posting ke localStorage
@@ -129,31 +169,27 @@ export default function OutputAPBDes() {
           {items.length > 0 ? (
             <div className="divide-y divide-gray-300">
               {items.map((item, idx) => {
-                // Filter penjabaran untuk item ini - konversi ke string untuk matching
+                // Filter penjabaran untuk item kelompok ini
                 const itemPenjabaran = penjabaranData.filter((p) => String(p.rincian_id) === String(item.id));
-                // jumlahkan semua anggaran penjabaran untuk parent ini
                 const penjabaranSum = (itemPenjabaran || []).reduce((s, p) => s + Number(p.anggaran || 0), 0);
-                // jika penjabaran sum lebih besar, tunjukkan penjabaranSum sebagai total parent
                 const parentTotal = Math.max(Number(item.anggaran || 0), penjabaranSum);
-                console.log(`🔍 Item ${item.id}:`, {
-                  item: item.objek || item.jenis || item.kelompok,
-                  rincian_id: item.id,
-                  rincian_id_type: typeof item.id,
-                  penjabaranCount: itemPenjabaran.length,
-                  penjabaran: itemPenjabaran,
-                  penjabaranSum,
-                  parentTotal,
-                });
+
+                // Ambil item jenis yang merupakan child dari kelompok ini
+                const jenisItems = getJenisItems(item.id);
 
                 return (
                   <div key={item.id || idx}>
-                    {/* Item Draft APBDes */}
+                    {/* Item Kelompok (Level 1) atau Data Lama */}
                     <div className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-md transition">
                       <div className="flex items-center text-sm text-gray-800 space-x-2">
-                        <span>{item.kelompok || "Tidak ada uraian"}</span>
+                        {/* Tampilkan uraian sesuai dengan property yang ada */}
+                        <span className="font-semibold">
+                          {item.kelompok || item.jenis || item.objek || item.uraian || "Tidak ada uraian"}
+                        </span>
                         <button
                           className="ml-1 text-gray-600 hover:text-gray-900 transition"
                           onClick={() => router.push(`/APBDes/input-draft-penjabaran?rincian_id=${item.id}`)}
+                          title="Tambah penjabaran"
                         >
                           <SquarePlus width={20} height={20} />
                         </button>
@@ -165,7 +201,7 @@ export default function OutputAPBDes() {
                       </div>
                     </div>
 
-                    {/* Item Penjabaran dengan Indentasi */}
+                    {/* Item Penjabaran Kelompok dengan Indentasi */}
                     {itemPenjabaran.length > 0 && (
                       <div className="ml-8 border-l-2 border-gray-200 pl-4">
                         {itemPenjabaran.map((penjabaran, pIdx) => (
@@ -190,6 +226,135 @@ export default function OutputAPBDes() {
                             </div>
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {/* Item Jenis (Level 2) - Child dari Kelompok */}
+                    {jenisItems.length > 0 && (
+                      <div className="ml-6 border-l-2 border-blue-200 pl-4">
+                        {jenisItems.map((jenisItem, jIdx) => {
+                          // Filter penjabaran untuk item jenis ini
+                          const jenisPenjabaran = penjabaranData.filter((p) => String(p.rincian_id) === String(jenisItem.id));
+                          const jenisPenjabaranSum = (jenisPenjabaran || []).reduce((s, p) => s + Number(p.anggaran || 0), 0);
+                          const jenisTotal = Math.max(Number(jenisItem.anggaran || 0), jenisPenjabaranSum);
+
+                          // Ambil item objek yang merupakan child dari jenis ini
+                          const objekItems = getObjekItems(jenisItem.id);
+
+                          return (
+                            <div key={jenisItem.id || `jenis-${jIdx}`} className="mt-1">
+                              {/* Item Jenis */}
+                              <div className="flex items-center justify-between py-2 px-2 hover:bg-blue-50 rounded-md transition">
+                                <div className="flex items-center text-sm text-blue-800 space-x-2">
+                                  <span className="font-medium">{jenisItem.jenis || "Tidak ada uraian"}</span>
+                                  <button
+                                    className="ml-1 text-blue-600 hover:text-blue-900 transition"
+                                    onClick={() => router.push(`/APBDes/input-draft-penjabaran?rincian_id=${jenisItem.id}`)}
+                                    title="Tambah item objek"
+                                  >
+                                    <SquarePlus width={18} height={18} />
+                                  </button>
+                                </div>
+                                <div className="text-sm font-light text-blue-900">
+                                  Rp{jenisTotal.toLocaleString("id-ID", {
+                                    minimumFractionDigits: 2,
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Item Penjabaran Jenis dengan Indentasi */}
+                              {jenisPenjabaran.length > 0 && (
+                                <div className="ml-8 border-l-2 border-gray-200 pl-4">
+                                  {jenisPenjabaran.map((penjabaran, pIdx) => (
+                                    <div
+                                      key={penjabaran.id || pIdx}
+                                      className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-md transition text-gray-600"
+                                    >
+                                      <div className="flex items-center text-sm space-x-2">
+                                        <span>{penjabaran.objek || penjabaran.jenis || penjabaran.kelompok || "Penjabaran"}</span>
+                                        <button
+                                          className="ml-1 text-blue-600 hover:text-blue-800 transition"
+                                          onClick={() => router.push(`/APBDes/input-draft-penjabaran?id=${penjabaran.id}&rincian_id=${jenisItem.id}`)}
+                                          title="Edit penjabaran"
+                                        >
+                                          <Pencil width={16} height={16} />
+                                        </button>
+                                      </div>
+                                      <div className="text-sm font-light">
+                                        Rp{Number(penjabaran.anggaran || 0).toLocaleString("id-ID", {
+                                          minimumFractionDigits: 2,
+                                        })}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Item Objek (Level 3) - Child dari Jenis */}
+                              {objekItems.length > 0 && (
+                                <div className="ml-6 border-l-2 border-green-200 pl-4">
+                                  {objekItems.map((objekItem, oIdx) => {
+                                    // Filter penjabaran untuk item objek ini
+                                    const objekPenjabaran = penjabaranData.filter((p) => String(p.rincian_id) === String(objekItem.id));
+                                    const objekPenjabaranSum = (objekPenjabaran || []).reduce((s, p) => s + Number(p.anggaran || 0), 0);
+                                    const objekTotal = Math.max(Number(objekItem.anggaran || 0), objekPenjabaranSum);
+
+                                    return (
+                                      <div key={objekItem.id || `objek-${oIdx}`} className="mt-1">
+                                        {/* Item Objek */}
+                                        <div className="flex items-center justify-between py-2 px-2 hover:bg-green-50 rounded-md transition">
+                                          <div className="flex items-center text-sm text-green-800 space-x-2">
+                                            <span>{objekItem.objek || "Tidak ada uraian"}</span>
+                                            <button
+                                              className="ml-1 text-green-600 hover:text-green-900 transition"
+                                              onClick={() => router.push(`/APBDes/input-draft-penjabaran?rincian_id=${objekItem.id}`)}
+                                              title="Tambah penjabaran objek"
+                                            >
+                                              <SquarePlus width={16} height={16} />
+                                            </button>
+                                          </div>
+                                          <div className="text-sm font-light text-green-900">
+                                            Rp{objekTotal.toLocaleString("id-ID", {
+                                              minimumFractionDigits: 2,
+                                            })}
+                                          </div>
+                                        </div>
+
+                                        {/* Item Penjabaran Objek dengan Indentasi */}
+                                        {objekPenjabaran.length > 0 && (
+                                          <div className="ml-8 border-l-2 border-gray-200 pl-4">
+                                            {objekPenjabaran.map((penjabaran, pIdx) => (
+                                              <div
+                                                key={penjabaran.id || pIdx}
+                                                className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-md transition text-gray-600"
+                                              >
+                                                <div className="flex items-center text-sm space-x-2">
+                                                  <span>{penjabaran.objek || penjabaran.jenis || penjabaran.kelompok || "Penjabaran"}</span>
+                                                  <button
+                                                    className="ml-1 text-blue-600 hover:text-blue-800 transition"
+                                                    onClick={() => router.push(`/APBDes/input-draft-penjabaran?id=${penjabaran.id}&rincian_id=${objekItem.id}`)}
+                                                    title="Edit penjabaran"
+                                                  >
+                                                    <Pencil width={16} height={16} />
+                                                  </button>
+                                                </div>
+                                                <div className="text-sm font-light">
+                                                  Rp{Number(penjabaran.anggaran || 0).toLocaleString("id-ID", {
+                                                    minimumFractionDigits: 2,
+                                                  })}
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

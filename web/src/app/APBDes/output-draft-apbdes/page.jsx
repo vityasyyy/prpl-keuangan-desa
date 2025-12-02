@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BreadCrumb from "@/components/breadCrumb";
 import Button from "@/components/button";
-import { ArrowUpRight, Download, Plus, SquarePlus } from "@/components/icons";
+import { ArrowUpRight, Download, Plus, SquarePlus, Pencil } from "@/components/icons";
 
 export default function OutputAPBDes() {
   const router = useRouter();
@@ -43,10 +43,7 @@ export default function OutputAPBDes() {
       // Create map: id -> {uraian, level}
       const map = {};
       ekonomiData.forEach((item) => {
-        map[item.id] = {
-          uraian: item.uraian,
-          level: item.level,
-        };
+        map[item.id] = item; // Store the full item for richer data
       });
       setKodeEkonomiMap(map);
       console.log("🗺️ Kode ekonomi map sample:", Object.entries(map).slice(0, 5));
@@ -88,50 +85,136 @@ export default function OutputAPBDes() {
     fetchData();
   }, []);
 
-  // Hitung total per kategori berdasarkan level kelompok dari kode_ekonomi
-  const total = (kategori) => {
-    if (!data || data.length === 0) return 0;
-    
-    const filtered = data.filter((item) => {
-      // Get uraian from kode_ekonomi_id
+  const buildHierarchy = (kategori) => {
+    const allItems = data.filter(item => {
       const ekonomiInfo = kodeEkonomiMap[item.kode_ekonomi_id];
-      
-      console.log(`🔍 Item ${item.id}: kode_ekonomi_id="${item.kode_ekonomi_id}", ekonomiInfo:`, ekonomiInfo);
-      
-      // Filter hanya item dengan level 'kelompok'
-      if (!ekonomiInfo || ekonomiInfo.level !== 'kelompok') return false;
-      
-      const uraian = ekonomiInfo.uraian.toLowerCase();
-      const matches = uraian.includes(kategori.toLowerCase());
-      
-      console.log(`   -> uraian="${ekonomiInfo.uraian}", level="${ekonomiInfo.level}", matches ${kategori}?`, matches);
-      
-      return matches;
+      return ekonomiInfo && ekonomiInfo.uraian.toLowerCase().includes(kategori.toLowerCase());
     });
-    
-    console.log(`📊 Total for ${kategori}: ${filtered.length} items`);
-    
-    return filtered.reduce((sum, item) => {
-      // sum penjabaran for this parent
-      const penjabaranSum = (penjabaranData || [])
-        .filter((p) => String(p.rincian_id) === String(item.id))
-        .reduce((s, p) => s + sanitizeNumber(p.jumlah_anggaran || 0), 0);
-      const parentTotal = Math.max(sanitizeNumber(item.jumlah_anggaran), penjabaranSum);
-      return sum + parentTotal;
-    }, 0);
+
+    const groupedByKode = {};
+    allItems.forEach(item => {
+      const ekonomiInfo = kodeEkonomiMap[item.kode_ekonomi_id];
+      if (ekonomiInfo && ekonomiInfo.full_code) {
+        groupedByKode[ekonomiInfo.full_code] = groupedByKode[ekonomiInfo.full_code] || [];
+        groupedByKode[ekonomiInfo.full_code].push(item);
+      } else {
+        console.warn(`Warning: Item ${item.id} has no kode_ekonomi info or full_code:`, ekonomiInfo);
+      }
+    });
+
+    const sortedKodes = Object.keys(groupedByKode).sort((a, b) => {
+      const aParts = a.split('.').map(Number);
+      const bParts = b.split('.').map(Number);
+
+      for (let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
+        if (aParts[i] !== bParts[i]) {
+          return aParts[i] - bParts[i];
+        }
+      }
+      return aParts.length - bParts.length;
+    });
+
+    const hierarchy = {};
+
+    sortedKodes.forEach(kode => {
+      const itemsAtKode = groupedByKode[kode];
+      if (itemsAtKode) {
+        itemsAtKode.forEach(item => {
+          const itemWithPenjabaran = { ...item };
+          itemWithPenjabaran.penjabaranDetails = (penjabaranData || []).filter(p => String(p.rincian_id) === String(item.id));
+          itemWithPenjabaran.penjabaranSum = itemWithPenjabaran.penjabaranDetails.reduce((s, p) => s + sanitizeNumber(p.jumlah_anggaran || 0), 0);
+          itemWithPenjabaran.calculatedTotal = Math.max(sanitizeNumber(item.jumlah_anggaran), itemWithPenjabaran.penjabaranSum);
+
+          const ekonomiInfo = kodeEkonomiMap[item.kode_ekonomi_id];
+          const fungsiInfo = kodeEkonomiMap[item.kode_fungsi_id];
+
+          // Prioritize uraian from kode_fungsi_id, then kode_ekonomi_id
+          itemWithPenjabaran.displayUraian = fungsiInfo?.uraian || ekonomiInfo?.uraian || "Tidak ada uraian";
+          itemWithPenjabaran.level = ekonomiInfo?.level || 'unknown'; // Retain level from kode_ekonomi for consistent grouping
+          itemWithPenjabaran.kode = ekonomiInfo?.full_code; // Retain kode from kode_ekonomi for consistent grouping
+
+          hierarchy[kode] = itemWithPenjabaran;
+        });
+      }
+    });
+
+    const tree = [];
+    Object.keys(hierarchy).forEach(kode => {
+      const item = hierarchy[kode];
+      const kodeParts = kode.split('.');
+      if (kodeParts.length > 1) {
+        const parentKode = kodeParts.slice(0, kodeParts.length - 1).join('.');
+        if (hierarchy[parentKode]) {
+          hierarchy[parentKode].children = hierarchy[parentKode].children || [];
+          hierarchy[parentKode].children.push(item);
+        } else {
+          let existingParent = tree.find(node => node.kode === parentKode);
+          if (!existingParent) {
+            const parentEkonomiInfo = Object.values(kodeEkonomiMap).find(ke => ke.full_code === parentKode);
+            existingParent = {
+              kode: parentKode,
+              displayUraian: (parentEkonomiInfo && parentEkonomiInfo.uraian) || `Kode ${parentKode}`,
+              level: (parentEkonomiInfo && parentEkonomiInfo.level) || 'unknown',
+              calculatedTotal: 0,
+              children: [],
+              isConceptual: true,
+            };
+            tree.push(existingParent);
+          }
+          existingParent.children.push(item);
+        }
+      } else {
+        tree.push(item);
+      }
+    });
+
+    const sortTree = (nodes) => {
+      nodes.sort((a, b) => {
+        const aKode = a.kode || '';
+        const bKode = b.kode || '';
+
+        const aParts = aKode.split('.').map(Number);
+        const bParts = bKode.split('.').map(Number);
+        
+        for (let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
+          if (aParts[i] !== bParts[i]) {
+            return aParts[i] - bParts[i];
+          }
+        }
+        return aParts.length - bParts.length;
+      });
+      nodes.forEach(node => {
+        if (node.children) {
+          sortTree(node.children);
+        }
+      });
+    };
+    sortTree(tree);
+
+
+    const calculateNodeTotals = (nodes) => {
+      let sum = 0;
+      nodes.forEach(node => {
+        if (node.children && node.children.length > 0) {
+          node.calculatedTotal = calculateNodeTotals(node.children);
+        }
+        sum += node.calculatedTotal;
+      });
+      return sum;
+    };
+    const totalSum = calculateNodeTotals(tree);
+
+    return { tree, totalSum };
   };
 
-  // Ambil item per kategori dengan level kelompok
+  const total = (kategori) => {
+    const { totalSum } = buildHierarchy(kategori);
+    return totalSum;
+  };
+
   const getItems = (kategori) => {
-    if (!data || data.length === 0) return [];
-    return data.filter((item) => {
-      const ekonomiInfo = kodeEkonomiMap[item.kode_ekonomi_id];
-      // Filter hanya item dengan level 'kelompok'
-      if (!ekonomiInfo || ekonomiInfo.level !== 'kelompok') return false;
-      
-      const uraian = ekonomiInfo.uraian.toLowerCase();
-      return uraian.includes(kategori.toLowerCase());
-    });
+    const { tree } = buildHierarchy(kategori);
+    return tree;
   };
 
   // Simpan hasil posting ke API
@@ -171,6 +254,80 @@ export default function OutputAPBDes() {
   const renderBox = (title, kategori) => {
     const items = getItems(kategori);
 
+    const renderTree = (nodes, depth = 0) => {
+      const paddingLeft = depth * 8; // 8px per level of indentation
+
+      return (
+        <div className="divide-y divide-gray-300">
+          {nodes.map((node, idx) => (
+            <div key={node.id || node.kode || idx}>
+              <div
+                className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-md transition"
+                style={{ paddingLeft: `${paddingLeft}px` }}
+              >
+                <div className="flex items-center text-sm text-gray-800 space-x-1">
+                  <button
+                    type="button"
+                    onClick={() => node.id && router.push(`/APBDes/input-draft-apbdes?id=${node.id}`)}
+                    className="flex items-center space-x-1 text-left"
+                    title="Edit item"
+                    disabled={!node.id} // Disable edit for conceptual nodes without an actual item ID
+                  >
+                    <span>{node.displayUraian}</span>
+                    {node.id && <span className="text-gray-400 text-xs">✎</span>}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => node.id && router.push(`/APBDes/input-draft-apbdes?id=${node.id}`)}
+                  className="text-sm font-light text-black"
+                  title="Edit amount"
+                  disabled={!node.id} // Disable edit for conceptual nodes
+                >
+                  Rp{node.calculatedTotal.toLocaleString("id-ID", {
+                    minimumFractionDigits: 2,
+                  })}
+                </button>
+              </div>
+
+              {node.penjabaranDetails && node.penjabaranDetails.length > 0 && (
+                <div className="ml-8 border-l-2 border-gray-200 pl-4">
+                  {node.penjabaranDetails.map((penjabaran, pIdx) => (
+                    <div
+                      key={penjabaran.id || pIdx}
+                      className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-md transition text-gray-700"
+                    >
+                      <div className="flex items-center text-sm space-x-2">
+                        <span>{penjabaran.objek || penjabaran.jenis || penjabaran.kelompok || "Penjabaran"}</span>
+                        <button
+                          className="ml-1 text-blue-600 hover:text-blue-800 transition"
+                          onClick={() => router.push(`/APBDes/input-draft-penjabaran?id=${penjabaran.id}&rincian_id=${node.id}`)}
+                          title="Edit penjabaran"
+                        >
+                          <Pencil width={16} height={16} />
+                        </button>
+                      </div>
+                      <div className="text-sm font-light">
+                        Rp{Number(penjabaran.jumlah_anggaran || 0).toLocaleString("id-ID", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {node.children && node.children.length > 0 && (
+                <div className="pl-4">
+                  {renderTree(node.children, depth + 1)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    };
+
     return (
       <div className="rounded-2xl bg-white">
         {/* Header */}
@@ -199,47 +356,7 @@ export default function OutputAPBDes() {
         {/* Body */}
         <div className="overflow-y-auto max-h-[180px]">
           {items.length > 0 ? (
-            <div className="divide-y divide-gray-300">
-              {items.map((item, idx) => {
-                // compute penjabaran sum and parentTotal
-                const itemPenjabaran = (penjabaranData || []).filter((p) => String(p.rincian_id) === String(item.id));
-                const penjabaranSum = itemPenjabaran.reduce((s, p) => s + sanitizeNumber(p.jumlah_anggaran || 0), 0);
-                const parentTotal = Math.max(sanitizeNumber(item.jumlah_anggaran), penjabaranSum);
-
-                // Get uraian from kode_ekonomi_id (use kelompok level)
-                const ekonomiInfo = kodeEkonomiMap[item.kode_ekonomi_id];
-                const displayUraian = ekonomiInfo?.uraian || "Tidak ada uraian";
-
-                return (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between py-2 px-2 hover:bg-gray-50"
-                  >
-                    <div className="flex items-center text-sm text-gray-800 space-x-1">
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/APBDes/input-draft-apbdes?id=${item.id}`)}
-                        className="flex items-center space-x-1 text-left"
-                        title="Edit item"
-                      >
-                        <span>{displayUraian}</span>
-                        <span className="text-gray-400 text-xs">✎</span>
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/APBDes/input-draft-apbdes?id=${item.id}`)}
-                      className="text-sm font-light text-black"
-                      title="Edit amount"
-                    >
-                      Rp{parentTotal.toLocaleString("id-ID", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+            renderTree(items)
           ) : (
             <div className="text-gray-400 text-sm italic px-2 py-3">
               Belum ada data {kategori.toLowerCase()} yang diinput.

@@ -36,7 +36,6 @@ export default function createApbdRepo(arg) {
     const q = `
       SELECT
         r.id,
-        r.kegiatan_id,
         a.id AS apbdes_id,
         a.tahun,
         a.status,
@@ -125,8 +124,52 @@ export default function createApbdRepo(arg) {
     return rows;
   };
 
+  // Helper function to generate sequential ID with retry on conflict
+  const generateSequentialId = async (prefix, tableName, columnName = 'id', maxRetries = 5) => {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      // Get the maximum number used with this prefix
+      const q = `
+        SELECT ${columnName} 
+        FROM ${tableName} 
+        WHERE ${columnName} ~ $1
+        ORDER BY ${columnName} DESC 
+        LIMIT 1
+      `;
+      // Regex pattern to match prefix followed by digits: ^prefix\d+$
+      const { rows } = await db.query(q, [`^${prefix}\\d+$`]);
+      
+      let nextNumber = 1;
+      if (rows.length > 0 && rows[0][columnName]) {
+        // Extract number from last ID (e.g., "apbdes001" -> 1)
+        const lastId = rows[0][columnName];
+        const match = lastId.match(new RegExp(`${prefix}(\\d+)$`));
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+      
+      // Format with leading zeros (001, 002, etc.)
+      const formattedNumber = String(nextNumber).padStart(3, '0');
+      const newId = `${prefix}${formattedNumber}`;
+      
+      // Check if this ID already exists
+      const checkQ = `SELECT 1 FROM ${tableName} WHERE ${columnName} = $1`;
+      const { rows: existingRows } = await db.query(checkQ, [newId]);
+      
+      if (existingRows.length === 0) {
+        return newId;
+      }
+      
+      // If ID exists, wait a bit and retry
+      await new Promise(resolve => setTimeout(resolve, 10 * (attempt + 1)));
+    }
+    
+    // Fallback to timestamp-based ID if all retries fail
+    return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  };
+
   const createApbdesDraft = async (tahun) => {
-    const id = `apbdes_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const id = await generateSequentialId('apbdes', 'apbdes');
     const q = `
       INSERT INTO apbdes (id, tahun, status)
       VALUES ($1, $2, 'draft')
@@ -143,17 +186,16 @@ export default function createApbdRepo(arg) {
   };
 
   const createApbdesRincian = async (payload) => {
-    const id = `rincian_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const id = await generateSequentialId('rincian', 'apbdes_rincian');
     const q = `
       INSERT INTO apbdes_rincian (
-        id, kegiatan_id, kode_fungsi_id, kode_ekonomi_id, jumlah_anggaran, sumber_dana, apbdes_id
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+        id, kode_fungsi_id, kode_ekonomi_id, jumlah_anggaran, sumber_dana, apbdes_id
+      ) VALUES ($1,$2,$3,$4,$5,$6)
       RETURNING *;
     `;
 
     const params = [
       id,
-      payload.kegiatan_id || null,
       payload.kode_fungsi_id || null,
       payload.kode_ekonomi_id || null,
       payload.jumlah_anggaran,
@@ -167,7 +209,7 @@ export default function createApbdRepo(arg) {
 
   const getDraftApbdesList = async () => {
     const q = `
-      SELECT r.id, r.kegiatan_id, a.id AS apbdes_id, a.tahun, a.status,
+      SELECT r.id, a.id AS apbdes_id, a.tahun, a.status,
              r.kode_fungsi_id, r.kode_ekonomi_id, r.jumlah_anggaran, r.sumber_dana  
       FROM apbdes_rincian r
       JOIN apbdes a ON a.id = r.apbdes_id
@@ -180,7 +222,7 @@ export default function createApbdRepo(arg) {
 
   const getDraftApbdesById = async (id) => {
     const q = `
-      SELECT r.id, r.kegiatan_id, a.id AS apbdes_id, a.tahun, a.status,
+      SELECT r.id, a.id AS apbdes_id, a.tahun, a.status,
              r.kode_fungsi_id, r.kode_ekonomi_id, r.jumlah_anggaran, r.sumber_dana
       FROM apbdes_rincian r
       JOIN apbdes a ON a.id = r.apbdes_id
@@ -275,7 +317,7 @@ export default function createApbdRepo(arg) {
   };
 
   const createApbdesRincianPenjabaran = async (payload) => {
-    const id = `penjabaran_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const id = await generateSequentialId('penjabaran', 'apbdes_rincian_penjabaran');
     const q = `
       INSERT INTO apbdes_rincian_penjabaran
       (id, rincian_id, kode_fungsi_id, kode_ekonomi_id, volume, satuan, jumlah_anggaran, sumber_dana)

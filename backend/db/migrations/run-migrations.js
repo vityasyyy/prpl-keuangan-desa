@@ -20,6 +20,7 @@ const migrations = [
   "3_user.sql",
   "4_update_tabel_rincian.sql",
   "5_update_tabel_penjabaran.sql",
+  "6_update_table_rincian.sql",
 ];
 
 console.log("Running run-migrations.js...");

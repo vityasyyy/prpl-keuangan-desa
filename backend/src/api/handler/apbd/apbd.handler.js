@@ -175,9 +175,11 @@ export default function createApbdHandler(ApbdService) {
   const deleteDraftApbdesItem = async (req, res, next) => {
     try {
       const { id } = req.params;
+      console.log("Attempting to delete APBDes rincian with ID:", id); // Add logging here
       const result = await ApbdService.deleteDraftApbdesItem(id);
-      res.json(result);
+      res.json({ message: "Data berhasil dihapus", deletedItem: result.deletedItem, total: result.total }); // Consistent response
     } catch (e) {
+      console.error("Error deleting APBDes rincian:", e); // Add error logging
       next(e);
     }
   };
