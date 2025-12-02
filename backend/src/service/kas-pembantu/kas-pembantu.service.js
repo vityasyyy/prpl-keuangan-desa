@@ -16,10 +16,23 @@ export default function createKasPembantuService(repo) {
   return {
 
     // EXPORT BUKU-BUKU KE EXCEL
-    async exportKasPembantuKegiatan() {
+    async exportKasPembantuKegiatan({ bulan, tahun }) {
       try {
-        // Ambil SEMUA data dari tabel buku_kas_pembantu
-        const data = await repo.getAllData();
+        // Ambil data dengan filter dari repo
+        let data;
+        
+        // Jika ada filter bulan atau tahun, gunakan listKegiatanTransaksi dengan limit besar
+        if (bulan !== undefined && tahun !== undefined) {
+          data = await repo.listKegiatanTransaksi({
+            bulan,
+            tahun,
+            page: 1,
+            limit: 100000 // limit besar untuk ambil semua data yang difilter
+          });
+        } else {
+          // Jika tidak ada filter, ambil semua data
+          data = await repo.getAllData();
+        }
 
         if (!data || data.length === 0) {
           throw new Error('Tidak ada data untuk diekspor');
@@ -33,7 +46,7 @@ export default function createKasPembantuService(repo) {
         workbook.creator = 'Sistem Keuangan Desa';
         workbook.created = new Date();
 
-        // HEADER DOKUMEN
+        // HEADER DOKUMEN dengan info filter
         worksheet.mergeCells('A1:K1');
         worksheet.getCell('A1').value = 'BUKU KAS PEMBANTU KEGIATAN';
         worksheet.getCell('A1').font = { bold: true, size: 14 };
@@ -44,8 +57,19 @@ export default function createKasPembantuService(repo) {
         worksheet.getCell('A2').font = { bold: true, size: 12 };
         worksheet.getCell('A2').alignment = { horizontal: 'center' };
 
+        // Info filter dan tanggal cetak
+        let filterInfo = `Dicetak: ${new Date().toLocaleDateString('id-ID')}`;
+        if (tahun) {
+          filterInfo += ` | Tahun: ${tahun}`;
+          if (bulan) {
+            const namaBulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                              'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            filterInfo += ` - ${namaBulan[bulan - 1]}`;
+          }
+        }
+
         worksheet.mergeCells('A3:K3');
-        worksheet.getCell('A3').value = `Dicetak: ${new Date().toLocaleDateString('id-ID')}`;
+        worksheet.getCell('A3').value = filterInfo;
         worksheet.getCell('A3').font = { italic: true };
         worksheet.getCell('A3').alignment = { horizontal: 'center' };
 
@@ -209,10 +233,16 @@ export default function createKasPembantuService(repo) {
       }
     },
 
-    async exportKasPajak() {
+    async exportKasPajak({bulan, tahun}) {
       try {
-        // Ambil SEMUA data dari tabel buku_kas_pajak
-        const data = await repo.getAllKasPajak();
+        
+        let data;
+        if (bulan !== undefined && tahun !== undefined) {
+          data = await repo.getAllKasPajak({bulan,tahun});
+        }
+        else {
+          data = await repo.getAllKasPajak();
+        }
 
         if (!data || data.length === 0) {
           throw new Error('Tidak ada data untuk diekspor');
@@ -379,10 +409,16 @@ export default function createKasPembantuService(repo) {
       }
     },
 
-    async exportKasPanjar() {
+    async exportKasPanjar({bulan, tahun}) {
       try {
         // Ambil SEMUA data dari tabel buku_pembantu_panjar
-        const data = await repo.getAllKasPanjar();
+        let data;
+        if(bulan !== undefined && tahun !== undefined) {
+          data = await repo.getAllKasPanjar({bulan,tahun});
+        }
+        else {
+          data = await repo.getAllKasPanjar();
+        }
 
         if (!data || data.length === 0) {
           throw new Error('Tidak ada data untuk diekspor');

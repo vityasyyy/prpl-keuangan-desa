@@ -72,7 +72,6 @@ export default function KasPembantuKegiatan() {
         const transformed = transformToMonthCards(result);
         setData(transformed);
       } catch (err) {
-        console.error("Fetch error:", err);
         setError(err.message);
         setData([]);
       } finally {

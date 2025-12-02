@@ -75,6 +75,23 @@ export default function MonthCard({
 
   const columns = MODULE_FIELDS[moduleType]?.columns || [];
 
+  const handleDownload = (e) => {
+    e.stopPropagation();
+    const bulan = parseInt(transactions[0].tanggal.slice(5, 7));
+    const tahun = parseInt(transactions[0].tanggal.slice(0, 4));
+
+    const locationPath = window.location.pathname.toLowerCase();
+    const moduleMap = {
+      "kas-pembantu-kegiatan": "kegiatan",
+      "kas-pembantu-panjar": "panjar",
+      "kas-pembantu-pajak": "pajak",
+    };
+    const moduleType = moduleMap[Object.keys(moduleMap).find(key => locationPath.includes(key))] || "kegiatan";
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
+    const exportUrl = `${API_BASE_URL}/kas-pembantu/${moduleType}/export?bulan=${bulan}&tahun=${tahun}`;
+    window.location.href = exportUrl;
+  };
+
   return (
     <div className="rounded-2xl border border-gray-300 bg-white shadow-sm">
       <div
@@ -110,16 +127,16 @@ export default function MonthCard({
         <div className="flex items-center gap-2">
           <button
             className="rounded-md border border-gray-300 px-2 py-1 hover:bg-gray-50"
-            onClick={(e) => e.stopPropagation()}
+            onClick={handleDownload}
           >
-            <Download size={16} className="text-gray-600" />
+            <Download size={16} className="text-gray-600 hover:cursor-pointer" />
           </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
               router.push(formPath);
             }}
-            className="rounded-md border border-gray-300 px-2 py-1 hover:bg-gray-50"
+            className="rounded-md border border-gray-300 px-2 py-1 hover:bg-gray-50 hover:cursor-pointer"
           >
             <Plus size={16} className="text-gray-600" />
           </button>

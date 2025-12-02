@@ -7,11 +7,21 @@ export default function createKasPembantuHandler(service) {
 
   // Export buku kas pembantu ke excel
   const exportBukuKasPembantu = async (req, res, next) => {
+    const log = req?.log; 
     try {
-      logInfo("Memulai export Buku Kas Pembantu Kegiatan ke Excel");
+      // ambil filter klo ada
+      const bulan = req.query.bulan ? parseInt(req.query.bulan) : null;
+      const tahun = req.query.tahun ? parseInt(req.query.tahun) : null;
+
+      logInfo("Memulai export Buku Kas Pembantu Kegiatan ke Excel", { 
+        layer: "handler", 
+        route: "GET /kegiatan/export",
+        filters: { bulan, tahun}
+      }, 10, log);
+
 
       // Panggil service untuk generate Excel
-      const buffer = await service.exportKasPembantuKegiatan();
+      const buffer = await service.exportKasPembantuKegiatan({bulan, tahun});
 
       // Generate filename dengan timestamp
       const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -33,28 +43,34 @@ export default function createKasPembantuHandler(service) {
       // Kirim buffer sebagai response
       return res.send(buffer);
     } catch (error) {
-      logError(`Gagal export Excel: ${error.message}`, error.stack);
+      logError(`Gagal export Excel Buku Kas Pembantu: ${error.message}`, error.stack);
 
       return res.status(500).json({
         success: false,
-        message: 'Gagal export data ke Excel',
+        message: 'Gagal export data ke Excel Buku Kas Pembantu',
         error: error.message,
       });
     }
   };
 
   const exportBukuKasPajak = async (req, res, next) => {
+    const log = req?.log;
     try {
-      logInfo("Memulai export Buku Kas Pajak ke Excel");
+      const bulan = req.query.bulan ? parseInt(req.query.bulan) : null; 
+      const tahun = req.query.tahun ? parseInt(req.query.tahun) : null;
 
+      logInfo("Memulai export Buku Kas Pajak ke Excel", { layer: "handler", route: "GET /pajak/export" }, 10, log);
       // Panggil service untuk generate Excel
-      const buffer = await service.exportKasPajak();
+      const buffer = await service.exportKasPajak({ bulan, tahun });
 
       // Generate filename dengan timestamp
       const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       const filename = `Buku_Kas_Pajak_${timestamp}.xlsx`;
 
-      logInfo(`Export Excel berhasil: ${filename}`);
+      logInfo(`Export Excel berhasil: ${filename}`, {
+        layer: "handler",
+        route: "GET /pajak/export"
+      }, 10, log);
 
       // Set response headers
       res.setHeader(
@@ -74,18 +90,22 @@ export default function createKasPembantuHandler(service) {
 
       return res.status(500).json({
         success: false,
-        message: 'Gagal export data ke Excel',
+        message: 'Gagal export data ke Excel Buku Kas Pajak',
         error: error.message,
       });
     }
   };
 
   const exportBukuKasPanjar = async (req, res, next) => {
+    const log = req?.log;
     try {
-      logInfo("Memulai export Buku Pembantu Panjar ke Excel");
+      const bulan = req.query.bulan ? parseInt(req.query.bulan) : null;
+      const tahun = req.query.tahun ? parseInt(req.query.tahun) : null;
+
+      logInfo("Memulai export Buku Pembantu Panjar ke Excel", { layer: "handler", route: "GET /panjar/export", filters: { bulan, tahun } }, 10, log);
 
       // Panggil service untuk generate Excel
-      const buffer = await service.exportKasPanjar();
+      const buffer = await service.exportKasPanjar({ bulan, tahun });
 
       // Generate filename dengan timestamp
       const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -111,7 +131,7 @@ export default function createKasPembantuHandler(service) {
 
       return res.status(500).json({
         success: false,
-        message: 'Gagal export data ke Excel',
+        message: 'Gagal export data ke Excel Buku Kas Panjar',
         error: error.message,
       });
     }

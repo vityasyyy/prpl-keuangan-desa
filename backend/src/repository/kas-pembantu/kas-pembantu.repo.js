@@ -308,20 +308,43 @@ export default function createRepo(db) {
     }
   }
 
-
-  async function getAllKasPanjar() {  // khusus untuk export semua data ke excel
+  async function getAllKasPanjar({ bulan, tahun }) {  // khusus untuk export semua data ke excel
     try {
-      const query = `
-        SELECT * FROM buku_pembantu_panjar
-        ORDER BY tanggal ASC, id ASC
+      const values = [];
+      let conditions = [];
+
+      if (tahun) {
+        values.push(tahun);
+        conditions.push(`EXTRACT(YEAR FROM tanggal) = $${values.length}`);
+      }
+
+      if (bulan) {
+        values.push(bulan);
+        conditions.push(`EXTRACT(MONTH FROM tanggal) = $${values.length}`);
+      }
+
+      // base query
+      let query = `
+        SELECT *
+        FROM buku_pembantu_panjar
       `;
-      const result = await db.query(query);
+
+      // apply filters only if exist
+      if (conditions.length > 0) {
+        query += " WHERE " + conditions.join(" AND ");
+      }
+
+      query += " ORDER BY tanggal ASC, id ASC";
+
+      const result = await db.query(query, values);
       return result.rows;
+
     } catch (err) {
       logError("ERROR in getAllKasPanjar():", err);
       throw err;
     }
   }
+
   async function listPanjar({
     page = 1,
     per_page = 20,
@@ -475,14 +498,37 @@ export default function createRepo(db) {
   // BUKU KAS PAJAK (buku_kas_pajak)
   // =========================
   
-  async function getAllKasPajak() {  // khusus untuk export semua data ke excel
+  async function getAllKasPajak({ bulan, tahun }) { // khusus untuk export semua data ke excel  
     try {
-      const query = `
-        SELECT * FROM buku_kas_pajak
-        ORDER BY tanggal ASC, id ASC
+      const values = [];
+      let conditions = [];
+
+      if (tahun) {
+        values.push(tahun);
+        conditions.push(`EXTRACT(YEAR FROM tanggal) = $${values.length}`);
+      }
+
+      if (bulan) {
+        values.push(bulan);
+        conditions.push(`EXTRACT(MONTH FROM tanggal) = $${values.length}`);
+      }
+
+      // build query dasar
+      let query = `
+        SELECT *
+        FROM buku_kas_pajak
       `;
-      const result = await db.query(query);
+
+      // jika ada filter, tambahkan WHERE
+      if (conditions.length > 0) {
+        query += " WHERE " + conditions.join(" AND ");
+      }
+
+      query += " ORDER BY tanggal ASC, id ASC";
+
+      const result = await db.query(query, values);
       return result.rows;
+
     } catch (err) {
       logError("ERROR in getAllKasPajak():", err);
       throw err;

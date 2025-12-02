@@ -4,7 +4,6 @@ import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "@/features/kas-pembantu/Sidebar";
 import Header from "@/features/kas-pembantu/Header";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
-import { ChevronDown, ChevronRight, Download, Plus } from "lucide-react";
 import MonthCard from "@/features/kas-pembantu/MonthCard";
 import { useAuth } from "@/lib/auth";
 
@@ -74,11 +73,9 @@ export default function KasPembantuPajak() {
         const result = await response.json();
 
         // Transform API response to match UI data structure
-        console.log("API Response:", result);
         const transformed = transformToMonthCards(result);
         setData(transformed);
       } catch (err) {
-        console.error("Fetch error:", err);
         setError(err.message);
         setData([]);
       } finally {
@@ -123,8 +120,6 @@ export default function KasPembantuPajak() {
         saldo_hitung_formatted: formatCurrency(runningSaldo),
       };
     });
-
-    console.log(allWithSaldo);
 
     // 3) Kelompokkan per bulan (YYYY-MM)
     const monthGroups = {};
