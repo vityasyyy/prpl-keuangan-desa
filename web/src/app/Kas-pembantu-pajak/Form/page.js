@@ -22,13 +22,6 @@ function formatCurrency(value) {
   }).format(num);
 }
 
-function parseCurrency(value) {
-  if (!value) return 0;
-  const cleaned = value.replace(/[^0-9,-]/g, "").replace(",", ".");
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? 0 : num;
-}
-
 // Convert any date format to YYYY-MM-DD
 function toYYYYMMDD(dateValue) {
   if (!dateValue) return "";
@@ -141,7 +134,7 @@ export default function Page() {
   useEffect(() => {
     const pemotonganAmount = parseFloat(pemotongan || 0);
     const penyetoranAmount = parseFloat(penyetoran || 0);
-    const saldo = penyetoran - pemotonganAmount;
+    const saldo = pemotonganAmount - penyetoranAmount;
     setCalculatedSaldo(saldo);
   }, [pemotongan, penyetoran]);
 
@@ -228,7 +221,6 @@ export default function Page() {
       
       // Prepare payload
       const payload = {
-        bku_id: "bku003", // Default for now
         tanggal: formattedTanggal, // YYYY-MM-DD format
         uraian: uraian,
         no_bukti: noBukti || null,

@@ -39,7 +39,7 @@ const MODULE_FIELDS = {
       { key: "penerimaan_swadaya", label: "Penerimaan dari Swadaya", width: "auto" },
       { key: "pengeluaran_barang_dan_jasa", label: "Pengeluaran Barang dan Jasa", width: "auto" },
       { key: "pengeluaran_modal", label: "Pengeluaran Modal", width: "auto" },
-      { key: "saldo_after", label: "Saldo", width: "120px" },
+      { key: "saldo_hitung", label: "Saldo", width: "120px" },
     ],
   },
   panjar: {
@@ -48,7 +48,7 @@ const MODULE_FIELDS = {
       { key: "uraian", label: "Uraian", width: "auto" },
       { key: "pemberian", label: "Pemberian", width: "120px" },
       { key: "pertanggungjawaban", label: "Pertanggungjawaban", width: "140px" },
-      { key: "saldo_after", label: "Saldo", width: "120px" },
+      { key: "saldo_hitung", label: "Saldo", width: "120px" },
     ],
   },
   pajak: {
@@ -57,7 +57,7 @@ const MODULE_FIELDS = {
       { key: "uraian", label: "Uraian", width: "auto" },
       { key: "pemotongan", label: "Pemotongan", width: "120px" },
       { key: "penyetoran", label: "Penyetoran", width: "120px" },
-      { key: "saldo_after", label: "Saldo", width: "120px" },
+      { key: "saldo_hitung", label: "Saldo", width: "120px" },
     ],
   },
 };

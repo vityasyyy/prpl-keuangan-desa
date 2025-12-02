@@ -4,7 +4,6 @@ import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "@/features/kas-pembantu/Sidebar";
 import Header from "@/features/kas-pembantu/Header";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
-import { ChevronDown, ChevronRight, Download, Plus } from "lucide-react";
 import MonthCard from "@/features/kas-pembantu/MonthCard";
 import { useAuth } from "@/lib/auth";
 
@@ -21,10 +20,6 @@ function formatCurrency(value) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(num);
-}
-
-function formatMonthDisplay(monthNumber) {
-  return `Bulan ${monthNumber}`;
 }
 
 export default function KasPembantuPanjar() {

@@ -74,6 +74,7 @@ export default function KasPembantuPajak() {
         const result = await response.json();
 
         // Transform API response to match UI data structure
+        console.log("API Response:", result);
         const transformed = transformToMonthCards(result);
         setData(transformed);
       } catch (err) {
@@ -111,7 +112,7 @@ export default function KasPembantuPajak() {
     // 2) Hitung prefix sum global 
     let runningSaldo = 0;
     const allWithSaldo = all.map((trx) => {
-      const delta = (parseFloat(trx.penyetoran) || 0) - (parseFloat(trx.pemotongan) || 0); // rumus Anda
+      const delta = (parseFloat(trx.pemotongan) || 0) - (parseFloat(trx.penyetoran) || 0); 
       runningSaldo += delta;
 
       return {
@@ -122,6 +123,8 @@ export default function KasPembantuPajak() {
         saldo_hitung_formatted: formatCurrency(runningSaldo),
       };
     });
+
+    console.log(allWithSaldo);
 
     // 3) Kelompokkan per bulan (YYYY-MM)
     const monthGroups = {};

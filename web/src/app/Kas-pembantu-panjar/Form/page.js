@@ -229,7 +229,6 @@ export default function Page() {
       
       // Prepare payload
       const payload = {
-        bku_id: "bku003",
         tanggal: formattedTanggal, // YYYY-MM-DD format
         uraian: uraian,
         no_bukti: noBukti || null,

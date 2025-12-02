@@ -291,7 +291,7 @@ export default function createKasPembantuService(repo) {
           return new Date(a.tanggal) - new Date(b.tanggal);
         });
 
-        // Hitung saldo dengan prefix sum: saldo += (penyetoran - pemotongan)
+        // Hitung saldo dengan prefix sum: saldo += (pemotongan - penyetoran)
         let runningSaldo = 0;
         let totalPemotongan = 0;
         let totalPenyetoran = 0;
@@ -301,8 +301,8 @@ export default function createKasPembantuService(repo) {
           const pemotongan = Number(row.pemotongan) || 0;
           const penyetoran = Number(row.penyetoran) || 0;
 
-          // Saldo = saldo sebelumnya + (penyetoran - pemotongan)
-          const delta = penyetoran - pemotongan;
+          // Saldo = saldo sebelumnya + (pemotongan - penyetoran)
+          const delta = pemotongan - penyetoran;
           runningSaldo += delta;
 
           // Akumulasi total
@@ -713,6 +713,10 @@ export default function createKasPembantuService(repo) {
         throw { status: 400, message: "pengeluaran modal dan jasa must be numeric" };
       }
 
+      if (updates.no_bukti === undefined || updates.no_bukti === null || updates.no_bukti === "" ) {
+        throw { status: 400, message: "nomor bukti cannot be empty" };
+      }
+
       const updated = await repo.updateKegiatanById(id, updates);
       if (!updated)
         throw { status: 404, message: `Kegiatan with id ${id} not found` };
@@ -783,7 +787,6 @@ export default function createKasPembantuService(repo) {
     async createPanjar(input) {
       // required fields
       const { id: rawId, bku_id, tanggal, uraian, no_bukti} = input || {};
-      if (!bku_id) throw { status: 400, message: "bku_id is required" };
       if (!tanggal) throw { status: 400, message: "tanggal is required" };
       if (!uraian) throw { status: 400, message: "uraian is required" };
 
@@ -828,12 +831,6 @@ export default function createKasPembantuService(repo) {
             status: 409,
             message: `Panjar entry with id ${id} already exists`,
           };
-      }
-
-      // optional: if you have repo.checkBkuExists, validate bku_id exists in buku_kas_umum
-      if (typeof repo.checkBkuExists === "function") {
-        const ok = await repo.checkBkuExists(bku_id);
-        if (!ok) throw { status: 400, message: `bku_id ${bku_id} not found` };
       }
 
       const payload = {
@@ -1041,20 +1038,11 @@ export default function createKasPembantuService(repo) {
       // Required fields validation
       if (!tanggal) throw { status: 400, message: "tanggal is required" };
       if (!uraian) throw { status: 400, message: "uraian is required" };
+      if (!no_bukti) throw { status: 400, message: "nomor bukti is required" };
       
       // tanggal harus YYYY-MM-DD
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(tanggal))) {
         throw { status: 400, message: "tanggal must be in YYYY-MM-DD format" };
-      }
-      
-      // validate no_bukti if provided
-      if (no_bukti !== undefined && no_bukti !== null) {
-        if (typeof no_bukti !== 'string' || no_bukti.trim() === '') {
-          throw {
-            status: 400,
-            message: "no_bukti must be a non-empty string",
-          };
-        }
       }
       
       // numeric fields
@@ -1110,7 +1098,7 @@ export default function createKasPembantuService(repo) {
         bku_id: bku_id ?? null,
         tanggal,
         uraian,
-        no_bukti: no_bukti ?? null,
+        no_bukti,
         pemotongan,
         penyetoran,
         saldo_after,
@@ -1136,13 +1124,8 @@ export default function createKasPembantuService(repo) {
       }
       
       // validate no_bukti if provided
-      if (updates.no_bukti !== undefined && updates.no_bukti !== null) {
-        if (typeof updates.no_bukti !== 'string' || updates.no_bukti.trim() === '') {
-          throw {
-            status: 400,
-            message: "no_bukti must be a non-empty string",
-          };
-        }
+      if(updates.no_bukti === undefined || updates.no_bukti === null || updates.no_bukti === "" ) {
+        throw { status: 400, message: "nomor bukti cannot be empty" };
       }
       
       // validate uraian if provided
@@ -1200,16 +1183,6 @@ export default function createKasPembantuService(repo) {
         updates.saldo_after !== undefined
           ? Number(updates.saldo_after)
           : finalPemotongan - finalPenyetoran;
-      
-      // optional: validate bku_id exists if repo has checkBkuExists
-      if (
-        updates.bku_id !== undefined &&
-        typeof repo.checkBkuExists === "function"
-      ) {
-        const ok = await repo.checkBkuExists(updates.bku_id);
-        if (!ok)
-          throw { status: 400, message: `bku_id ${updates.bku_id} not found` };
-      }
       
       // delegate update to repo
       const updated = await repo.updatePajakById(id, updates);
