@@ -282,12 +282,15 @@ export default function InputDraftAPBDes() {
 
   // Load data kalau sedang edit
   useEffect(() => {
-    if (id && akunData.length > 0 && bidangData.length > 0 && subBidangData.length > 0 && 
-        kelompokData.length > 0) {
+    // Only require the basic dropdown data to be loaded, not all of them
+    if (id && akunData.length > 0 && kelompokData.length > 0 && 
+        bidangData.length > 0 && subBidangData.length > 0 && kegiatanData.length > 0) {
       
       // Fetch data dari API
       const fetchEditData = async () => {
         try {
+          setIsLoadingEditData(true);
+          
           const res = await fetch(`${API}/draft/rincian/${id}`);
           if (!res.ok) throw new Error("Failed to fetch data");
           
@@ -297,8 +300,6 @@ export default function InputDraftAPBDes() {
           console.log("📝 Loading edit data:", existing);
           
           if (existing) {
-            setIsLoadingEditData(true);
-            
             console.log("Debug: existing.jumlah_anggaran =", existing.jumlah_anggaran);
 
             // Map kode_ekonomi_id ke format form
@@ -314,173 +315,120 @@ export default function InputDraftAPBDes() {
             const kodeRekEkonomi = ekonomiInfo?.full_code || "";
             const kodeRekBidang = fungsiInfo?.full_code || "";
             
-            setFormData({
-              id: existing.id,
-              kodeRekEkonomi: kodeRekEkonomi,
-              pendapatanBelanja: "", // Will be set after finding akun
-              kelompok: "",
-              kodeRekBidang: kodeRekBidang,
-              bidang: "",
-              subBidang: "",
-              kegiatan: "",
-              anggaran: String(existing.jumlah_anggaran || "").replace(/[^0-9]/g, ""),
-              sumberDana: existing.sumber_dana || "",
-            });
+            // Find all hierarchy items
+            let akunItem = null, kelompokItem = null, bidangItem = null, subBidangItem = null, kegiatanItem = null;
             
-            // Set selected IDs based on the fetched kode IDs
             if (existing.kode_ekonomi_id) {
-              // Find the akun parent
-              const findAkunParent = (kodeId) => {
-                // Try to find in different levels
-                const item = akunData.find(a => a.id === kodeId) 
-                  || kelompokData.find(k => k.id === kodeId);
-                
-                if (!item) return null;
-                
-                // If it's already akun level, return it
-                if (item.level === 'akun') return item;
-                
-                // Otherwise find its parent
-                if (item.parent_id) {
-                  return findAkunParent(item.parent_id);
+              // First, try to find the exact item
+              const exactEkonomiItem = akunData.find(a => a.id === existing.kode_ekonomi_id)
+                || kelompokData.find(k => k.id === existing.kode_ekonomi_id);
+              
+              console.log("🔍 Exact ekonomi item:", exactEkonomiItem);
+              
+              if (exactEkonomiItem) {
+                // Determine level by checking if it has parent_id
+                // If no parent_id or parent_id is null, it's akun level
+                // If it has parent_id, it's kelompok level
+                if (!exactEkonomiItem.parent_id || exactEkonomiItem.parent_id === null) {
+                  // The item itself is akun (top level)
+                  akunItem = exactEkonomiItem;
+                  console.log("✅ Found akun (top level):", akunItem);
+                } else {
+                  // The item is kelompok (has parent)
+                  kelompokItem = exactEkonomiItem;
+                  console.log("✅ Found kelompok:", kelompokItem);
+                  console.log("🔍 Looking for parent with ID:", exactEkonomiItem.parent_id);
+                  
+                  // Find the akun parent
+                  akunItem = akunData.find(a => 
+                    String(a.id) === String(exactEkonomiItem.parent_id)
+                  );
+                  
+                  console.log("✅ Found akun parent:", akunItem);
                 }
-                return null;
-              };
-              
-              const akunParent = findAkunParent(existing.kode_ekonomi_id);
-              if (akunParent) {
-                setSelectedAkunId(akunParent.id);
-                setFormData(prev => ({ ...prev, pendapatanBelanja: akunParent.uraian }));
-              }
-              
-              // Set kelompok if exists
-              const kelompokItem = kelompokData.find(k => k.id === existing.kode_ekonomi_id);
-              if (kelompokItem) {
-                setSelectedKelompokId(kelompokItem.id);
-                setFormData(prev => ({ ...prev, kelompok: kelompokItem.uraian }));
+              } else {
+                console.log("❌ Exact ekonomi item not found for ID:", existing.kode_ekonomi_id);
               }
             }
             
             if (existing.kode_fungsi_id) {
-              // Find bidang parent
-              const findBidangParent = (kodeId) => {
-                const item = bidangData.find(b => b.id === kodeId)
-                  || subBidangData.find(s => s.id === kodeId)
-                  || kegiatanData.find(k => k.id === kodeId);
-                
-                if (!item) return null;
-                if (item.level === 'bidang') return item;
-                if (item.parent_id) return findBidangParent(item.parent_id);
-                return null;
-              };
+              // First, try to find the exact item
+              const exactFungsiItem = bidangData.find(b => b.id === existing.kode_fungsi_id)
+                || subBidangData.find(s => s.id === existing.kode_fungsi_id)
+                || kegiatanData.find(k => k.id === existing.kode_fungsi_id);
               
-              const bidangParent = findBidangParent(existing.kode_fungsi_id);
-              if (bidangParent) {
-                setSelectedBidangId(bidangParent.id);
-                setFormData(prev => ({ ...prev, bidang: bidangParent.uraian }));
+              console.log("🔍 Exact fungsi item:", exactFungsiItem);
+              
+              if (exactFungsiItem) {
+                // Determine hierarchy by checking parent_id chain
+                const isInBidang = bidangData.some(b => b.id === exactFungsiItem.id);
+                const isInSubBidang = subBidangData.some(s => s.id === exactFungsiItem.id);
+                const isInKegiatan = kegiatanData.some(k => k.id === exactFungsiItem.id);
+                
+                if (isInBidang && !exactFungsiItem.parent_id) {
+                  // Top level bidang
+                  bidangItem = exactFungsiItem;
+                } else if (isInSubBidang) {
+                  // Sub-bidang level
+                  subBidangItem = exactFungsiItem;
+                  bidangItem = bidangData.find(b => String(b.id) === String(exactFungsiItem.parent_id));
+                } else if (isInKegiatan) {
+                  // Kegiatan level
+                  kegiatanItem = exactFungsiItem;
+                  // Find sub-bidang parent
+                  const subBidang = subBidangData.find(s => String(s.id) === String(exactFungsiItem.parent_id));
+                  if (subBidang) {
+                    subBidangItem = subBidang;
+                    bidangItem = bidangData.find(b => String(b.id) === String(subBidang.parent_id));
+                  }
+                }
               }
             }
+            
+            console.log("📊 Found items:", { akunItem, kelompokItem, bidangItem, subBidangItem, kegiatanItem });
+            
+            // Set all IDs first (this triggers filtering in useEffects)
+            if (akunItem) setSelectedAkunId(akunItem.id);
+            if (kelompokItem) setSelectedKelompokId(kelompokItem.id);
+            if (bidangItem) setSelectedBidangId(bidangItem.id);
+            if (subBidangItem) setSelectedSubBidangId(subBidangItem.id);
+            
+            // Set form data with all values
+            // For anggaran: only set if value exists and > 0, otherwise leave empty
+            const anggaranValue = existing.jumlah_anggaran && existing.jumlah_anggaran > 0 
+              ? String(Math.floor(existing.jumlah_anggaran)) // Ensure it's an integer without decimals
+              : "";
+            
+            console.log("💰 Setting anggaran from DB:", existing.jumlah_anggaran, "→ formData:", anggaranValue);
+            
+            setFormData({
+              id: existing.id,
+              kodeRekEkonomi: kodeRekEkonomi,
+              pendapatanBelanja: akunItem?.uraian || "",
+              kelompok: kelompokItem?.uraian || "",
+              kodeRekBidang: kodeRekBidang,
+              bidang: bidangItem?.uraian || "",
+              subBidang: subBidangItem?.uraian || "",
+              kegiatan: kegiatanItem?.uraian || "",
+              anggaran: anggaranValue,
+              sumberDana: existing.sumber_dana || "",
+            });
+            
+            // Give time for filtering to complete, then disable loading flag
+            setTimeout(() => {
+              setIsLoadingEditData(false);
+            }, 100);
           }
         } catch (error) {
           console.error("Error loading edit data:", error);
           alert(`Gagal memuat data: ${error.message}`);
-        }
-      };
-      
-      fetchEditData();
-    }
-  }, [id, akunData, bidangData, subBidangData, kelompokData]);
-
-  // Set Sub-Bidang ID setelah subBidangOptions ter-update
-  useEffect(() => {
-    if (isLoadingEditData && id && subBidangOptions.length > 0) {
-      const fetchEditData = async () => {
-        try {
-          const res = await fetch(`${API}/draft/rincian/${id}`);
-          if (!res.ok) return;
-          
-          const result = await res.json();
-          const existing = result.data || result;
-          
-          if (existing && existing.kode_fungsi_id) {
-            const selectedSubBidang = subBidangData.find(
-              (item) => item.id === existing.kode_fungsi_id || item.parent_id === existing.kode_fungsi_id
-            );
-            if (selectedSubBidang && selectedSubBidang.level === 'sub_bidang') {
-              setSelectedSubBidangId(selectedSubBidang.id);
-              setFormData(prev => ({ ...prev, subBidang: selectedSubBidang.uraian }));
-            }
-          }
-        } catch (error) {
-          console.error("Error setting sub-bidang:", error);
-        }
-      };
-      fetchEditData();
-    }
-  }, [isLoadingEditData, subBidangOptions, id]);
-
-  // Set Kelompok ID setelah kelompokOptions ter-update
-  useEffect(() => {
-    if (isLoadingEditData && id && kelompokOptions.length > 0) {
-      const fetchEditData = async () => {
-        try {
-          const res = await fetch(`${API}/draft/rincian/${id}`);
-          if (!res.ok) return;
-          
-          const result = await res.json();
-          const existing = result.data || result;
-          
-          if (existing && existing.kode_ekonomi_id) {
-            const selectedKelompok = kelompokData.find(
-              (item) => item.id === existing.kode_ekonomi_id
-            );
-            if (selectedKelompok && selectedKelompok.level === 'kelompok') {
-              setSelectedKelompokId(selectedKelompok.id);
-              setFormData(prev => ({ ...prev, kelompok: selectedKelompok.uraian }));
-            }
-          }
-        } catch (error) {
-          console.error("Error setting kelompok:", error);
-        }
-      };
-      fetchEditData();
-    }
-  }, [isLoadingEditData, kelompokOptions, id]);
-  // Selesai loading edit data setelah semua options ter-update
-  useEffect(() => {
-    if (isLoadingEditData && kegiatanOptions.length > 0) {
-      const fetchEditData = async () => {
-        try {
-          const res = await fetch(`${API}/draft/rincian/${id}`);
-          if (!res.ok) return;
-          
-          const result = await res.json();
-          const existing = result.data || result;
-          
-          if (existing) {
-            // Set Kegiatan if it's at kegiatan level
-            if (existing.kode_fungsi_id) {
-              const selectedKegiatan = kegiatanData.find(
-                (item) => item.id === existing.kode_fungsi_id
-              );
-              if (selectedKegiatan && selectedKegiatan.level === 'kegiatan') {
-                setFormData(prev => ({ ...prev, kegiatan: selectedKegiatan.uraian }));
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Error setting kegiatan:", error);
-        }
-      };
-      
-      fetchEditData().then(() => {
-        // Beri sedikit delay untuk memastikan semua state sudah ter-update
-        setTimeout(() => {
           setIsLoadingEditData(false);
-        }, 100);
-      });
+        }
+      };
+      
+      fetchEditData();
     }
-  }, [isLoadingEditData, kegiatanOptions]);
+  }, [id, akunData, bidangData, subBidangData, kelompokData, kegiatanData]);
 
   const handleOnChange = (field, value) => {
     setFormData((prev) => ({
