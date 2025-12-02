@@ -21,6 +21,7 @@ const migrations = [
   "4_update_tabel_rincian.sql",
   "5_update_tabel_penjabaran.sql",
   "6_update_table_rincian.sql",
+  "7_add_status_to_rincian.sql",
 ];
 
 console.log("Running run-migrations.js...");

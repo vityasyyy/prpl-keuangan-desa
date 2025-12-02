@@ -38,6 +38,7 @@ export default function createApbdRouter(apbdHandler) {
   // Draft APBDes endpoints
   r.get("/draft/rincian", apbdHandler.getDraftApbdesList); // GET /api/apbd/draft/rincian
   r.get("/draft/rincian/:id", apbdHandler.getDraftApbdesById); // GET /api/apbd/draft/rincian/:id
+  r.get("/rincian-for-penjabaran", apbdHandler.getRincianListForPenjabaran); // GET /api/apbd/rincian-for-penjabaran (no status filter)
   r.get("/draft/rincian/summary", apbdHandler.getDraftApbdesSummary); // GET /api/apbd/draft/rincian/summary
 
   // Draft Penjabaran APBDes endpoints
@@ -67,6 +68,10 @@ export default function createApbdRouter(apbdHandler) {
     "/draft/penjabaran/:id/penjabaran/post",
     apbdHandler.postDraftPenjabaranApbdes
   ); // POST /api/apbd/draft/penjabaran/:id/penjabaran/post
+  r.post(
+    "/draft/penjabaran/post-with-parent",
+    apbdHandler.postPenjabaranWithParent
+  ); // POST /api/apbd/draft/penjabaran/post-with-parent
 
   // UPDATE & DELETE
   r.put("/draft/rincian/:id", apbdHandler.updateDraftApbdesItem); // PUT /api/apbd/draft/rincian/:id

@@ -116,6 +116,8 @@ export default function createApbdService(ApbdRepo) {
   };
 
   const getDraftApbdesList = async () => ApbdRepo.getDraftApbdesList();
+  
+  const getRincianListForPenjabaran = async () => ApbdRepo.getRincianListForPenjabaran();
 
   const getDraftApbdesById = async (id) => {
     if (!id) throw { status: 400, error: "id_required" };
@@ -195,6 +197,64 @@ export default function createApbdService(ApbdRepo) {
     };
   };
 
+  // Post penjabaran beserta parent rinciannya
+  const postPenjabaranWithParent = async (penjabaranIds) => {
+    if (!penjabaranIds || penjabaranIds.length === 0) {
+      throw { status: 400, error: "penjabaran_ids_required" };
+    }
+
+    // Get all penjabaran data
+    const penjabaranList = [];
+    for (const id of penjabaranIds) {
+      const penjabaran = await ApbdRepo.getDraftPenjabaranApbdesById(id);
+      if (penjabaran) penjabaranList.push(penjabaran);
+    }
+
+    if (penjabaranList.length === 0) {
+      throw { status: 404, error: "no_penjabaran_found" };
+    }
+
+    // Get unique rincian IDs
+    const rincianIds = [...new Set(penjabaranList.map(p => p.rincian_id))];
+
+    // Get rincian data and filter yang belum posted, juga collect apbdes_id
+    const rincianToPost = [];
+    const apbdesIds = new Set();
+    for (const rincianId of rincianIds) {
+      const rincian = await ApbdRepo.getDraftApbdesById(rincianId);
+      if (rincian) {
+        apbdesIds.add(rincian.apbdes_id);
+        if (rincian.status !== 'posted') {
+          rincianToPost.push(rincianId);
+        }
+      }
+    }
+
+    // Post parent rincian
+    let postedRincian = [];
+    if (rincianToPost.length > 0) {
+      postedRincian = await ApbdRepo.postRincianByIds(rincianToPost);
+    }
+
+    // Post parent apbdes juga
+    for (const apbdesId of apbdesIds) {
+      const currentStatus = await ApbdRepo.getApbdesStatus(apbdesId);
+      if (currentStatus !== 'posted') {
+        await ApbdRepo.postDraftApbdes(apbdesId);
+      }
+    }
+
+    return {
+      message: "Penjabaran dan parent rincian berhasil diposting.",
+      data: {
+        posted_rincian_count: postedRincian.length,
+        posted_rincian_ids: postedRincian.map(r => r.id),
+        penjabaran_count: penjabaranList.length,
+        posted_apbdes_count: apbdesIds.size,
+      },
+    };
+  };
+
   const createApbdesRincianPenjabaran = async (payload) => {
     // Convert full_code ke id jika diperlukan (sama seperti create rincian)
     if (payload.kode_ekonomi_id && /\s/.test(payload.kode_ekonomi_id)) {
@@ -268,19 +328,41 @@ export default function createApbdService(ApbdRepo) {
 
   const postDraftPenjabaranApbdes = async (id) => {
     if (!id) throw { status: 400, error: "id_required" };
-    const currentStatus = await ApbdRepo.getApbdesStatus(id);
-    if (currentStatus === "posted") {
+    
+    // Get penjabaran untuk mendapatkan rincian_id
+    const penjabaran = await ApbdRepo.getDraftPenjabaranApbdesById(id);
+    if (!penjabaran) {
       throw {
-        status: 409,
-        error: "apbdes_already_posted",
-        message: "APBDes ini sudah diposting dan tidak dapat diubah lagi.",
+        status: 404,
+        error: "penjabaran_not_found",
+        message: "Penjabaran tidak ditemukan.",
       };
     }
 
-    const postedApbdes = await ApbdRepo.postDraftPenjabaranApbdes(id);
+    // Get rincian untuk cek status
+    const rincian = await ApbdRepo.getDraftApbdesById(penjabaran.rincian_id);
+    if (!rincian) {
+      throw {
+        status: 404,
+        error: "rincian_not_found",
+        message: "Rincian parent tidak ditemukan.",
+      };
+    }
+
+    // Cek apakah parent rincian sudah diposting
+    if (rincian.status !== "posted") {
+      throw {
+        status: 400,
+        error: "rincian_not_posted",
+        message: "Parent rincian harus diposting terlebih dahulu sebelum posting penjabaran.",
+      };
+    }
+
+    // Post penjabaran
+    await ApbdRepo.postDraftPenjabaranApbdes(id);
     return {
-      message: "APBDes berhasil diposting.",
-      data: postedApbdes,
+      message: "Penjabaran berhasil diposting.",
+      data: { id, rincian_id: penjabaran.rincian_id },
     };
   };
 
@@ -419,6 +501,7 @@ export default function createApbdService(ApbdRepo) {
     //output apbdes rincian
     getDraftApbdesList,
     getDraftApbdesById,
+    getRincianListForPenjabaran,
     getDraftApbdesSummary,
     updateDraftApbdesItem,
     deleteDraftApbdesItem,
@@ -435,6 +518,7 @@ export default function createApbdService(ApbdRepo) {
     updatePenjabaranApbdesItem,
     deletePenjabaranApbdesItem,
     postDraftPenjabaranApbdes,
+    postPenjabaranWithParent,
 
     //buku apbdes
     getApbdes,

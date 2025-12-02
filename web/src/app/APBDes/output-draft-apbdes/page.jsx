@@ -371,16 +371,6 @@ export default function OutputAPBDes() {
 
         {/* Buttons */}
         <div className="flex flex-col space-y-2">
-          {/* Tombol Posting */}
-          <Button
-            variant="solid"
-            className="bg-[#0779ce] hover:bg-[#066bb8] text-white flex items-center justify-between px-4 py-2 rounded-lg w-48 shadow-sm"
-            onClick={handlePostingAPB}
-            disabled={loading}
-          >
-            <span>Posting APB</span>
-            <ArrowUpRight width={18} height={18} />
-          </Button>
 
           {/* Tombol Unduh (masih nonaktif) */}
           <Button

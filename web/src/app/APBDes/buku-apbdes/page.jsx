@@ -38,9 +38,18 @@ export default function BukuAPBDes() {
       if (!rincianRes.ok) throw new Error("Failed to fetch posted APBDes");
       const result = await rincianRes.json();
 
-      console.log("📊 Posted APBDes data:", result);
+      console.log("📊 Posted APBDes rincian data:", result);
       
       setData(result.rows || []);
+
+      // Fetch penjabaran yang terkait dengan rincian yang sudah diposting
+      const penjabaranRes = await fetch(`${API}/draft/penjabaran`);
+      if (!penjabaranRes.ok) throw new Error("Failed to fetch penjabaran");
+      const penjabaranResult = await penjabaranRes.json();
+      
+      console.log("📋 Penjabaran data:", penjabaranResult);
+      
+      setPenjabaranData(penjabaranResult || []);
     } catch (error) {
       console.error("Error fetching posted APBDes:", error);
       alert(`Gagal memuat data: ${error.message}`);
@@ -104,7 +113,13 @@ export default function BukuAPBDes() {
       if (itemsAtKode) {
         itemsAtKode.forEach(item => {
           const itemWithDetails = { ...item };
-          itemWithDetails.calculatedTotal = sanitizeNumber(item.jumlah_anggaran || 0);
+          
+          // Cari penjabaran untuk rincian ini
+          const itemPenjabaran = penjabaranData.filter(p => String(p.rincian_id) === String(item.id));
+          
+          // Hitung total: max antara jumlah rincian vs sum penjabaran
+          const penjabaranSum = itemPenjabaran.reduce((s, p) => s + sanitizeNumber(p.jumlah_anggaran || 0), 0);
+          itemWithDetails.calculatedTotal = Math.max(sanitizeNumber(item.jumlah_anggaran || 0), penjabaranSum);
 
           const ekonomiInfo = kodeEkonomiMap[item.kode_ekonomi_id];
           const fungsiInfo = kodeEkonomiMap[item.kode_fungsi_id];
@@ -112,6 +127,20 @@ export default function BukuAPBDes() {
           itemWithDetails.displayUraian = fungsiInfo?.uraian || ekonomiInfo?.uraian || "Tidak ada uraian";
           itemWithDetails.level = ekonomiInfo?.level || 'unknown';
           itemWithDetails.kode = ekonomiInfo?.full_code;
+          
+          // Tambahkan penjabaran sebagai children
+          if (itemPenjabaran.length > 0) {
+            itemWithDetails.penjabaranChildren = itemPenjabaran.map(penjabaran => {
+              const penjabaranEkonomiInfo = kodeEkonomiMap[penjabaran.kode_ekonomi_id];
+              const penjabaranFungsiInfo = kodeEkonomiMap[penjabaran.kode_fungsi_id];
+              return {
+                id: penjabaran.id,
+                displayUraian: penjabaranFungsiInfo?.uraian || penjabaranEkonomiInfo?.uraian || "Penjabaran",
+                calculatedTotal: sanitizeNumber(penjabaran.jumlah_anggaran || 0),
+                isPenjabaran: true,
+              };
+            });
+          }
 
           hierarchy[kode] = itemWithDetails;
         });
@@ -220,6 +249,28 @@ export default function BukuAPBDes() {
                 </div>
               </div>
 
+              {/* Render penjabaran children dengan indentasi */}
+              {node.penjabaranChildren && node.penjabaranChildren.length > 0 && (
+                <div className="ml-8 border-l-2 border-gray-200 pl-4">
+                  {node.penjabaranChildren.map((penjabaran, pIdx) => (
+                    <div
+                      key={penjabaran.id || pIdx}
+                      className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-md transition text-gray-700"
+                    >
+                      <div className="flex items-center text-sm space-x-2">
+                        <span>{penjabaran.displayUraian}</span>
+                      </div>
+                      <div className="text-sm font-light">
+                        Rp{penjabaran.calculatedTotal.toLocaleString("id-ID", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Render hierarchy children */}
               {node.children && node.children.length > 0 && (
                 <div className="pl-4">
                   {renderTree(node.children, depth + 1)}

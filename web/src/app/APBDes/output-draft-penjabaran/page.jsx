@@ -72,54 +72,49 @@ export default function OutputAPBDes() {
 
   // Fetch data dari API
   const fetchData = async () => {
+    console.log("🔄 Starting fetchData...");
     setLoading(true);
     try {
-      // Fetch rincian dari draft (status = draft)
-      const rincianDraftRes = await fetch(`${API}/draft/rincian`);
-      if (!rincianDraftRes.ok) throw new Error("Failed to fetch draft rincian");
-      const rincianDraftData = await rincianDraftRes.json();
+      // Fetch rincian yang masih draft (untuk halaman draft penjabaran)
+      console.log("📡 Fetching draft rincian from:", `${API}/draft/rincian`);
+      const rincianRes = await fetch(`${API}/draft/rincian`);
+      console.log("📡 Rincian response status:", rincianRes.status);
+      if (!rincianRes.ok) throw new Error("Failed to fetch rincian");
+      const rincianData = await rincianRes.json();
+      console.log("📊 Rincian data received:", rincianData.length, "items");
+      console.log("📊 Rincian data:", rincianData);
 
-      // TODO: Jika perlu fetch rincian posted juga, tambahkan endpoint baru di backend
-      // Untuk sementara, kita hanya tampilkan draft rincian
-      // Tapi penjabaran tetap bisa diinput untuk rincian yang sudah posted
-      
-      // Fetch penjabaran (semua status)
+      // Fetch penjabaran yang parent rinciannya masih draft
+      console.log("📡 Fetching penjabaran from:", `${API}/draft/penjabaran`);
       const penjabaranRes = await fetch(`${API}/draft/penjabaran`);
+      console.log("📡 Penjabaran response status:", penjabaranRes.status);
       if (!penjabaranRes.ok) throw new Error("Failed to fetch penjabaran");
       const penjabaranDataList = await penjabaranRes.json();
-
-      console.log("📊 Rincian data:", rincianDraftData);
+      console.log("📋 Penjabaran data received:", penjabaranDataList.length, "items");
       console.log("📋 Penjabaran data:", penjabaranDataList);
 
-      // Jika ada penjabaran yang parent rinciannya sudah posted,
-      // kita perlu fetch parent rincian tersebut juga
-      const penjabaranRincianIds = [...new Set(penjabaranDataList.map(p => p.rincian_id))];
-      const missingRincianIds = penjabaranRincianIds.filter(
-        id => !rincianDraftData.some(r => r.id === id)
+      // Filter penjabaran: hanya yang parent rinciannya masih draft
+      const rincianDraftIds = rincianData.map(r => r.id);
+      const filteredPenjabaran = penjabaranDataList.filter(p => 
+        rincianDraftIds.includes(p.rincian_id)
       );
+      console.log("🔍 Filtered penjabaran (only draft parents):", filteredPenjabaran.length, "items");
 
-      // Fetch missing rincian (yang sudah posted tapi punya penjabaran)
-      let additionalRincian = [];
-      if (missingRincianIds.length > 0) {
-        console.log("🔍 Fetching missing rincian IDs:", missingRincianIds);
-        const fetchPromises = missingRincianIds.map(id =>
-          fetch(`${API}/draft/rincian/${id}`).then(res => res.ok ? res.json() : null)
-        );
-        const results = await Promise.all(fetchPromises);
-        additionalRincian = results.filter(r => r !== null);
-        console.log("➕ Additional rincian (posted):", additionalRincian);
-      }
+      console.log("✅ Total rincian:", rincianData.length, "items");
+      console.log("✅ All rincian data:", rincianData);
 
-      // Gabungkan draft dan posted rincian
-      const allRincian = [...rincianDraftData, ...additionalRincian];
-
-      setData(allRincian);
-      setPenjabaranData(penjabaranDataList);
+      console.log("💾 Setting state - data:", rincianData.length, "items");
+      console.log("💾 Setting state - penjabaranData:", filteredPenjabaran.length, "items");
+      setData(rincianData);
+      setPenjabaranData(filteredPenjabaran);
+      console.log("✅ State updated successfully");
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("❌ Error in fetchData:", error);
+      console.error("❌ Error stack:", error.stack);
       alert(`Gagal memuat data: ${error.message}`);
     } finally {
       setLoading(false);
+      console.log("🏁 fetchData completed");
     }
   };
 
@@ -173,7 +168,7 @@ export default function OutputAPBDes() {
     });
   };
 
-  // Posting penjabaran ke Buku APBDes
+  // Posting penjabaran ke Buku APBDes (sekaligus posting parent rincian)
   const handlePostingAPB = async () => {
     if (!data || data.length === 0) {
       alert("Belum ada data rincian. Silakan input data rincian terlebih dahulu.");
@@ -186,90 +181,43 @@ export default function OutputAPBDes() {
     }
 
     try {
-      // Get apbdes_id from first rincian item
-      const apbdesId = data[0]?.apbdes_id;
-      if (!apbdesId) {
-        alert("Data tidak valid: apbdes_id tidak ditemukan.");
-        return;
-      }
-
-      // STEP 1: Check if rincian sudah diposting
-      const statusRes = await fetch(`${API}/status/${apbdesId}`);
-      if (!statusRes.ok) {
-        throw new Error("Gagal memeriksa status APBDes");
-      }
+      // Get all penjabaran IDs
+      const penjabaranIds = penjabaranData.map(p => p.id);
       
-      const statusData = await statusRes.json();
-      console.log("📊 APBDes Status:", statusData);
-      
-      if (statusData.status !== "posted") {
-        const postRincianFirst = window.confirm(
-          "⚠️ APBDes Rincian belum diposting!\n\n" +
-          "Untuk memposting penjabaran, Anda harus memposting APBDes Rincian terlebih dahulu.\n\n" +
-          "Apakah Anda ingin memposting APBDes Rincian sekarang?"
-        );
-        
-        if (postRincianFirst) {
-          // Redirect ke halaman draft apbdes untuk posting rincian
-          router.push("/APBDes/output-draft-apbdes");
-          return;
-        } else {
-          return; // User membatalkan
-        }
-      }
+      console.log("🔍 Posting penjabaran:", penjabaranIds.length, "items");
 
-      // STEP 2: Jika rincian sudah diposting, lanjutkan posting penjabaran
       const confirmPost = window.confirm(
         `Apakah Anda yakin ingin memposting ${penjabaranData.length} item penjabaran ke Buku APBDes?\n\n` +
+        `Parent rincian yang belum diposting akan ikut diposting.\n\n` +
         `Setelah diposting, data tidak dapat diubah lagi.`
       );
       
       if (!confirmPost) return;
 
-      // Post semua penjabaran
-      let successCount = 0;
-      let errorCount = 0;
-      const errors = [];
+      // Post semua penjabaran beserta parent rinciannya
+      const res = await fetch(`${API}/draft/penjabaran/post-with-parent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ penjabaran_ids: penjabaranIds }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
+        throw new Error(errorData.message || `HTTP ${res.status}`);
+      }
+
+      const result = await res.json();
+      console.log("✅ Posting result:", result);
+
+      alert(
+        `✅ Berhasil memposting!\n\n` +
+        `📝 ${result.data.penjabaran_count} penjabaran diposting\n` +
+        `📋 ${result.data.posted_rincian_count} parent rincian diposting`
+      );
       
-      for (const penjabaran of penjabaranData) {
-        try {
-          const res = await fetch(`${API}/draft/penjabaran/${penjabaran.id}/penjabaran/post`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-          });
-
-          if (res.ok) {
-            successCount++;
-          } else {
-            errorCount++;
-            const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
-            errors.push(`ID ${penjabaran.id}: ${errorData.message || res.statusText}`);
-            console.error(`Failed to post penjabaran ${penjabaran.id}:`, errorData);
-          }
-        } catch (err) {
-          errorCount++;
-          errors.push(`ID ${penjabaran.id}: ${err.message}`);
-          console.error(`Error posting penjabaran ${penjabaran.id}:`, err);
-        }
-      }
-
-      if (errorCount === 0) {
-        alert(`✅ Berhasil memposting ${successCount} item penjabaran ke Buku APBDes.`);
-        router.push("/APBDes/buku-apbdes");
-      } else {
-        const errorMsg = errors.length > 0 ? `\n\nError:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? '\n...' : ''}` : '';
-        alert(
-          `⚠️ Posting selesai dengan:\n` +
-          `✅ ${successCount} berhasil\n` +
-          `❌ ${errorCount} gagal` +
-          errorMsg +
-          `\n\nSilakan periksa console untuk detail lengkap.`
-        );
-        // Refresh data
-        fetchData();
-      }
+      router.push("/APBDes/buku-apbdes");
     } catch (error) {
-      console.error("Error posting penjabaran:", error);
+      console.error("❌ Error posting penjabaran:", error);
       alert(`❌ Gagal posting penjabaran: ${error.message}`);
     }
   };
@@ -426,6 +374,14 @@ export default function OutputAPBDes() {
         <div className="flex flex-col space-y-2">
           <Button
             variant="solid"
+            className="bg-[#ff9500] hover:bg-[#e68600] text-white flex items-center justify-between px-4 py-2 rounded-lg w-48 shadow-sm"
+            onClick={() => alert("Fitur Unduh File belum diaktifkan")}
+          >
+            <span>Unduh File</span>
+            <Download width={18} height={18} />
+          </Button>
+          <Button
+            variant="solid"
             className="bg-[#0779ce] hover:bg-[#066bb8] text-white flex items-center justify-between px-4 py-2 rounded-lg w-48 shadow-sm"
             onClick={handlePostingAPB}
           >
@@ -433,14 +389,7 @@ export default function OutputAPBDes() {
             <ArrowUpRight width={18} height={18} />
           </Button>
 
-          <Button
-            variant="solid"
-            className="bg-[#ff9500] hover:bg-[#e68600] text-white flex items-center justify-between px-4 py-2 rounded-lg w-48 shadow-sm"
-            onClick={() => alert("Fitur Unduh File belum diaktifkan")}
-          >
-            <span>Unduh File</span>
-            <Download width={18} height={18} />
-          </Button>
+          
 
           {/* <Button
             variant="solid"

@@ -17,7 +17,7 @@ export default function createApbdRepo(arg) {
     const values = [];
     let idx = 1;
 
-    // Join apbdes_rincian with kegiatan and apbdes to allow filtering by tahun/status
+    // Join apbdes_rincian with apbdes to allow filtering by tahun/status
     if (id) {
       conditions.push(`r.id = $${idx++}`);
       values.push(id);
@@ -27,7 +27,8 @@ export default function createApbdRepo(arg) {
       values.push(tahun);
     }
     if (status) {
-      conditions.push(`a.status = $${idx++}`);
+      // Check status in apbdes_rincian table (not apbdes table)
+      conditions.push(`r.status = $${idx++}`);
       values.push(status);
     }
 
@@ -38,7 +39,8 @@ export default function createApbdRepo(arg) {
         r.id,
         a.id AS apbdes_id,
         a.tahun,
-        a.status,
+        a.status AS apbdes_status,
+        r.status,
         r.kode_fungsi_id,
         r.kode_ekonomi_id,
         r.jumlah_anggaran,
@@ -233,6 +235,19 @@ export default function createApbdRepo(arg) {
     return rows[0];
   };
 
+  // Get rincian list tanpa filter status (untuk halaman draft penjabaran)
+  const getRincianListForPenjabaran = async () => {
+    const q = `
+      SELECT r.id, a.id AS apbdes_id, a.tahun, a.status,
+             r.kode_fungsi_id, r.kode_ekonomi_id, r.jumlah_anggaran, r.sumber_dana  
+      FROM apbdes_rincian r
+      JOIN apbdes a ON a.id = r.apbdes_id
+      ORDER BY a.tahun DESC, r.id
+    `;
+    const { rows } = await db.query(q);
+    return rows;
+  };
+
   const getDraftApbdesSummary = async () => {
     const q = `
       SELECT e.uraian, SUM(r.jumlah_anggaran) AS total_anggaran
@@ -302,6 +317,20 @@ export default function createApbdRepo(arg) {
       WHERE id = $1
     `;
     await db.query(q, [id]);
+  };
+
+  // Post multiple rincian by IDs (untuk posting penjabaran beserta parent rinciannya)
+  const postRincianByIds = async (rincianIds) => {
+    if (!rincianIds || rincianIds.length === 0) return [];
+    
+    const q = `
+      UPDATE apbdes_rincian
+      SET status = 'posted'
+      WHERE id = ANY($1::text[])
+      RETURNING id, status
+    `;
+    const { rows } = await db.query(q, [rincianIds]);
+    return rows;
   };
 
   const recalculateDraftApbdesTotals = async (apbdesId) => {
@@ -623,12 +652,14 @@ export default function createApbdRepo(arg) {
     //output apbdes rincian
     getDraftApbdesList,
     getDraftApbdesById,
+    getRincianListForPenjabaran,
     getDraftApbdesSummary,
     updateDraftApbdesItem,
     deleteDraftApbdesItem,
     recalculateDraftApbdesTotals,
     downloadDraftApbdes,
     postDraftApbdes,
+    postRincianByIds,
 
     //input form apbdes rincian penjabaran
     createApbdesRincianPenjabaran,
