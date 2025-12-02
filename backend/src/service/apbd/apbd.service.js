@@ -250,6 +250,12 @@ export default function createApbdService(ApbdRepo) {
     return draft;
   };
 
+  const getDraftPenjabaranByRincianId = async (rincianId) => {
+    if (!rincianId) throw { status: 400, error: "rincian_id_required" };
+    const penjabaran = await ApbdRepo.getDraftPenjabaranByRincianId(rincianId);
+    return penjabaran;
+  };
+
   const getDraftPenjabaranApbdesSummary = async () => {
     const summary = await ApbdRepo.getDraftPenjabaranApbdesSummary();
     return {
@@ -424,6 +430,7 @@ export default function createApbdService(ApbdRepo) {
     //output draft apbdes rincian penjabaran
     getDraftPenjabaranApbdesList,
     getDraftPenjabaranApbdesById,
+    getDraftPenjabaranByRincianId,
     getDraftPenjabaranApbdesSummary,
     updatePenjabaranApbdesItem,
     deletePenjabaranApbdesItem,

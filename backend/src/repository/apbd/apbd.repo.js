@@ -352,7 +352,7 @@ export default function createApbdRepo(arg) {
 
   const getDraftPenjabaranApbdesList = async () => {
     const q = `
-      SELECT p.id, p.rincian_id, p.volume, p.satuan, p.jumlah_anggaran, p.sumber_dana
+      SELECT p.id, p.rincian_id, p.volume, p.satuan, p.jumlah_anggaran, p.sumber_dana, p.kode_fungsi_id, p.kode_ekonomi_id
       FROM apbdes_rincian_penjabaran p
       JOIN apbdes_rincian r ON p.rincian_id = r.id
       ORDER BY p.id
@@ -363,12 +363,38 @@ export default function createApbdRepo(arg) {
 
   const getDraftPenjabaranApbdesById = async (id) => {
     const q = `
-      SELECT id AS penjabaran_id, rincian_id, volume, satuan, jumlah_anggaran, sumber_dana
+      SELECT id AS penjabaran_id, rincian_id, kode_fungsi_id, kode_ekonomi_id, volume, satuan, jumlah_anggaran, sumber_dana
       FROM apbdes_rincian_penjabaran
       WHERE id = $1
       ORDER BY id
     `;
     const { rows } = await db.query(q, [id]);
+    return rows[0];
+  };
+
+  const getDraftPenjabaranByRincianId = async (rincianId) => {
+    const q = `
+      SELECT 
+        p.id, 
+        p.rincian_id, 
+        p.kode_fungsi_id,
+        p.kode_ekonomi_id,
+        p.volume, 
+        p.satuan, 
+        p.jumlah_anggaran, 
+        p.sumber_dana,
+        kf.full_code AS kode_fungsi_full_code,
+        ke.full_code AS kode_ekonomi_full_code,
+        kf.uraian AS kode_fungsi_uraian,
+        ke.uraian AS kode_ekonomi_uraian,
+        ke.level AS kode_ekonomi_level
+      FROM apbdes_rincian_penjabaran p
+      LEFT JOIN kode_fungsi kf ON p.kode_fungsi_id = kf.id
+      LEFT JOIN kode_ekonomi ke ON p.kode_ekonomi_id = ke.id
+      WHERE p.rincian_id = $1
+      ORDER BY p.id
+    `;
+    const { rows } = await db.query(q, [rincianId]);
     return rows;
   };
 
@@ -611,6 +637,7 @@ export default function createApbdRepo(arg) {
     //output draft apbdes rincian penjabaran
     getDraftPenjabaranApbdesList,
     getDraftPenjabaranApbdesById,
+    getDraftPenjabaranByRincianId,
     getDraftPenjabaranApbdesSummary,
     updatePenjabaranApbdesItem,
     deletePenjabaranApbdesItem,

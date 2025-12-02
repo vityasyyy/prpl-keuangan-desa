@@ -12,139 +12,278 @@ export default function OutputAPBDes() {
   const [data, setData] = useState([]);
   const [penjabaranData, setPenjabaranData] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [kodeEkonomiMap, setKodeEkonomiMap] = useState({});
+  const [kodeFungsiMap, setKodeFungsiMap] = useState({});
+  const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  // Load data input draft APBDes dan penjabaran
+  // Helpers: sanitize anggaran
+  const sanitizeNumber = (val) => {
+    if (val === null || val === undefined) return 0;
+    const s = String(val).replace(/\s/g, "").replace(/[^0-9.,-]/g, "");
+    if (s.indexOf(',') > -1 && s.indexOf('.') > -1) {
+      return Number(s.replace(/\./g, '').replace(',', '.')) || 0;
+    }
+    if (s.indexOf('.') > -1 && s.indexOf(',') === -1) {
+      if ((s.match(/\./g) || []).length > 1) {
+        return Number(s.replace(/\./g, '')) || 0;
+      }
+      return Number(s) || 0;
+    }
+    if (s.indexOf(',') > -1) return Number(s.replace(',', '.')) || 0;
+    return Number(s) || 0;
+  };
+
+  // Fetch kode ekonomi untuk mapping ID ke uraian
+  const fetchKodeEkonomi = async () => {
+    try {
+      const res = await fetch(`${API}/kode-ekonomi`);
+      if (!res.ok) throw new Error("Failed to fetch kode ekonomi");
+      const ekonomiData = await res.json();
+      
+      // Create map: id -> full item
+      const map = {};
+      ekonomiData.forEach((item) => {
+        map[item.id] = item;
+      });
+      setKodeEkonomiMap(map);
+    } catch (error) {
+      console.error("Error fetching kode ekonomi:", error);
+    }
+  };
+
+  // Fetch kode fungsi untuk mapping ID ke uraian
+  const fetchKodeFungsi = async () => {
+    try {
+      const res = await fetch(`${API}/kode-fungsi`);
+      if (!res.ok) throw new Error("Failed to fetch kode fungsi");
+      const fungsiData = await res.json();
+      
+      // Create map: id -> full item
+      const map = {};
+      fungsiData.forEach((item) => {
+        map[item.id] = item;
+      });
+      setKodeFungsiMap(map);
+    } catch (error) {
+      console.error("Error fetching kode fungsi:", error);
+    }
+  };
+
+  // Fetch data dari API
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch rincian dari draft (status = draft)
+      const rincianDraftRes = await fetch(`${API}/draft/rincian`);
+      if (!rincianDraftRes.ok) throw new Error("Failed to fetch draft rincian");
+      const rincianDraftData = await rincianDraftRes.json();
+
+      // TODO: Jika perlu fetch rincian posted juga, tambahkan endpoint baru di backend
+      // Untuk sementara, kita hanya tampilkan draft rincian
+      // Tapi penjabaran tetap bisa diinput untuk rincian yang sudah posted
+      
+      // Fetch penjabaran (semua status)
+      const penjabaranRes = await fetch(`${API}/draft/penjabaran`);
+      if (!penjabaranRes.ok) throw new Error("Failed to fetch penjabaran");
+      const penjabaranDataList = await penjabaranRes.json();
+
+      console.log("📊 Rincian data:", rincianDraftData);
+      console.log("📋 Penjabaran data:", penjabaranDataList);
+
+      // Jika ada penjabaran yang parent rinciannya sudah posted,
+      // kita perlu fetch parent rincian tersebut juga
+      const penjabaranRincianIds = [...new Set(penjabaranDataList.map(p => p.rincian_id))];
+      const missingRincianIds = penjabaranRincianIds.filter(
+        id => !rincianDraftData.some(r => r.id === id)
+      );
+
+      // Fetch missing rincian (yang sudah posted tapi punya penjabaran)
+      let additionalRincian = [];
+      if (missingRincianIds.length > 0) {
+        console.log("🔍 Fetching missing rincian IDs:", missingRincianIds);
+        const fetchPromises = missingRincianIds.map(id =>
+          fetch(`${API}/draft/rincian/${id}`).then(res => res.ok ? res.json() : null)
+        );
+        const results = await Promise.all(fetchPromises);
+        additionalRincian = results.filter(r => r !== null);
+        console.log("➕ Additional rincian (posted):", additionalRincian);
+      }
+
+      // Gabungkan draft dan posted rincian
+      const allRincian = [...rincianDraftData, ...additionalRincian];
+
+      setData(allRincian);
+      setPenjabaranData(penjabaranDataList);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      alert(`Gagal memuat data: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load data on mount and when pathname/refreshKey changes
   useEffect(() => {
-    const loadData = () => {
-      const saved = JSON.parse(localStorage.getItem("apbdesData") || "[]");
-      const penjabaranSaved = JSON.parse(localStorage.getItem("penjabaranData") || "[]");
-      console.log("📊 Loading data:");
-      console.log("  Draft APBDes:", saved);
-      console.log("  Penjabaran:", penjabaranSaved);
-      setData(saved);
-      setPenjabaranData(penjabaranSaved);
-    };
-
-    // Load data setiap kali pathname berubah
-    loadData();
-
-    // Listen untuk storage events
-    const handleStorageChange = () => {
-      console.log("🔄 Storage changed - reloading data");
-      loadData();
-    };
-
-    // Listen untuk custom events dari InputDraftPenjabaran
-    const handlePenjabaranUpdate = () => {
-      console.log("✅ Penjabaran updated - reloading data");
-      loadData();
-    };
-
-    // Listen untuk apbdes updates
-    const handleApbdesUpdate = () => {
-      console.log("📝 APBDes updated - reloading data");
-      loadData();
-    };
+    fetchKodeEkonomi();
+    fetchKodeFungsi();
+    fetchData();
 
     // Listen untuk visibility change
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         console.log("👁️ Tab visible - reloading data");
-        loadData();
-        // Force re-render
+        fetchData();
         setRefreshKey(prev => prev + 1);
       }
     };
 
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("penjabaran:update", handlePenjabaranUpdate);
-    window.addEventListener("apbdes:update", handleApbdesUpdate);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     // Cleanup listeners
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("penjabaran:update", handlePenjabaranUpdate);
-      window.removeEventListener("apbdes:update", handleApbdesUpdate);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [pathname, refreshKey]);
 
-  // Hitung total per kategori - menjumlahkan semua level
+  // Hitung total per kategori
   const total = (kategori) => {
     if (!data || data.length === 0) return 0;
-    
-    // Filter semua item dengan kategori yang sesuai (semua level)
-    const allItems = data.filter((item) => 
-      (item.pendapatanBelanja || "").toLowerCase() === kategori.toLowerCase()
-    );
-    
-    return allItems.reduce((sum, item) => {
-      // Hitung total penjabaran untuk item ini
-      const penjabaranSum = (penjabaranData || [])
-        .filter((p) => String(p.rincian_id) === String(item.id))
-        .reduce((s, p) => s + Number(p.anggaran || 0), 0);
-      
-      // Ambil nilai terbesar antara anggaran item atau total penjabarannya
-      const itemTotal = Math.max(Number(item.anggaran || 0), penjabaranSum);
-      return sum + itemTotal;
-    }, 0);
+    return data
+      .filter((item) => {
+        const ekonomiInfo = kodeEkonomiMap[item.kode_ekonomi_id];
+        return ekonomiInfo && ekonomiInfo.uraian.toLowerCase().includes(kategori.toLowerCase());
+      })
+      .reduce((sum, item) => {
+        // hitung juga total penjabaran untuk item ini
+        const penjabaranSum = (penjabaranData || [])
+          .filter((p) => String(p.rincian_id) === String(item.id))
+          .reduce((s, p) => s + sanitizeNumber(p.jumlah_anggaran || 0), 0);
+        const parentTotal = Math.max(sanitizeNumber(item.jumlah_anggaran || 0), penjabaranSum);
+        return sum + parentTotal;
+      }, 0);
   };
 
   // Ambil item per kategori
   const getItems = (kategori) => {
     if (!data || data.length === 0) return [];
-    
-    // Filter items dengan kategori yang sesuai
-    const filtered = data.filter((item) => 
-      (item.pendapatanBelanja || "").toLowerCase() === kategori.toLowerCase()
-    );
-    
-    // Jika ada data dengan level, filter hanya kelompok atau yang tidak punya parent
-    const hasLevelProperty = filtered.some(item => item.level);
-    if (hasLevelProperty) {
-      return filtered.filter(item => 
-        (item.level || "").toLowerCase() === "kelompok" || 
-        !item.parent_id  // atau yang tidak punya parent (data lama)
-      );
-    }
-    
-    // Jika tidak ada property level, return semua (untuk backward compatibility)
-    return filtered;
+    return data.filter((item) => {
+      const ekonomiInfo = kodeEkonomiMap[item.kode_ekonomi_id];
+      return ekonomiInfo && ekonomiInfo.uraian.toLowerCase().includes(kategori.toLowerCase());
+    });
   };
 
-  // Ambil item jenis untuk parent tertentu
-  const getJenisItems = (parentId) => {
-    if (!data || data.length === 0) return [];
-    return data.filter((item) => 
-      String(item.parent_id) === String(parentId) && 
-      (item.level || "").toLowerCase() === "jenis"
-    );
-  };
-
-  // Ambil item objek untuk parent tertentu
-  const getObjekItems = (parentId) => {
-    if (!data || data.length === 0) return [];
-    return data.filter((item) => 
-      String(item.parent_id) === String(parentId) && 
-      (item.level || "").toLowerCase() === "objek"
-    );
-  };
-
-  // Simpan hasil posting ke localStorage
-  const handlePostingAPB = () => {
+  // Posting penjabaran ke Buku APBDes
+  const handlePostingAPB = async () => {
     if (!data || data.length === 0) {
-      alert("Belum ada data yang dapat diposting.");
+      alert("Belum ada data rincian. Silakan input data rincian terlebih dahulu.");
       return;
     }
 
-    localStorage.setItem("apbdesPosted", JSON.stringify(data));
-    alert("✅ APBDes berhasil diposting ke Buku APBDes.");
-    router.push("/APBDes/buku-apbdes");
+    if (!penjabaranData || penjabaranData.length === 0) {
+      alert("Belum ada data penjabaran yang dapat diposting.");
+      return;
+    }
+
+    try {
+      // Get apbdes_id from first rincian item
+      const apbdesId = data[0]?.apbdes_id;
+      if (!apbdesId) {
+        alert("Data tidak valid: apbdes_id tidak ditemukan.");
+        return;
+      }
+
+      // STEP 1: Check if rincian sudah diposting
+      const statusRes = await fetch(`${API}/status/${apbdesId}`);
+      if (!statusRes.ok) {
+        throw new Error("Gagal memeriksa status APBDes");
+      }
+      
+      const statusData = await statusRes.json();
+      console.log("📊 APBDes Status:", statusData);
+      
+      if (statusData.status !== "posted") {
+        const postRincianFirst = window.confirm(
+          "⚠️ APBDes Rincian belum diposting!\n\n" +
+          "Untuk memposting penjabaran, Anda harus memposting APBDes Rincian terlebih dahulu.\n\n" +
+          "Apakah Anda ingin memposting APBDes Rincian sekarang?"
+        );
+        
+        if (postRincianFirst) {
+          // Redirect ke halaman draft apbdes untuk posting rincian
+          router.push("/APBDes/output-draft-apbdes");
+          return;
+        } else {
+          return; // User membatalkan
+        }
+      }
+
+      // STEP 2: Jika rincian sudah diposting, lanjutkan posting penjabaran
+      const confirmPost = window.confirm(
+        `Apakah Anda yakin ingin memposting ${penjabaranData.length} item penjabaran ke Buku APBDes?\n\n` +
+        `Setelah diposting, data tidak dapat diubah lagi.`
+      );
+      
+      if (!confirmPost) return;
+
+      // Post semua penjabaran
+      let successCount = 0;
+      let errorCount = 0;
+      const errors = [];
+      
+      for (const penjabaran of penjabaranData) {
+        try {
+          const res = await fetch(`${API}/draft/penjabaran/${penjabaran.id}/penjabaran/post`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          });
+
+          if (res.ok) {
+            successCount++;
+          } else {
+            errorCount++;
+            const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
+            errors.push(`ID ${penjabaran.id}: ${errorData.message || res.statusText}`);
+            console.error(`Failed to post penjabaran ${penjabaran.id}:`, errorData);
+          }
+        } catch (err) {
+          errorCount++;
+          errors.push(`ID ${penjabaran.id}: ${err.message}`);
+          console.error(`Error posting penjabaran ${penjabaran.id}:`, err);
+        }
+      }
+
+      if (errorCount === 0) {
+        alert(`✅ Berhasil memposting ${successCount} item penjabaran ke Buku APBDes.`);
+        router.push("/APBDes/buku-apbdes");
+      } else {
+        const errorMsg = errors.length > 0 ? `\n\nError:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? '\n...' : ''}` : '';
+        alert(
+          `⚠️ Posting selesai dengan:\n` +
+          `✅ ${successCount} berhasil\n` +
+          `❌ ${errorCount} gagal` +
+          errorMsg +
+          `\n\nSilakan periksa console untuk detail lengkap.`
+        );
+        // Refresh data
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Error posting penjabaran:", error);
+      alert(`❌ Gagal posting penjabaran: ${error.message}`);
+    }
   };
 
   const renderBox = (title, kategori) => {
     const items = getItems(kategori);
+
+    if (loading) {
+      return (
+        <div className="rounded-2xl bg-white p-8 text-center">
+          <p className="text-gray-500">Memuat data...</p>
+        </div>
+      );
+    }
 
     return (
       <div className="rounded-2xl bg-white">
@@ -169,23 +308,39 @@ export default function OutputAPBDes() {
           {items.length > 0 ? (
             <div className="divide-y divide-gray-300">
               {items.map((item, idx) => {
-                // Filter penjabaran untuk item kelompok ini
+                // Filter penjabaran untuk item ini
                 const itemPenjabaran = penjabaranData.filter((p) => String(p.rincian_id) === String(item.id));
-                const penjabaranSum = (itemPenjabaran || []).reduce((s, p) => s + Number(p.anggaran || 0), 0);
-                const parentTotal = Math.max(Number(item.anggaran || 0), penjabaranSum);
+                // jumlahkan semua anggaran penjabaran untuk parent ini
+                const penjabaranSum = (itemPenjabaran || []).reduce((s, p) => s + sanitizeNumber(p.jumlah_anggaran || 0), 0);
+                // jika penjabaran sum lebih besar, tunjukkan penjabaranSum sebagai total parent
+                const parentTotal = Math.max(sanitizeNumber(item.jumlah_anggaran || 0), penjabaranSum);
+                
+                // Get uraian - prioritaskan kode_ekonomi_id karena itu yang paling spesifik (child terakhir)
+                const ekonomiInfo = kodeEkonomiMap[item.kode_ekonomi_id];
+                const fungsiInfo = kodeFungsiMap[item.kode_fungsi_id];
+                
+                // Gunakan uraian dari kode ekonomi (level child terakhir: objek > jenis > kelompok > akun)
+                // Jika tidak ada, baru gunakan fungsi (kegiatan > sub-bidang > bidang)
+                const displayUraian = ekonomiInfo?.uraian || fungsiInfo?.uraian || "Tidak ada uraian";
 
-                // Ambil item jenis yang merupakan child dari kelompok ini
-                const jenisItems = getJenisItems(item.id);
+                console.log(`🔍 Item ${item.id}:`, {
+                  kode_ekonomi: ekonomiInfo?.full_code,
+                  kode_fungsi: fungsiInfo?.full_code,
+                  ekonomi_uraian: ekonomiInfo?.uraian,
+                  fungsi_uraian: fungsiInfo?.uraian,
+                  displayUraian,
+                  rincian_id: item.id,
+                  penjabaranCount: itemPenjabaran.length,
+                  penjabaranSum,
+                  parentTotal,
+                });
 
                 return (
                   <div key={item.id || idx}>
-                    {/* Item Kelompok (Level 1) atau Data Lama */}
+                    {/* Item Draft APBDes */}
                     <div className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-md transition">
                       <div className="flex items-center text-sm text-gray-800 space-x-2">
-                        {/* Tampilkan uraian sesuai dengan property yang ada */}
-                        <span className="font-semibold">
-                          {item.kelompok || item.jenis || item.objek || item.uraian || "Tidak ada uraian"}
-                        </span>
+                        <span>{displayUraian}</span>
                         <button
                           className="ml-1 text-gray-600 hover:text-gray-900 transition"
                           onClick={() => router.push(`/APBDes/input-draft-penjabaran?rincian_id=${item.id}`)}
@@ -201,157 +356,37 @@ export default function OutputAPBDes() {
                       </div>
                     </div>
 
-                    {/* Item Penjabaran Kelompok dengan Indentasi */}
+                    {/* Item Penjabaran dengan Indentasi */}
                     {itemPenjabaran.length > 0 && (
                       <div className="ml-8 border-l-2 border-gray-200 pl-4">
-                        {itemPenjabaran.map((penjabaran, pIdx) => (
-                          <div
-                            key={penjabaran.id || pIdx}
-                            className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-md transition text-gray-700"
-                          >
-                            <div className="flex items-center text-sm space-x-2">
-                              <span>{penjabaran.objek || penjabaran.jenis || penjabaran.kelompok || "Penjabaran"}</span>
-                              <button
-                                className="ml-1 text-blue-600 hover:text-blue-800 transition"
-                                onClick={() => router.push(`/APBDes/input-draft-penjabaran?id=${penjabaran.id}&rincian_id=${item.id}`)}
-                                title="Edit penjabaran"
-                              >
-                                <Pencil width={16} height={16} />
-                              </button>
-                            </div>
-                            <div className="text-sm font-light">
-                              Rp{Number(penjabaran.anggaran || 0).toLocaleString("id-ID", {
-                                minimumFractionDigits: 2,
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Item Jenis (Level 2) - Child dari Kelompok */}
-                    {jenisItems.length > 0 && (
-                      <div className="ml-6 border-l-2 border-blue-200 pl-4">
-                        {jenisItems.map((jenisItem, jIdx) => {
-                          // Filter penjabaran untuk item jenis ini
-                          const jenisPenjabaran = penjabaranData.filter((p) => String(p.rincian_id) === String(jenisItem.id));
-                          const jenisPenjabaranSum = (jenisPenjabaran || []).reduce((s, p) => s + Number(p.anggaran || 0), 0);
-                          const jenisTotal = Math.max(Number(jenisItem.anggaran || 0), jenisPenjabaranSum);
-
-                          // Ambil item objek yang merupakan child dari jenis ini
-                          const objekItems = getObjekItems(jenisItem.id);
+                        {itemPenjabaran.map((penjabaran, pIdx) => {
+                          // Get uraian for penjabaran - prioritaskan kode_ekonomi_id (child terakhir)
+                          const penjabaranEkonomiInfo = kodeEkonomiMap[penjabaran.kode_ekonomi_id];
+                          const penjabaranFungsiInfo = kodeFungsiMap[penjabaran.kode_fungsi_id];
+                          
+                          // Gunakan uraian dari kode ekonomi (level child terakhir)
+                          const penjabaranUraian = penjabaranEkonomiInfo?.uraian || penjabaranFungsiInfo?.uraian || "Penjabaran";
 
                           return (
-                            <div key={jenisItem.id || `jenis-${jIdx}`} className="mt-1">
-                              {/* Item Jenis */}
-                              <div className="flex items-center justify-between py-2 px-2 hover:bg-blue-50 rounded-md transition">
-                                <div className="flex items-center text-sm text-blue-800 space-x-2">
-                                  <span className="font-medium">{jenisItem.jenis || "Tidak ada uraian"}</span>
-                                  <button
-                                    className="ml-1 text-blue-600 hover:text-blue-900 transition"
-                                    onClick={() => router.push(`/APBDes/input-draft-penjabaran?rincian_id=${jenisItem.id}`)}
-                                    title="Tambah item objek"
-                                  >
-                                    <SquarePlus width={18} height={18} />
-                                  </button>
-                                </div>
-                                <div className="text-sm font-light text-blue-900">
-                                  Rp{jenisTotal.toLocaleString("id-ID", {
-                                    minimumFractionDigits: 2,
-                                  })}
-                                </div>
+                            <div
+                              key={penjabaran.id || pIdx}
+                              className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-md transition text-gray-700"
+                            >
+                              <div className="flex items-center text-sm space-x-2">
+                                <span>{penjabaranUraian}</span>
+                                <button
+                                  className="ml-1 text-blue-600 hover:text-blue-800 transition"
+                                  onClick={() => router.push(`/APBDes/input-draft-penjabaran?id=${penjabaran.id}&rincian_id=${item.id}`)}
+                                  title="Edit penjabaran"
+                                >
+                                  <Pencil width={16} height={16} />
+                                </button>
                               </div>
-
-                              {/* Item Penjabaran Jenis dengan Indentasi */}
-                              {jenisPenjabaran.length > 0 && (
-                                <div className="ml-8 border-l-2 border-gray-200 pl-4">
-                                  {jenisPenjabaran.map((penjabaran, pIdx) => (
-                                    <div
-                                      key={penjabaran.id || pIdx}
-                                      className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-md transition text-gray-600"
-                                    >
-                                      <div className="flex items-center text-sm space-x-2">
-                                        <span>{penjabaran.objek || penjabaran.jenis || penjabaran.kelompok || "Penjabaran"}</span>
-                                        <button
-                                          className="ml-1 text-blue-600 hover:text-blue-800 transition"
-                                          onClick={() => router.push(`/APBDes/input-draft-penjabaran?id=${penjabaran.id}&rincian_id=${jenisItem.id}`)}
-                                          title="Edit penjabaran"
-                                        >
-                                          <Pencil width={16} height={16} />
-                                        </button>
-                                      </div>
-                                      <div className="text-sm font-light">
-                                        Rp{Number(penjabaran.anggaran || 0).toLocaleString("id-ID", {
-                                          minimumFractionDigits: 2,
-                                        })}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* Item Objek (Level 3) - Child dari Jenis */}
-                              {objekItems.length > 0 && (
-                                <div className="ml-6 border-l-2 border-green-200 pl-4">
-                                  {objekItems.map((objekItem, oIdx) => {
-                                    // Filter penjabaran untuk item objek ini
-                                    const objekPenjabaran = penjabaranData.filter((p) => String(p.rincian_id) === String(objekItem.id));
-                                    const objekPenjabaranSum = (objekPenjabaran || []).reduce((s, p) => s + Number(p.anggaran || 0), 0);
-                                    const objekTotal = Math.max(Number(objekItem.anggaran || 0), objekPenjabaranSum);
-
-                                    return (
-                                      <div key={objekItem.id || `objek-${oIdx}`} className="mt-1">
-                                        {/* Item Objek */}
-                                        <div className="flex items-center justify-between py-2 px-2 hover:bg-green-50 rounded-md transition">
-                                          <div className="flex items-center text-sm text-green-800 space-x-2">
-                                            <span>{objekItem.objek || "Tidak ada uraian"}</span>
-                                            <button
-                                              className="ml-1 text-green-600 hover:text-green-900 transition"
-                                              onClick={() => router.push(`/APBDes/input-draft-penjabaran?rincian_id=${objekItem.id}`)}
-                                              title="Tambah penjabaran objek"
-                                            >
-                                              <SquarePlus width={16} height={16} />
-                                            </button>
-                                          </div>
-                                          <div className="text-sm font-light text-green-900">
-                                            Rp{objekTotal.toLocaleString("id-ID", {
-                                              minimumFractionDigits: 2,
-                                            })}
-                                          </div>
-                                        </div>
-
-                                        {/* Item Penjabaran Objek dengan Indentasi */}
-                                        {objekPenjabaran.length > 0 && (
-                                          <div className="ml-8 border-l-2 border-gray-200 pl-4">
-                                            {objekPenjabaran.map((penjabaran, pIdx) => (
-                                              <div
-                                                key={penjabaran.id || pIdx}
-                                                className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-md transition text-gray-600"
-                                              >
-                                                <div className="flex items-center text-sm space-x-2">
-                                                  <span>{penjabaran.objek || penjabaran.jenis || penjabaran.kelompok || "Penjabaran"}</span>
-                                                  <button
-                                                    className="ml-1 text-blue-600 hover:text-blue-800 transition"
-                                                    onClick={() => router.push(`/APBDes/input-draft-penjabaran?id=${penjabaran.id}&rincian_id=${objekItem.id}`)}
-                                                    title="Edit penjabaran"
-                                                  >
-                                                    <Pencil width={16} height={16} />
-                                                  </button>
-                                                </div>
-                                                <div className="text-sm font-light">
-                                                  Rp{Number(penjabaran.anggaran || 0).toLocaleString("id-ID", {
-                                                    minimumFractionDigits: 2,
-                                                  })}
-                                                </div>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
+                              <div className="text-sm font-light">
+                                Rp{sanitizeNumber(penjabaran.jumlah_anggaran || 0).toLocaleString("id-ID", {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </div>
                             </div>
                           );
                         })}

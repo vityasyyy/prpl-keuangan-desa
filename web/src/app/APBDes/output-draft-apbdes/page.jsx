@@ -303,33 +303,6 @@ export default function OutputAPBDes() {
                 </button>
               </div>
 
-              {node.penjabaranDetails && node.penjabaranDetails.length > 0 && (
-                <div className="ml-8 border-l-2 border-gray-200 pl-4">
-                  {node.penjabaranDetails.map((penjabaran, pIdx) => (
-                    <div
-                      key={penjabaran.id || pIdx}
-                      className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-md transition text-gray-700"
-                    >
-                      <div className="flex items-center text-sm space-x-2">
-                        <span>{penjabaran.objek || penjabaran.jenis || penjabaran.kelompok || "Penjabaran"}</span>
-                        <button
-                          className="ml-1 text-blue-600 hover:text-blue-800 transition"
-                          onClick={() => router.push(`/APBDes/input-draft-penjabaran?id=${penjabaran.id}&rincian_id=${node.id}`)}
-                          title="Edit penjabaran"
-                        >
-                          <Pencil width={16} height={16} />
-                        </button>
-                      </div>
-                      <div className="text-sm font-light">
-                        Rp{Number(penjabaran.jumlah_anggaran || 0).toLocaleString("id-ID", {
-                          minimumFractionDigits: 2,
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
               {node.children && node.children.length > 0 && (
                 <div className="pl-4">
                   {renderTree(node.children, depth + 1)}

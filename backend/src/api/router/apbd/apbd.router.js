@@ -43,13 +43,17 @@ export default function createApbdRouter(apbdHandler) {
   // Draft Penjabaran APBDes endpoints
   r.get("/draft/penjabaran", apbdHandler.getDraftPenjabaranApbdesList); // GET /api/apbd/draft/penjabaran
   r.get(
-    "/draft/penjabaran/:rincian_id",
-    apbdHandler.getDraftPenjabaranApbdesById
-  ); // GET /api/apbd/draft/penjabaran/:rincian_id
+    "/draft/penjabaran/by-rincian/:rincian_id",
+    apbdHandler.getDraftPenjabaranByRincianId
+  ); // GET /api/apbd/draft/penjabaran/by-rincian/:rincian_id
   r.get(
     "/draft/penjabaran/summary",
     apbdHandler.getDraftPenjabaranApbdesSummary
   ); // GET /api/apbd/draft/penjabaran/summary
+  r.get(
+    "/draft/penjabaran/:id",
+    apbdHandler.getDraftPenjabaranApbdesById
+  ); // GET /api/apbd/draft/penjabaran/:id
 
   //POST
   r.post("/draft", apbdHandler.createApbdesDraft); // POST /api/apbd/draft

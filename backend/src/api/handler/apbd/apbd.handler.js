@@ -226,6 +226,16 @@ export default function createApbdHandler(ApbdService) {
     }
   };
 
+  const getDraftPenjabaranByRincianId = async (req, res, next) => {
+    try {
+      const { rincian_id } = req.params;
+      const data = await ApbdService.getDraftPenjabaranByRincianId(rincian_id);
+      res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  };
+
   const getDraftPenjabaranApbdesSummary = async (_req, res, next) => {
     try {
       const data = await ApbdService.getDraftPenjabaranApbdesSummary();
@@ -332,6 +342,7 @@ export default function createApbdHandler(ApbdService) {
     //output draft apbdes rincian penjabaran
     getDraftPenjabaranApbdesList,
     getDraftPenjabaranApbdesById,
+    getDraftPenjabaranByRincianId,
     getDraftPenjabaranApbdesSummary,
     updatePenjabaranApbdesItem,
     deletePenjabaranApbdesItem,
