@@ -40,10 +40,15 @@ export default function createApbdService(ApbdRepo) {
 
   const createApbdesRincian = async (payload) => {
     let apbdesId = payload.apbdes_id;
-    // Jika tidak ada apbdes_id → buat draft baru
+    // Jika tidak ada apbdes_id → cek dulu apakah sudah ada draft untuk tahun ini
     if (!apbdesId) {
-      const tahun = new Date().getFullYear();
-      const draft = await ApbdRepo.createApbdesDraft(tahun);
+      const tahun = payload.tahun || new Date().getFullYear();
+      // Cek apakah sudah ada draft untuk tahun ini
+      let draft = await ApbdRepo.getDraftApbdesByYear(tahun);
+      // Jika belum ada, baru buat baru
+      if (!draft) {
+        draft = await ApbdRepo.createApbdesDraft(tahun);
+      }
       apbdesId = draft.id;
     }
     

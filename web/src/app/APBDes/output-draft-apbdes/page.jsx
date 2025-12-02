@@ -232,6 +232,16 @@ export default function OutputAPBDes() {
         return;
       }
 
+      // Debug: Check if all rincian have the same apbdes_id
+      const uniqueApbdesIds = [...new Set(data.map(item => item.apbdes_id))];
+      console.log("🔍 Unique APBDes IDs in draft:", uniqueApbdesIds);
+      console.log("📝 Total rincian items:", data.length);
+      console.log("🎯 Posting APBDes ID:", apbdesId);
+
+      if (uniqueApbdesIds.length > 1) {
+        alert(`Warning: Ada ${uniqueApbdesIds.length} APBDes yang berbeda. Hanya APBDes pertama yang akan diposting.`);
+      }
+
       const res = await fetch(`${API}/draft/rincian/post`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -243,7 +253,10 @@ export default function OutputAPBDes() {
         throw new Error(error.message || "Gagal posting APBDes");
       }
 
-      alert("APBDes berhasil diposting ke Buku APBDes.");
+      const result = await res.json();
+      console.log("✅ Posting result:", result);
+
+      alert(result.message || "APBDes berhasil diposting ke Buku APBDes.");
       router.push("/APBDes/buku-apbdes");
     } catch (error) {
       console.error("Error posting APBDes:", error);

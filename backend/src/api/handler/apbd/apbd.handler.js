@@ -186,7 +186,7 @@ export default function createApbdHandler(ApbdService) {
 
   const postDraftApbdes = async (req, res, next) => {
     try {
-      const { id } = req.params;
+      const { id } = req.body;
       const result = await ApbdService.postDraftApbdes(id);
       res.status(200).json(result);
     } catch (e) {

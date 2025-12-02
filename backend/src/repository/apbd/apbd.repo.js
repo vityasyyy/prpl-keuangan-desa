@@ -169,7 +169,7 @@ export default function createApbdRepo(arg) {
   };
 
   const createApbdesDraft = async (tahun) => {
-    const id = await generateSequentialId('apbdes', 'apbdes');
+    const id = `apbdes_${tahun}`;
     const q = `
       INSERT INTO apbdes (id, tahun, status)
       VALUES ($1, $2, 'draft')
