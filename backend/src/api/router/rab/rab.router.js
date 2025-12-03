@@ -5,7 +5,7 @@ export default function createRabRouter(rabHandler) {
   const router = express.Router();
 
   // All routes are protected
-  // router.use(verifyAccessToken);
+   router.use(verifyAccessToken);
 
   // ==================== RAB ROUTES ====================
 

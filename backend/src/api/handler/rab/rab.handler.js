@@ -1,28 +1,34 @@
+import { logInfo, logError } from "../../../common/logger/logger.js";
+
 export default function createRabHandler(rabService) {
   return {
     // ==================== RAB HANDLERS ====================
 
-    async getRAByear(req, res) {
+    async getRAByear(req, res, next) {
+      const log = req?.log;
       try {
         const years = await rabService.getRAByearService();
+        logInfo("RAB Years fetched", { layer: "handler", route: "GET /years" }, 10, log);
+
         res.json({
           success: true,
           data: years,
           message: "Data tahun RAB berhasil diambil",
         });
       } catch (err) {
-        console.error("HANDLER ERROR getRAByear:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to fetch RAB years", { layer: "handler", route: "GET /years" }, log);
+        next(err);
       }
     },
 
-    async getRABbyYear(req, res) {
+    async getRABbyYear(req, res, next) {
+      const log = req?.log;
       try {
         const { year } = req.params;
         const rabList = await rabService.getRABbyYearService(parseInt(year));
+
+        logInfo("RAB by year fetched", { layer: "handler", route: "GET /year/:year", year }, 10, log);
+
         res.json({
           success: true,
           data: rabList,
@@ -30,32 +36,30 @@ export default function createRabHandler(rabService) {
           metadata: {
             year: parseInt(year),
             count: rabList.length,
-            total_amount: rabList.reduce(
-              (sum, rab) => sum + rab.total_amount,
-              0
-            ),
+            total_amount: rabList.reduce((sum, rab) => sum + rab.total_amount, 0),
           },
         });
       } catch (err) {
-        console.error("HANDLER ERROR getRABbyYear:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to fetch RAB by year", { layer: "handler", route: "GET /year/:year" }, log);
+        next(err);
       }
     },
 
-    async getRABbyId(req, res) {
+    async getRABbyId(req, res, next) {
+      const log = req?.log;
       try {
         const { rabId } = req.params;
         const rab = await rabService.getRABbyIdService(rabId);
 
         if (!rab) {
+          logInfo("RAB not found", { layer: "handler", route: "GET /:rabId", rabId }, 10, log);
           return res.status(404).json({
             success: false,
             error: `RAB dengan ID ${rabId} tidak ditemukan`,
           });
         }
+
+        logInfo("RAB fetched", { layer: "handler", route: "GET /:rabId", rabId }, 10, log);
 
         res.json({
           success: true,
@@ -63,59 +67,50 @@ export default function createRabHandler(rabService) {
           message: "Data RAB berhasil diambil",
         });
       } catch (err) {
-        console.error("HANDLER ERROR getRABbyId:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to fetch RAB by ID", { layer: "handler", route: "GET /:rabId" }, log);
+        next(err);
       }
     },
 
-    async getRABbyStatus(req, res) {
+    async getRABbyStatus(req, res, next) {
+      const log = req?.log;
       try {
         const { status } = req.params;
         const rabList = await rabService.getRABbyStatusService(status);
+
+        logInfo("RAB by status fetched", { layer: "handler", route: "GET /status/:status", status }, 10, log);
+
         res.json({
           success: true,
           data: rabList,
           message: `Data RAB dengan status ${status} berhasil diambil`,
           metadata: {
-            status: status,
+            status,
             count: rabList.length,
-            total_amount: rabList.reduce(
-              (sum, rab) => sum + rab.total_amount,
-              0
-            ),
+            total_amount: rabList.reduce((sum, rab) => sum + rab.total_amount, 0),
           },
         });
       } catch (err) {
-        console.error("HANDLER ERROR getRABbyStatus:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to fetch RAB by status", { layer: "handler", route: "GET /status/:status" }, log);
+        next(err);
       }
     },
 
-    async createRAB(req, res) {
+    async createRAB(req, res, next) {
+      const log = req?.log;
       try {
         const rabData = req.body;
 
-        // Validasi required fields di handler level
-        if (
-          !rabData.mulai ||
-          !rabData.selesai ||
-          !rabData.kode_fungsi_id ||
-          !rabData.kode_ekonomi_id
-        ) {
+        if (!rabData.mulai || !rabData.selesai || !rabData.kode_fungsi_id || !rabData.kode_ekonomi_id) {
           return res.status(400).json({
             success: false,
-            error:
-              "Data mulai, selesai, kode_fungsi_id, dan kode_ekonomi_id harus diisi",
+            error: "Data mulai, selesai, kode_fungsi_id, dan kode_ekonomi_id harus diisi",
           });
         }
 
         const result = await rabService.createRABService(rabData);
+
+        logInfo("RAB created", { layer: "handler", route: "POST /" }, 10, log);
 
         res.status(201).json({
           success: true,
@@ -123,20 +118,20 @@ export default function createRabHandler(rabService) {
           message: "RAB berhasil dibuat",
         });
       } catch (err) {
-        console.error("HANDLER ERROR createRAB:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to create RAB", { layer: "handler", route: "POST /" }, log);
+        next(err);
       }
     },
 
-    // ==================== RAB LINE HANDLERS ====================
+    // ==================== RAB LINE ====================
 
-    async getRABline(req, res) {
+    async getRABline(req, res, next) {
+      const log = req?.log;
       try {
         const { rabId } = req.params;
         const lines = await rabService.getRABlineService(rabId);
+
+        logInfo("RAB lines fetched", { layer: "handler", route: "GET /:rabId/lines" }, 10, log);
 
         res.json({
           success: true,
@@ -149,29 +144,18 @@ export default function createRabHandler(rabService) {
           },
         });
       } catch (err) {
-        console.error("HANDLER ERROR getRABline:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to fetch RAB lines", { layer: "handler", route: "GET /:rabId/lines" }, log);
+        next(err);
       }
     },
 
-    async createRABLine(req, res) {
+    async createRABLine(req, res, next) {
+      const log = req?.log;
       try {
         const { rabId } = req.params;
-        const lineData = {
-          ...req.body,
-          rab_id: rabId, // Ensure rab_id from URL parameter
-        };
+        const lineData = { ...req.body, rab_id: rabId };
 
-        // Validasi required fields
-        if (
-          !lineData.uraian ||
-          lineData.volume === undefined ||
-          lineData.harga_satuan === undefined ||
-          !lineData.satuan
-        ) {
+        if (!lineData.uraian || lineData.volume === undefined || lineData.harga_satuan === undefined || !lineData.satuan) {
           return res.status(400).json({
             success: false,
             error: "Data uraian, volume, harga_satuan, dan satuan harus diisi",
@@ -180,42 +164,35 @@ export default function createRabHandler(rabService) {
 
         const result = await rabService.createRABLineService(lineData);
 
+        logInfo("RAB line created", { layer: "handler", route: "POST /:rabId/lines" }, 10, log);
+
         res.status(201).json({
           success: true,
           data: result,
           message: "RAB line berhasil ditambahkan",
         });
       } catch (err) {
-        console.error("HANDLER ERROR createRABLine:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to create RAB line", { layer: "handler", route: "POST /:rabId/lines" }, log);
+        next(err);
       }
     },
 
-    async updateRABLine(req, res) {
+    async updateRABLine(req, res, next) {
+      const log = req?.log;
       try {
         const { rabLineId } = req.params;
         const updateData = req.body;
 
-        if (!updateData.uraian) {
+        if (!updateData.uraian || !updateData.satuan) {
           return res.status(400).json({
             success: false,
-            error: "Uraian harus diisi",
-          });
-        }
-        if (!updateData.satuan) {
-          return res.status(400).json({
-            success: false,
-            error: "Satuan harus diisi",
+            error: "Uraian dan satuan harus diisi",
           });
         }
 
-        const result = await rabService.updateRABLineService(
-          rabLineId,
-          updateData
-        );
+        const result = await rabService.updateRABLineService(rabLineId, updateData);
+
+        logInfo("RAB line updated", { layer: "handler", route: "PUT /lines/:rabLineId" }, 10, log);
 
         res.json({
           success: true,
@@ -223,18 +200,18 @@ export default function createRabHandler(rabService) {
           message: result.message || "RAB line berhasil diupdate",
         });
       } catch (err) {
-        console.error("HANDLER ERROR updateRABLine:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to update RAB line", { layer: "handler", route: "PUT /lines/:rabLineId" }, log);
+        next(err);
       }
     },
 
-    async deleteRABLine(req, res) {
+    async deleteRABLine(req, res, next) {
+      const log = req?.log;
       try {
         const { rabLineId } = req.params;
         const result = await rabService.deleteRABLineService(rabLineId);
+
+        logInfo("RAB line deleted", { layer: "handler", route: "DELETE /lines/:rabLineId" }, 10, log);
 
         res.json({
           success: true,
@@ -242,185 +219,160 @@ export default function createRabHandler(rabService) {
           message: result.message || "RAB line berhasil dihapus",
         });
       } catch (err) {
-        console.error("HANDLER ERROR deleteRABLine:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to delete RAB line", { layer: "handler", route: "DELETE /lines/:rabLineId" }, log);
+        next(err);
       }
     },
 
-    // ==================== KODE REKENING HANDLERS ====================
+    // ==================== KODE REKENING ====================
 
-    async getKodeRekeningBidang(req, res) {
+    async getKodeRekeningBidang(req, res, next) {
+      const log = req?.log;
       try {
         const bidangList = await rabService.getKodeRekeningBidangService();
+
+        logInfo("Bidang fetched", { layer: "handler", route: "GET /kode-rekening/bidang" }, 10, log);
+
         res.json({
           success: true,
           data: bidangList,
           message: "Data bidang berhasil diambil",
-          metadata: {
-            count: bidangList.length,
-          },
+          metadata: { count: bidangList.length },
         });
       } catch (err) {
-        console.error("HANDLER ERROR getKodeRekeningBidang:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to fetch bidang", { layer: "handler", route: "GET /kode-rekening/bidang" }, log);
+        next(err);
       }
     },
 
-    async getKodeRekeningSubBidang(req, res) {
+    async getKodeRekeningSubBidang(req, res, next) {
+      const log = req?.log;
       try {
         const { bidangId } = req.params;
-        const subBidangList = await rabService.getKodeRekeningSubBidangService(
-          bidangId
-        );
+        const subBidangList = await rabService.getKodeRekeningSubBidangService(bidangId);
+
+        logInfo("Sub-bidang fetched", { layer: "handler", route: "GET /kode-rekening/bidang/:bidangId/sub-bidang" }, 10, log);
 
         res.json({
           success: true,
           data: subBidangList,
           message: "Data sub bidang berhasil diambil",
-          metadata: {
-            bidang_id: bidangId,
-            count: subBidangList.length,
-          },
+          metadata: { bidang_id: bidangId, count: subBidangList.length },
         });
       } catch (err) {
-        console.error("HANDLER ERROR getKodeRekeningSubBidang:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to fetch sub-bidang", { layer: "handler", route: "GET /kode-rekening/bidang/:bidangId/sub-bidang" }, log);
+        next(err);
       }
     },
 
-    async getKodeRekeningKegiatan(req, res) {
+    async getKodeRekeningKegiatan(req, res, next) {
+      const log = req?.log;
       try {
         const { subBidangId } = req.params;
-        const kegiatanList = await rabService.getKodeRekeningKegiatanService(
-          subBidangId
-        );
+        const kegiatanList = await rabService.getKodeRekeningKegiatanService(subBidangId);
+
+        logInfo("Kegiatan fetched", { layer: "handler", route: "GET /kode-rekening/sub-bidang/:subBidangId/kegiatan" }, 10, log);
 
         res.json({
           success: true,
           data: kegiatanList,
           message: "Data kegiatan berhasil diambil",
-          metadata: {
-            sub_bidang_id: subBidangId,
-            count: kegiatanList.length,
-          },
+          metadata: { sub_bidang_id: subBidangId, count: kegiatanList.length },
         });
       } catch (err) {
-        console.error("HANDLER ERROR getKodeRekeningKegiatan:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to fetch kegiatan", { layer: "handler", route: "GET /kode-rekening/sub-bidang/:subBidangId/kegiatan" }, log);
+        next(err);
       }
     },
 
-    async getKodeEkonomiAkun(req, res) {
+    async getKodeEkonomiAkun(req, res, next) {
+      const log = req?.log;
       try {
         const akunList = await rabService.getKodeEkonomiAkunService();
+
+        logInfo("Akun fetched", { layer: "handler", route: "GET /kode-ekonomi/akun" }, 10, log);
+
         res.json({
           success: true,
           data: akunList,
           message: "Data akun berhasil diambil",
-          metadata: {
-            count: akunList.length,
-          },
+          metadata: { count: akunList.length },
         });
       } catch (err) {
-        console.error("HANDLER ERROR getKodeEkonomiAkun:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to fetch akun", { layer: "handler", route: "GET /kode-ekonomi/akun" }, log);
+        next(err);
       }
     },
 
-    async getKodeEkonomiKelompok(req, res) {
+    async getKodeEkonomiKelompok(req, res, next) {
+      const log = req?.log;
       try {
         const { akunId } = req.params;
-        const kelompokList = await rabService.getKodeEkonomiKelompokService(
-          akunId
-        );
+        const kelompokList = await rabService.getKodeEkonomiKelompokService(akunId);
+
+        logInfo("Kelompok fetched", { layer: "handler", route: "GET /kode-ekonomi/akun/:akunId/kelompok" }, 10, log);
 
         res.json({
           success: true,
           data: kelompokList,
           message: "Data kelompok berhasil diambil",
-          metadata: {
-            akun_id: akunId,
-            count: kelompokList.length,
-          },
+          metadata: { akun_id: akunId, count: kelompokList.length },
         });
       } catch (err) {
-        console.error("HANDLER ERROR getKodeEkonomiKelompok:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to fetch kelompok", { layer: "handler", route: "GET /kode-ekonomi/akun/:akunId/kelompok" }, log);
+        next(err);
       }
     },
 
-    async getKodeEkonomiJenis(req, res) {
+    async getKodeEkonomiJenis(req, res, next) {
+      const log = req?.log;
       try {
         const { kelompokId } = req.params;
-        const jenisList = await rabService.getKodeEkonomiJenisService(
-          kelompokId
-        );
+        const jenisList = await rabService.getKodeEkonomiJenisService(kelompokId);
+
+        logInfo("Jenis fetched", { layer: "handler", route: "GET /kode-ekonomi/kelompok/:kelompokId/jenis" }, 10, log);
 
         res.json({
           success: true,
           data: jenisList,
           message: "Data jenis berhasil diambil",
-          metadata: {
-            kelompok_id: kelompokId,
-            count: jenisList.length,
-          },
+          metadata: { kelompok_id: kelompokId, count: jenisList.length },
         });
       } catch (err) {
-        console.error("HANDLER ERROR getKodeEkonomiJenis:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to fetch jenis", { layer: "handler", route: "GET /kode-ekonomi/kelompok/:kelompokId/jenis" }, log);
+        next(err);
       }
     },
 
-    async getKodeEkonomiObjek(req, res) {
+    async getKodeEkonomiObjek(req, res, next) {
+      const log = req?.log;
       try {
         const { jenisId } = req.params;
         const objekList = await rabService.getKodeEkonomiObjekService(jenisId);
+
+        logInfo("Objek fetched", { layer: "handler", route: "GET /kode-ekonomi/jenis/:jenisId/objek" }, 10, log);
 
         res.json({
           success: true,
           data: objekList,
           message: "Data objek berhasil diambil",
-          metadata: {
-            jenis_id: jenisId,
-            count: objekList.length,
-          },
+          metadata: { jenis_id: jenisId, count: objekList.length },
         });
       } catch (err) {
-        console.error("HANDLER ERROR getKodeEkonomiObjek:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to fetch objek", { layer: "handler", route: "GET /kode-ekonomi/jenis/:jenisId/objek" }, log);
+        next(err);
       }
     },
 
-    // ==================== UTILITY HANDLERS ====================
+    // ==================== UTILITY ====================
 
-    async calculateRABTotal(req, res) {
+    async calculateRABTotal(req, res, next) {
+      const log = req?.log;
       try {
         const { rabId } = req.params;
         const result = await rabService.calculateRABTotalService(rabId);
+
+        logInfo("RAB total calculated", { layer: "handler", route: "GET /:rabId/calculate-total" }, 10, log);
 
         res.json({
           success: true,
@@ -428,18 +380,18 @@ export default function createRabHandler(rabService) {
           message: "Perhitungan total RAB berhasil",
         });
       } catch (err) {
-        console.error("HANDLER ERROR calculateRABTotal:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to calculate RAB total", { layer: "handler", route: "GET /:rabId/calculate-total" }, log);
+        next(err);
       }
     },
 
-    async validateRABData(req, res) {
+    async validateRABData(req, res, next) {
+      const log = req?.log;
       try {
         const rabData = req.body;
         const result = await rabService.validateRABDataService(rabData);
+
+        logInfo("RAB data validated", { layer: "handler", route: "POST /validate" }, 10, log);
 
         res.json({
           success: true,
@@ -447,15 +399,13 @@ export default function createRabHandler(rabService) {
           message: result.isValid ? "Data RAB valid" : "Data RAB tidak valid",
         });
       } catch (err) {
-        console.error("HANDLER ERROR validateRABData:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to validate RAB data", { layer: "handler", route: "POST /validate" }, log);
+        next(err);
       }
     },
 
-    async updateRABStatus(req, res) {
+    async updateRABStatus(req, res, next) {
+      const log = req?.log;
       try {
         const { rabId } = req.params;
         const { status } = req.body;
@@ -469,17 +419,16 @@ export default function createRabHandler(rabService) {
 
         const result = await rabService.updateRABStatusService(rabId, status);
 
+        logInfo("RAB status updated", { layer: "handler", route: "PUT /:rabId/status", status }, 10, log);
+
         res.json({
           success: true,
           data: result,
           message: `Status RAB berhasil diubah menjadi ${status}`,
         });
       } catch (err) {
-        console.error("HANDLER ERROR updateRABStatus:", err);
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
+        logError(err, "Failed to update RAB status", { layer: "handler", route: "PUT /:rabId/status" }, log);
+        next(err);
       }
     },
   };
