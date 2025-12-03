@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 
@@ -19,8 +19,8 @@ export default function DownloadButton({ latestMonth, className = '' }) {
       }
 
       // Construct the backend URL for printing
-      // We use the NEXT_PUBLIC_BACKEND_URL env var or default to localhost:8081
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8081';
+      // We use the NEXT_PUBLIC_API_URL env var or default to localhost:3001
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
       
       // Add default metadata (can be made dynamic later)
       const params = new URLSearchParams({
@@ -34,7 +34,7 @@ export default function DownloadButton({ latestMonth, className = '' }) {
         autoPrint: 'true'
       });
 
-      const printUrl = `${backendUrl}/api/bank-desa/print?${params.toString()}`;
+      const printUrl = `${API_BASE_URL}/bank-desa/print?${params.toString()}`;
       
       // Open in new tab
       window.open(printUrl, '_blank');
@@ -50,7 +50,7 @@ export default function DownloadButton({ latestMonth, className = '' }) {
     <button 
       onClick={handleDownload}
       disabled={isLoading}
-      className={`bg-[#FF9500] border border-[#FF9500] text-white rounded-[8px] px-[14px] py-[8px] h-[36px] flex items-center justify-center gap-[8px] font-medium !text-[14px] !leading-[20px] hover:bg-[#e68600] transition-colors disabled:opacity-50 ${className}`}
+      className={`bg-[#EF6820] border border-[#EF6820] text-white rounded-[8px] px-[14px] py-[8px] h-[36px] flex items-center justify-center gap-[8px] font-medium !text-[14px] !leading-[20px] hover:bg-[#d55a1a] transition-colors disabled:opacity-50 ${className}`}
     >
       <span>{isLoading ? 'Loading...' : 'Unduh File'}</span>
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">

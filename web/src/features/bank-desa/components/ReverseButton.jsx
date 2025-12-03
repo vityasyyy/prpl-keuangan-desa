@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useToast } from './Toast';
 
 const TrashIcon = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
@@ -8,36 +9,49 @@ const TrashIcon = ({ className }) => (
   </svg>
 );
 
-export default function ReverseButton({ id, tanggal, backendUrl }) {
-  const router = useRouter();
-  const base = backendUrl || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8081';
+export default function ReverseButton({ id, tanggal, backendUrl, onSuccess }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const { addToast } = useToast();
+  const base = backendUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
   const onReverse = async () => {
     if (!id) return;
     if (!confirm('Buat transaksi pembalik untuk baris ini?')) return;
+    
+    setIsLoading(true);
     const qs = tanggal ? `?tanggal=${encodeURIComponent(String(tanggal).slice(0,10))}` : '';
     try {
-      const res = await fetch(`${base}/api/bank-desa/${id}${qs}`, { method: 'DELETE' });
+      const res = await fetch(`${base}/bank-desa/${id}${qs}`, { 
+        method: 'DELETE',
+        credentials: 'include',
+      });
       if (!res.ok) {
         const raw = await res.text().catch(() => 'Gagal membuat pembalik');
-        alert(raw);
+        addToast(raw, 'error');
         return;
       }
-      router.refresh();
+      addToast('Transaksi pembalik berhasil dibuat', 'success');
+      // Call the success callback to refresh data
+      if (onSuccess) {
+        await onSuccess();
+      }
     } catch (e) {
-      alert('Gagal terhubung ke server.');
+      addToast('Gagal terhubung ke server', 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <button 
       type="button" 
-      onClick={onReverse} 
-      className="bg-red-100 text-red-600 border border-red-200 rounded-[8px] px-3 py-2 flex items-center justify-center gap-2 font-medium text-[12px] hover:bg-red-200 transition-colors w-full"
+      onClick={onReverse}
+      disabled={isLoading}
+      className="bg-red-100 text-red-600 border border-red-200 rounded-[8px] px-3 py-2 flex items-center justify-center gap-2 font-medium text-[12px] hover:bg-red-200 transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed"
       title="Buat Transaksi Pembalik"
     >
-      <TrashIcon className="w-4 h-4" />
-      <span>Reversal</span>
+      <TrashIcon className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+      <span>{isLoading ? 'Memproses...' : 'Reversal'}</span>
     </button>
   );
 }

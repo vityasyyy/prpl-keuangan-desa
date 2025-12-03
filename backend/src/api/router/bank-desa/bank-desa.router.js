@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 // Import the handler functions
 import {
   createBukuBankEntry,
@@ -6,7 +6,7 @@ import {
   reverseBukuBankEntry,
 } from '../../handler/bank-desa/bank-desa.handler.js'; // Correct path to handler
 import { generateBukuBankPrintHtml } from '../../../service/bank-desa/bank-desa.service.js';
-// import { requireAuth } from '../../middleware/auth.middleware.js'; // Keep commented for now
+import { verifyAccessToken } from '../../middleware/auth.middleware.js';
 
 /**
  * Creates and configures the router for Buku Bank endpoints.
@@ -20,25 +20,25 @@ export default function bankDesaRouter(dependencies) { // Renamed function for c
   // Define the POST route, passing 'db' to the handler
   router.post(
     '/',
-    // requireAuth,
+    verifyAccessToken,
     createBukuBankEntry.bind(null, db) // Inject db into createBukuBankEntry handler
   );
 
   // Define the GET route, passing 'db' to the handler
   router.get(
     '/',
-    // requireAuth,
+    verifyAccessToken,
     getBukuBankEntries.bind(null, db) // Inject db into getBukuBankEntries handler
   );
 
   // Reversal (DELETE semantics): create an opposite entry
   router.delete(
     '/:id',
-    // requireAuth,
+    verifyAccessToken,
     reverseBukuBankEntry.bind(null, db)
   );
 
-  router.get('/print', async (req, res, next) => {
+  router.get('/print', verifyAccessToken, async (req, res, next) => {
     try {
       const year = Number(req.query.year);
       const month = Number(req.query.month);

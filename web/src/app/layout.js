@@ -1,6 +1,7 @@
-import { Geist, Geist_Mono, Inter, Poppins, Plus_Jakarta_Sans } from "next/font/google";
+﻿import { Geist, Geist_Mono, Inter, Poppins, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/features/bank-desa/components/Sidebar";
+import { AuthProvider } from "../lib/auth";
+import { ToastProvider } from "@/features/bank-desa/components/Toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,14 +36,15 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${poppins.variable} ${plusJakartaSans.variable} antialiased flex h-screen overflow-hidden font-sans`}
       >
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto bg-white">
-          {children}
-        </main>
+        <AuthProvider>
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

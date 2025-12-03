@@ -1,14 +1,12 @@
-import * as repo from '../../../repository/bank-desa/bank-desa.repo.js'; // Import repository functions
-import logger from '../../../common/logger/logger.js'; // Adjust path if needed
+﻿import * as repo from '../../../repository/bank-desa/bank-desa.repo.js'; // Import repository functions
+import { logInfo, logError } from '../../../common/logger/logger.js';
 import crypto from 'crypto';
-
-const log = logger.getLogger();
 
 /**
  * Helper function (internal to this handler) to calculate the new balance.
  * This remains a pure function.
  */
-function _calculateNewBalance(latestSaldo = 0, entryData) {
+function _calculateNewBalance(latestSaldo = 0, entryData, log = null) {
   const {
     setoran = 0,
     penerimaan_bunga = 0,
@@ -28,7 +26,8 @@ function _calculateNewBalance(latestSaldo = 0, entryData) {
   const totalKeluar = numPenarikan + numPajak + numBiayaAdmin;
 
   const newSaldo = numLatestSaldo + totalMasuk - totalKeluar;
-  log.debug(`Calculating balance: ${numLatestSaldo} + ${totalMasuk} - ${totalKeluar} = ${newSaldo}`);
+  logInfo(`Calculating balance: ${numLatestSaldo} + ${totalMasuk} - ${totalKeluar} = ${newSaldo}`, 
+    { layer: 'handler', operation: 'calculateBalance' }, 10, log);
   return newSaldo;
 }
 
@@ -43,30 +42,35 @@ function _calculateNewBalance(latestSaldo = 0, entryData) {
  * @param {function} next - Express next middleware function.
  */
 export async function createBukuBankEntry(db, req, res, next) {
+  const log = req?.log;
   const entryData = req.body;
-  log.info({ entryData }, 'Handling request to create bank entry');
+  logInfo('Handling request to create bank entry', 
+    { layer: 'handler', route: 'POST /bank-desa', entryData }, 10, log);
 
   // Validate basic required fields
   if (!entryData.tanggal || !entryData.uraian) {
-     log.warn('Validation failed: Tanggal and Uraian are required.');
+     logInfo('Validation failed: Tanggal and Uraian are required', 
+       { layer: 'handler', route: 'POST /bank-desa' }, 10, log);
      return res.status(400).json({ message: 'Tanggal and Uraian are required' });
   }
 
   let client; // Declare client outside try block for visibility in finally
   try {
     client = await db.connect(); // Get a client for transaction
-    log.info('Database client acquired for createBukuBankEntry');
+    logInfo('Database client acquired for createBukuBankEntry', 
+      { layer: 'handler', route: 'POST /bank-desa' }, 10, log);
     await client.query('BEGIN'); // Start transaction
-    log.debug('BEGIN transaction');
 
     // 1. Get the last saldo using the repository
     const latestEntry = await repo.findLatestEntry(client); // Pass client to repo function
     const latestSaldo = latestEntry ? latestEntry.saldo_after : 0;
-    log.info(`Latest saldo fetched: ${latestSaldo}`);
+    logInfo(`Latest saldo fetched: ${latestSaldo}`, 
+      { layer: 'handler', route: 'POST /bank-desa', latestSaldo }, 10, log);
 
     // 2. Calculate the new balance
-    const newSaldo = _calculateNewBalance(latestSaldo, entryData);
-    log.info(`Calculated new saldo: ${newSaldo}`);
+    const newSaldo = _calculateNewBalance(latestSaldo, entryData, log);
+    logInfo(`Calculated new saldo: ${newSaldo}`, 
+      { layer: 'handler', route: 'POST /bank-desa', newSaldo }, 10, log);
 
     // 3. Prepare the full data object for insertion
     const dataToInsert = {
@@ -79,20 +83,24 @@ export async function createBukuBankEntry(db, req, res, next) {
 
     // 5. Commit the transaction
     await client.query('COMMIT');
-    log.info('COMMIT transaction successful');
+    logInfo('COMMIT transaction successful', 
+      { layer: 'handler', route: 'POST /bank-desa', entryId: newEntry?.id }, 10, log);
 
     // 6. Send response
     res.status(201).json(newEntry);
 
   } catch (error) {
-    log.error({ err: error }, 'Error during createBukuBankEntry handling');
+    logError(error, 'Error during createBukuBankEntry handling', 
+      { layer: 'handler', route: 'POST /bank-desa' }, log);
     // Rollback transaction if a client was acquired
     if (client) {
       try {
         await client.query('ROLLBACK');
-        log.warn('ROLLBACK transaction due to error');
+        logInfo('ROLLBACK transaction due to error', 
+          { layer: 'handler', route: 'POST /bank-desa' }, 10, log);
       } catch (rollbackError) {
-        log.error({ err: rollbackError }, 'Failed to rollback transaction');
+        logError(rollbackError, 'Failed to rollback transaction', 
+          { layer: 'handler', route: 'POST /bank-desa' }, log);
       }
     }
     next(error); // Pass error to the central error handler
@@ -100,7 +108,8 @@ export async function createBukuBankEntry(db, req, res, next) {
     // ALWAYS release the client
     if (client) {
       client.release();
-      log.info('Database client released for createBukuBankEntry');
+      logInfo('Database client released for createBukuBankEntry', 
+        { layer: 'handler', route: 'POST /bank-desa' }, 10, log);
     }
   }
 }
@@ -113,8 +122,10 @@ export async function createBukuBankEntry(db, req, res, next) {
  * @param {function} next - Express next middleware function.
  */
 export async function getBukuBankEntries(db, req, res, next) {
+  const log = req?.log;
   try {
-    log.info('Handling request to get all bank entries');
+    logInfo('Handling request to get all bank entries', 
+      { layer: 'handler', route: 'GET /bank-desa' }, 10, log);
     // Fetch data using the repository, passing the pool directly
     const entries = await repo.findAllEntries(db);
 
@@ -139,9 +150,12 @@ export async function getBukuBankEntries(db, req, res, next) {
         };
     });
 
+    logInfo('Bank entries fetched successfully', 
+      { layer: 'handler', route: 'GET /bank-desa', count: recalculatedEntries.length }, 10, log);
     res.status(200).json(recalculatedEntries);
   } catch (error) {
-    log.error({ err: error }, 'Error during getBukuBankEntries handling');
+    logError(error, 'Error during getBukuBankEntries handling', 
+      { layer: 'handler', route: 'GET /bank-desa' }, log);
     next(error); // Pass error to the central error handler
   }
 }
@@ -152,14 +166,18 @@ export async function getBukuBankEntries(db, req, res, next) {
  * @param {object} db - pool
  */
 export async function reverseBukuBankEntry(db, req, res, next) {
+  const log = req?.log;
   const id = req.params?.id;
   const tanggalOverride = req.query?.tanggal; // optional YYYY-MM-DD
-  log.info({ id, tanggalOverride }, 'Handling request to reverse bank entry');
+  logInfo('Handling request to reverse bank entry', 
+    { layer: 'handler', route: 'DELETE /bank-desa/:id', id, tanggalOverride }, 10, log);
 
   let client;
   try {
     const original = await repo.findById(db, id);
     if (!original) {
+      logInfo('Entry not found for reversal', 
+        { layer: 'handler', route: 'DELETE /bank-desa/:id', id }, 10, log);
       return res.status(404).json({ message: 'Entry not found' });
     }
 
@@ -185,18 +203,21 @@ export async function reverseBukuBankEntry(db, req, res, next) {
     // Get latest saldo
     const latestEntry = await repo.findLatestEntry(client);
     const latestSaldo = latestEntry ? latestEntry.saldo_after : 0;
-    const newSaldo = _calculateNewBalance(latestSaldo, reversalBody);
+    const newSaldo = _calculateNewBalance(latestSaldo, reversalBody, log);
 
     const dataToInsert = { ...reversalBody, saldo_after: newSaldo };
     const newEntry = await repo.insertEntry(client, dataToInsert);
 
     await client.query('COMMIT');
+    logInfo('Reversal entry created successfully', 
+      { layer: 'handler', route: 'DELETE /bank-desa/:id', reversedId: id, reversalId: newEntry?.id }, 10, log);
     return res.status(201).json({ reversed: id, reversal: newEntry });
   } catch (error) {
     if (client) {
       try { await client.query('ROLLBACK'); } catch {}
     }
-    log.error({ err: error }, 'Error during reverseBukuBankEntry handling');
+    logError(error, 'Error during reverseBukuBankEntry handling', 
+      { layer: 'handler', route: 'DELETE /bank-desa/:id', id }, log);
     next(error);
   } finally {
     if (client) client.release();

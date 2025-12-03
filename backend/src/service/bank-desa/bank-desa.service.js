@@ -1,4 +1,4 @@
-const monthNames = [
+﻿const monthNames = [
 	'Januari','Februari','Maret','April','Mei','Juni',
 	'Juli','Agustus','September','Oktober','November','Desember'
 ];
@@ -55,17 +55,30 @@ function renderC6Html(data, { autoPrint = true } = {}) {
 		.text-bold { font-weight: bold; }
 		.bg-grey { background-color: #eee !important; }
 		
-		/* Signature Table */
-		table.sign-table { width: 100%; border: none; margin-top: 50px; }
-		table.sign-table td { border: none; text-align: center; vertical-align: top; padding: 0; }
-		.sign-gap { height: 80px; }
-		.sign-name { font-weight: bold; text-decoration: underline; }
+		/* Signature Section */
+		.signature-section { margin-top: 30px; page-break-inside: avoid; }
+		table.sign-table { width: 100%; border: none; }
+		table.sign-table td { border: none; vertical-align: top; padding: 0; }
+		.sign-left { text-align: left; padding-left: 20px; }
+		.sign-right { text-align: right; padding-right: 20px; }
+		.sign-gap { height: 70px; }
+		.sign-name { font-weight: normal; }
+		.sign-title { margin-bottom: 3px; }
 		
 		/* Notes */
-		.notes { margin-top: 20px; font-size: 11px; }
+		.notes { margin-top: 30px; font-size: 11px; page-break-inside: avoid; }
 		.notes-title { font-weight: bold; margin-bottom: 5px; }
 		table.notes-table { width: 100%; border: none; }
 		table.notes-table td { border: none; padding: 1px; vertical-align: top; }
+		
+		/* Page break handling for many rows */
+		@media print {
+			.sheet { page-break-after: auto; }
+			table.main-table { page-break-inside: auto; }
+			table.main-table tr { page-break-inside: avoid; page-break-after: auto; }
+			table.main-table thead { display: table-header-group; }
+			table.main-table tfoot { display: table-footer-group; }
+		}
 	`;
 
 	const headRow = `
@@ -114,8 +127,10 @@ function renderC6Html(data, { autoPrint = true } = {}) {
 		</tr>
 	`).join('');
 
-	// Fill empty rows to ensure table looks complete
-	const emptyRowsCount = Math.max(0, 10 - rows.length);
+	// Only add empty rows if we have fewer than 10 transactions to maintain table appearance
+	// If more than 10 transactions, no empty rows needed - table will expand naturally
+	const minRows = 10;
+	const emptyRowsCount = rows.length < minRows ? minRows - rows.length : 0;
 	const emptyRowsHtml = Array(emptyRowsCount).fill(0).map(() => `
 		<tr>
 			<td class="text-center">&nbsp;</td>
@@ -144,12 +159,15 @@ function renderC6Html(data, { autoPrint = true } = {}) {
 		</tr>
 	`;
 
+	// Generate document title for proper filename when saving/printing
+	const docTitle = `Buku Bank Desa - ${monthNames[meta.bulan - 1] || meta.bulan} ${meta.tahun}`;
+
 	return `
 	<!DOCTYPE html>
 	<html>
 		<head>
 			<meta charset="utf-8">
-			<title>C.6 Buku Bank Desa</title>
+			<title>${docTitle}</title>
 			<style>${css}</style>
 		</head>
 		<body>
@@ -185,23 +203,25 @@ function renderC6Html(data, { autoPrint = true } = {}) {
 					<tfoot>${footer}</tfoot>
 				</table>
 
-				<table class="sign-table" width="100%">
-					<tr>
-						<td width="30%">
-							<div>MENGETAHUI</div>
-							<div>KEPALA DESA,</div>
-							<div class="sign-gap"></div>
-							<div class="sign-name">( ....................................... )</div>
-						</td>
-						<td width="40%">&nbsp;</td>
-						<td width="30%">
-							<div>${meta.desa || '....................'}, tanggal ....................</div>
-							<div>BENDAHARA DESA,</div>
-							<div class="sign-gap"></div>
-							<div class="sign-name">( ....................................... )</div>
-						</td>
-					</tr>
-				</table>
+				<div class="signature-section">
+					<table class="sign-table" width="100%">
+						<tr>
+							<td width="35%" style="text-align: left; padding-left: 10px;">
+								<div class="sign-title">MENGETAHUI</div>
+								<div class="sign-title">KEPALA DESA,</div>
+								<div class="sign-gap"></div>
+								<div class="sign-name">( ....................................... )</div>
+							</td>
+							<td width="30%">&nbsp;</td>
+							<td width="35%" style="text-align: left;">
+								<div class="sign-title">${meta.desa || 'Banguntapan'}, tanggal ....................</div>
+								<div class="sign-title">BENDAHARA DESA,</div>
+								<div class="sign-gap"></div>
+								<div class="sign-name">( ....................................... )</div>
+							</td>
+						</tr>
+					</table>
+				</div>
 
 				<div class="notes">
 					<div class="notes-title">Cara Pengisian:</div>
@@ -231,6 +251,8 @@ export async function generateBukuBankPrintHtml(db, { year, month, meta, autoPri
 		throw err;
 	}
 
+	console.log('[Print] Generating for year:', year, 'month:', month);
+
 	const start = `${year}-${String(month).padStart(2, '0')}-01`;
 	const nextMonth = month === 12
 		? `${year + 1}-01-01`
@@ -245,6 +267,8 @@ export async function generateBukuBankPrintHtml(db, { year, month, meta, autoPri
 	const openOut = before.reduce((sum, row) => sum + num(row.penarikan) + num(row.pajak) + num(row.biaya_admin), 0);
 	let runningSaldo = openIn - openOut;
 
+	console.log('[Print] Querying transactions from', start, 'to', nextMonth);
+
 	const { rows: tx } = await db.query(
 		`SELECT id, tanggal, uraian, bukti_transaksi, setoran, penerimaan_bunga, penarikan, pajak, biaya_admin, created_at
 		 FROM buku_bank
@@ -252,6 +276,17 @@ export async function generateBukuBankPrintHtml(db, { year, month, meta, autoPri
 		 ORDER BY tanggal ASC, created_at ASC, id ASC`,
 		[start, nextMonth]
 	);
+
+	console.log('[Print] Found', tx.length, 'transactions');
+	if (tx.length > 0) {
+		console.log('[Print] First transaction:', JSON.stringify(tx[0]));
+	}
+	
+	// Debug: also check what's in the database for this month without date filter
+	const { rows: allTx } = await db.query(
+		`SELECT id, tanggal, uraian FROM buku_bank ORDER BY tanggal DESC LIMIT 5`
+	);
+	console.log('[Print] Last 5 transactions in DB:', JSON.stringify(allTx));
 
 	const rows = tx.map((entry, index) => {
 		runningSaldo += (num(entry.setoran) + num(entry.penerimaan_bunga))

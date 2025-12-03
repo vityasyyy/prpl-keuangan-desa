@@ -1,4 +1,4 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import DownloadButton from './DownloadButton';
 import HideReversalsButton from './HideReversalsButton';
 
@@ -38,8 +38,8 @@ export default function PageHeader({ latestMonth }) {
       {/* Title and Actions */}
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-[7px] flex-1">
-          <h1 className="font-semibold text-[24px] lg:text-[31px] leading-[36px] lg:leading-[46.5px] text-black">Buku Bank Desa</h1>
-          <p className="font-normal text-[14px] lg:text-[16px] leading-[24px] text-black">
+          <h1 className="font-jakarta font-semibold text-[24px] lg:text-[31px] leading-[36px] lg:leading-[46.5px] text-black">Buku Bank Desa</h1>
+          <p className="font-jakarta font-normal text-[14px] lg:text-[16px] leading-[24px] text-black">
             Buku Bank Desa<br />
             Desa BANGUNTAPAN Tahun Anggaran 2025
           </p>

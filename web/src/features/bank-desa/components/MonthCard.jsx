@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ReverseButton from './ReverseButton';
@@ -21,16 +21,25 @@ const PlusIcon = ({ className }) => (
   </svg>
 );
 
-export default function MonthCard({ monthName, monthKey, totalMonth, totalCumulative, transactions }) {
+export default function MonthCard({ monthName, monthKey, totalMonth, totalCumulative, transactions, onReversalSuccess }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [isPrinting, setIsPrinting] = useState(false);
     const router = useRouter();
 
-    const handleDownload = (e) => {
+    // Month names for filename
+    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+    const handleDownload = async (e) => {
         e.stopPropagation();
-        if (!monthKey) return;
-        const [year, month] = monthKey.split('-');
+        if (!monthKey || isPrinting) return;
         
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8081';
+        setIsPrinting(true);
+        const [year, month] = monthKey.split('-');
+        const monthName = monthNames[parseInt(month) - 1] || month;
+        const docTitle = `Buku Bank Desa - ${monthName} ${year}`;
+        
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
         const params = new URLSearchParams({
             year,
             month,
@@ -39,9 +48,53 @@ export default function MonthCard({ monthName, monthKey, totalMonth, totalCumula
             bankCabang: 'BPD DIY Capem Banguntapan',
             rekNo: '001.221.000123',
             kodeRekening: '1.1.1.01',
-            autoPrint: 'true'
+            autoPrint: 'false'
         });
-        window.open(`${backendUrl}/api/bank-desa/print?${params.toString()}`, '_blank');
+        
+        try {
+            // Fetch with credentials to handle authentication
+            const printUrl = `${API_BASE_URL}/bank-desa/print?${params.toString()}`;
+            const response = await fetch(printUrl, {
+                credentials: 'include',
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch print data');
+            }
+            
+            const html = await response.text();
+            
+            // Open a new window with the HTML content
+            const printWindow = window.open('', '_blank', 'width=1200,height=800');
+            if (printWindow) {
+                printWindow.document.write(html);
+                printWindow.document.close();
+                // Set the title explicitly for PDF filename
+                printWindow.document.title = docTitle;
+                
+                // Wait for content to load then trigger print
+                printWindow.onload = () => {
+                    setTimeout(() => {
+                        printWindow.print();
+                        setIsPrinting(false);
+                    }, 300);
+                };
+                
+                // Fallback if onload doesn't fire
+                setTimeout(() => {
+                    printWindow.document.title = docTitle;
+                    printWindow.print();
+                    setIsPrinting(false);
+                }, 800);
+            } else {
+                // Popup blocked - fallback to opening in same tab
+                alert('Popup diblokir. Silakan izinkan popup untuk mencetak.');
+                setIsPrinting(false);
+            }
+        } catch (error) {
+            console.error('Print error:', error);
+            setIsPrinting(false);
+        }
     };
 
     const handleAdd = (e) => {
@@ -52,33 +105,45 @@ export default function MonthCard({ monthName, monthKey, totalMonth, totalCumula
 
     return (
         <div className="flex flex-col">
-            <div className="border border-[#4b5565] rounded-[30px] h-[66px] px-[25px] py-[17px] flex items-center bg-white">
+            <div className="border-[0.5px] border-[#4b5565] rounded-[30px] h-[66px] px-[25px] py-[17px] flex items-center bg-white">
                 {/* Left side: Chevron + Month Name */}
                 <div className="flex items-center gap-[10px] min-w-[180px] cursor-pointer select-none shrink-0" onClick={() => setIsOpen(!isOpen)}>
                     <ChevronDown className={`w-6 h-6 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''} text-black`} />
-                    <span className="font-semibold text-[20px] leading-[30px] text-black whitespace-nowrap">{monthName}</span>
+                    <span className="font-jakarta font-semibold text-[20px] leading-[30px] text-black whitespace-nowrap">{monthName}</span>
                 </div>
 
                 {/* Middle: Totals - use fixed widths for alignment */}
                 <div className="flex items-center justify-center flex-1">
                     <div className="flex items-center gap-[10px] min-w-[280px]">
-                        <span className="font-normal text-[16px] leading-[24px] text-black">Total Bulan ini</span>
-                        <span className="font-semibold text-[16px] leading-[24px] text-black">{totalMonth}</span>
+                        <span className="font-jakarta font-normal text-[16px] leading-[24px] text-black">Total Bulan ini</span>
+                        <span className="font-poppins font-semibold text-[16px] leading-[24px] text-black">{totalMonth}</span>
                     </div>
 
                     <div className="flex items-center gap-[10px] min-w-[280px]">
-                        <span className="font-normal text-[16px] leading-[24px] text-black">Total Kumulatif</span>
-                        <span className="font-semibold text-[16px] leading-[24px] text-black">{totalCumulative}</span>
+                        <span className="font-jakarta font-normal text-[16px] leading-[24px] text-black">Total Kumulatif</span>
+                        <span className="font-poppins font-semibold text-[16px] leading-[24px] text-black">{totalCumulative}</span>
                     </div>
                 </div>
 
                 {/* Right: Actions */}
                 <div className="flex gap-[4px] items-center shrink-0">
-                    <button onClick={handleDownload} className="border border-[#4b5565] rounded-[8px] p-[8px] hover:bg-gray-100 transition-colors">
-                        <DownloadIcon className="w-4 h-4 text-[#364152]" />
+                    <button 
+                        onClick={handleDownload} 
+                        disabled={isPrinting}
+                        className="border border-[#4b5565] rounded-[8px] p-[8px] hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Cetak"
+                    >
+                        {isPrinting ? (
+                            <svg className="w-[16px] h-[16px] text-[#364152] animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        ) : (
+                            <DownloadIcon className="w-[16px] h-[16px] text-[#364152]" />
+                        )}
                     </button>
                     <button onClick={handleAdd} className="border border-[#4b5565] rounded-[8px] p-[8px] hover:bg-gray-100 transition-colors">
-                        <PlusIcon className="w-4 h-4 text-[#364152]" />
+                        <PlusIcon className="w-[16px] h-[16px] text-[#364152]" />
                     </button>
                 </div>
             </div>
@@ -120,7 +185,7 @@ export default function MonthCard({ monthName, monthKey, totalMonth, totalCumula
                                     <td className="p-3 text-right text-red-600 whitespace-nowrap">{tx.admin_fee}</td>
                                     <td className="p-3 text-right font-medium whitespace-nowrap border-r border-gray-200">{tx.balance}</td>
                                     <td className="p-3 text-center">
-                                        <ReverseButton id={tx.id} tanggal={tx.rawDate} />
+                                        <ReverseButton id={tx.id} tanggal={tx.rawDate} onSuccess={onReversalSuccess} />
                                     </td>
                                 </tr>
                             ))}

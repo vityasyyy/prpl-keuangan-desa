@@ -1,7 +1,8 @@
-"use client"; // REQUIRED for client-side interactivity
+﻿"use client"; // REQUIRED for client-side interactivity
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useToast } from '../Toast';
 
 // Icons
 const MailIcon = () => (
@@ -120,6 +121,7 @@ const FormSection = ({ title, children }) => (
 export default function BukuBankForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { addToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [makeAgain, setMakeAgain] = useState(false);
@@ -144,7 +146,6 @@ export default function BukuBankForm() {
   const [pajak, setPajak] = useState('');
   const [biayaAdmin, setBiayaAdmin] = useState('');
   const [buktiTransaksi, setBuktiTransaksi] = useState('');
-  const [saldo] = useState('100.000.000,00'); // Placeholder
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -162,10 +163,11 @@ export default function BukuBankForm() {
     console.log('(Client-side) Submitting to /api/bank-desa:', formData);
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8081';
-      const response = await fetch(`${backendUrl}/api/bank-desa`, {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${API_BASE_URL}/bank-desa`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Send cookies for authentication
         body: JSON.stringify(formData),
       });
 
@@ -179,6 +181,8 @@ export default function BukuBankForm() {
       }
 
       console.log('Form submitted successfully!');
+      addToast('Transaksi berhasil disimpan', 'success');
+      
       if (makeAgain) {
         setSetoran('');
         setPenerimaanBunga('');
@@ -186,6 +190,7 @@ export default function BukuBankForm() {
         setPajak('');
         setBiayaAdmin('');
         setBuktiTransaksi('');
+        setUraian('');
         setIsLoading(false);
         return;
       }
@@ -194,6 +199,7 @@ export default function BukuBankForm() {
     } catch (err) {
       console.error('Form submission error:', err);
       setError(err.message || 'Gagal menyimpan data.');
+      addToast(err.message || 'Gagal menyimpan data', 'error');
       setIsLoading(false);
     }
   };
@@ -340,10 +346,9 @@ export default function BukuBankForm() {
             label="Saldo" 
             id="saldo" 
             type="text" 
-            value={saldo} 
+            value="Terkalkulasi otomatis" 
             onChange={() => {}} 
             disabled 
-            prefix="Rp"
             icon={<LockIcon />}
           />
         </div>

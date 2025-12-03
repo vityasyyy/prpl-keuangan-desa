@@ -1,5 +1,6 @@
-import BukuBankForm from '@/features/bank-desa/components/forms/BukuBankForm.js';
+﻿import BukuBankForm from '@/features/bank-desa/components/forms/BukuBankForm.js';
 import Link from 'next/link';
+import '@/features/bank-desa/styles/bank-desa.css';
 
 const BreadcrumbIcon = ({ className }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
@@ -18,7 +19,7 @@ const BookIcon = ({ className }) => (
 
 export default function InputBukuBankPage() {
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto text-foreground dark:text-gray-200">
+    <div className="bank-desa-page p-4 md:p-8 max-w-4xl mx-auto text-foreground dark:text-gray-200">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-[#6B7280] text-[14px] font-medium mb-6">
         <BreadcrumbIcon className="w-5 h-5 text-[#6B7280]" />
@@ -31,7 +32,7 @@ export default function InputBukuBankPage() {
       </div>
 
       <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold mt-2 font-[var(--font-poppins)] text-black">Input Data Transaksi Bank</h1>
+        <h1 className="text-2xl md:text-3xl font-bold mt-2 font-poppins text-black">Input Data Transaksi Bank</h1>
       </div>
       
       {/* Render the actual form component */}
