@@ -53,7 +53,8 @@ describe("BankDesaRepository (Integration)", () => {
       const result = await bankDesaRepo.findLatestEntry(client);
 
       expect(result).toBeDefined();
-      expect(result.saldo_after).toBe(1500000);
+      // PostgreSQL NUMERIC type returns as string, convert to number for comparison
+      expect(Number(result.saldo_after)).toBe(1500000);
     });
   });
 
