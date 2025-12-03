@@ -65,7 +65,8 @@ async function main() {
     process.exit(1);
   }
 
-  initializeRoutes(app, allHandlers);
+  // Pass the DB pool into initializeRoutes so routers that need it can use it
+  initializeRoutes(app, allHandlers, { db: pool });
 
   app.use((_, res) => res.status(404).json({ message: "Not Found" }));
   app.use((err, req, res, next) => {
