@@ -7,6 +7,10 @@ import {
 } from '../../handler/bank-desa/bank-desa.handler.js'; // Correct path to handler
 import { generateBukuBankPrintHtml } from '../../../service/bank-desa/bank-desa.service.js';
 import { verifyAccessToken } from '../../middleware/auth.middleware.js';
+import {
+  canViewBankDesa,
+  canEditBankDesa,
+} from '../../middleware/bank-desa.middleware.js';
 
 /**
  * Creates and configures the router for Buku Bank endpoints.
@@ -21,6 +25,7 @@ export default function bankDesaRouter(dependencies) { // Renamed function for c
   router.post(
     '/',
     verifyAccessToken,
+    canEditBankDesa,
     createBukuBankEntry.bind(null, db) // Inject db into createBukuBankEntry handler
   );
 
@@ -28,6 +33,7 @@ export default function bankDesaRouter(dependencies) { // Renamed function for c
   router.get(
     '/',
     verifyAccessToken,
+    canViewBankDesa,
     getBukuBankEntries.bind(null, db) // Inject db into getBukuBankEntries handler
   );
 
@@ -35,10 +41,11 @@ export default function bankDesaRouter(dependencies) { // Renamed function for c
   router.delete(
     '/:id',
     verifyAccessToken,
+    canEditBankDesa,
     reverseBukuBankEntry.bind(null, db)
   );
 
-  router.get('/print', verifyAccessToken, async (req, res, next) => {
+  router.get('/print', verifyAccessToken, canViewBankDesa, async (req, res, next) => {
     try {
       const year = Number(req.query.year);
       const month = Number(req.query.month);
