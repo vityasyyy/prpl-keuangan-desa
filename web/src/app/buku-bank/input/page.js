@@ -1,6 +1,18 @@
-﻿import BukuBankForm from '@/features/bank-desa/components/forms/BukuBankForm.js';
+﻿import { Suspense } from 'react';
+import BukuBankForm from '@/features/bank-desa/components/forms/BukuBankForm.js';
 import Link from 'next/link';
 import '@/features/bank-desa/styles/bank-desa.css';
+
+const LoadingSkeleton = () => (
+  <div className="animate-pulse">
+    <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+    <div className="space-y-3">
+      <div className="h-4 bg-gray-200 rounded w-full"></div>
+      <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+      <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+    </div>
+  </div>
+);
 
 const BreadcrumbIcon = ({ className }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
@@ -35,8 +47,10 @@ export default function InputBukuBankPage() {
         <h1 className="text-2xl md:text-3xl font-bold mt-2 font-poppins text-black">Input Data Transaksi Bank</h1>
       </div>
       
-      {/* Render the actual form component */}
-      <BukuBankForm />
+      {/* Render the actual form component wrapped in Suspense */}
+      <Suspense fallback={<LoadingSkeleton />}>
+        <BukuBankForm />
+      </Suspense>
     </div>
   );
 }

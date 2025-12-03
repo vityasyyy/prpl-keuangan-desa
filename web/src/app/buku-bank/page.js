@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import ReverseButton from '@/features/bank-desa/components/ReverseButton.jsx';
@@ -27,8 +27,40 @@ function isReversal(tx) {
   return keterangan.startsWith('[REVERSAL]') || bukti.endsWith('-REV');
 }
 
-// --- Main Page Component ---
-export default function BukuBankPage() {
+// Loading fallback for Suspense
+function LoadingSkeleton() {
+  return (
+    <div className="bank-desa-page px-[40px] py-[20px] min-h-screen bg-white">
+      {/* Skeleton Header */}
+      <div className="mb-6">
+        <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
+        <div className="h-4 w-64 bg-gray-200 rounded animate-pulse"></div>
+      </div>
+      {/* Skeleton Month Cards */}
+      <div className="flex flex-col gap-[10px]">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="border-[0.5px] border-gray-200 rounded-[30px] h-[66px] px-[25px] py-[17px] flex items-center animate-pulse">
+            <div className="flex items-center gap-[10px] min-w-[180px]">
+              <div className="w-6 h-6 bg-gray-200 rounded"></div>
+              <div className="w-32 h-6 bg-gray-200 rounded"></div>
+            </div>
+            <div className="flex items-center justify-center flex-1 gap-8">
+              <div className="w-40 h-5 bg-gray-200 rounded"></div>
+              <div className="w-40 h-5 bg-gray-200 rounded"></div>
+            </div>
+            <div className="flex gap-[4px]">
+              <div className="w-10 h-10 bg-gray-200 rounded-[8px]"></div>
+              <div className="w-10 h-10 bg-gray-200 rounded-[8px]"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// --- Inner Component that uses useSearchParams ---
+function BukuBankContent() {
   const searchParams = useSearchParams();
   const hideReversals = searchParams.get('hideReversals') === '1' || searchParams.get('hideReversals') === 'true';
   
@@ -249,5 +281,14 @@ export default function BukuBankPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// --- Main Page Component wrapped in Suspense ---
+export default function BukuBankPage() {
+  return (
+    <Suspense fallback={<LoadingSkeleton />}>
+      <BukuBankContent />
+    </Suspense>
   );
 }
