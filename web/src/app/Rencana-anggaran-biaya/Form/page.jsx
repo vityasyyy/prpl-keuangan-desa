@@ -82,7 +82,9 @@ function RencanaAnggaranBiayaFormContent() {
 
   const fetchRABLines = async (rabId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/rab/${rabId}/lines`);
+      const response = await fetch(`${API_BASE_URL}/rab/${rabId}/lines`, {
+        credentials: "include",
+      });
       const data = await response.json();
       if (data.success) {
         setRabLines(data.data || []);
@@ -174,7 +176,9 @@ function RencanaAnggaranBiayaFormContent() {
   useEffect(() => {
     async function fetchAkun() {
       try {
-        const response = await fetch(`${API_BASE_URL}/rab/kode-ekonomi/akun`);
+        const response = await fetch(`${API_BASE_URL}/rab/kode-ekonomi/akun`, {
+          credentials: "include",
+        });
         const data = await response.json();
         console.log("fetchJenis response:", data);
         setAkunList(data.data || []);
@@ -192,11 +196,16 @@ function RencanaAnggaranBiayaFormContent() {
     async function fetchUraian1(akunId) {
       setUraian1List([]);
       try {
-        const res = await fetch(`${API_BASE_URL}/rab/kode-ekonomi/akun/${akunId}/kelompok`);
+        const res = await fetch(`${API_BASE_URL}/rab/kode-ekonomi/akun/${akunId}/kelompok`, {
+          credentials: "include",
+        });
         const data = await res.json();
         data.data.map(async (item) => {
           const response = await fetch(
-            `${API_BASE_URL}/rab/kode-ekonomi/kelompok/${item.id}/jenis`
+            `${API_BASE_URL}/rab/kode-ekonomi/kelompok/${item.id}/jenis`,
+            {
+              credentials: "include",
+            }
           );
           const jenisData = await response.json();
           setUraian1List((prevList) => [...prevList, ...jenisData.data]);
@@ -219,7 +228,9 @@ function RencanaAnggaranBiayaFormContent() {
     async function fetchUraian2(jenisId) {
       setUraian2List([]);
       try {
-        const response = await fetch(`${API_BASE_URL}/rab/kode-ekonomi/jenis/${jenisId}/objek`);
+        const response = await fetch(`${API_BASE_URL}/rab/kode-ekonomi/jenis/${jenisId}/objek`, {
+          credentials: "include",
+        });
         const data = await response.json();
         setUraian2List(data.data || []);
       } catch (error) {
@@ -236,7 +247,9 @@ function RencanaAnggaranBiayaFormContent() {
 
   useEffect(() => {
     async function fetchBidang() {
-      const data = await fetch(`${API_BASE_URL}/rab/kode-rekening/bidang`).then((res) =>
+      const data = await fetch(`${API_BASE_URL}/rab/kode-rekening/bidang`, {
+        credentials: "include",
+      }).then((res) =>
         res.json()
       );
       setBidangList(data.data);
@@ -249,7 +262,10 @@ function RencanaAnggaranBiayaFormContent() {
 
     async function fetchSubBidang(bidangId) {
       const data = await fetch(
-        `${API_BASE_URL}/rab/kode-rekening/bidang/${bidangId}/sub-bidang`
+        `${API_BASE_URL}/rab/kode-rekening/bidang/${bidangId}/sub-bidang`,
+        {
+          credentials: "include",
+        }
       ).then((res) => res.json());
       setSubBidangList(data.data);
     }
@@ -263,7 +279,10 @@ function RencanaAnggaranBiayaFormContent() {
 
     async function fetchKegiatan(subBidangId) {
       const data = await fetch(
-        `${API_BASE_URL}/rab/kode-rekening/sub-bidang/${subBidangId}/kegiatan`
+        `${API_BASE_URL}/rab/kode-rekening/sub-bidang/${subBidangId}/kegiatan`,
+        {
+          credentials: "include",
+        }
       ).then((res) => res.json());
       setKegiatanList(data.data);
     }
@@ -393,6 +412,7 @@ function RencanaAnggaranBiayaFormContent() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(rabData),
       });
 
@@ -465,6 +485,7 @@ function RencanaAnggaranBiayaFormContent() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(lineData),
       });
 

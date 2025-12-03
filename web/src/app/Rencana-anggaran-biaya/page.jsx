@@ -356,7 +356,9 @@ export default function RencanaAnggaranBiaya() {
 
   useEffect(() => {
     async function fetchData() {
-      const res = await fetch(`${API_BASE_URL}/rab/years`);
+      const res = await fetch(`${API_BASE_URL}/rab/years`, {
+        credentials: "include",
+      });
       const json = await res.json();
 
       const tahunArr = json.data.map((i) => i.tahun);
@@ -374,14 +376,18 @@ export default function RencanaAnggaranBiaya() {
 
     async function fetchRAB(year) {
       try {
-        const res = await fetch(`${API_BASE_URL}/rab/year/${year}`);
+        const res = await fetch(`${API_BASE_URL}/rab/year/${year}`, {
+          credentials: "include",
+        });
         const data = await res.json();
 
         const rabList = data.data;
 
         const rabWithLines = await Promise.all(
           rabList.map(async (rab) => {
-            const lineRes = await fetch(`${API_BASE_URL}/rab/${rab.id}/lines`);
+            const lineRes = await fetch(`${API_BASE_URL}/rab/${rab.id}/lines`, {
+              credentials: "include",
+            });
             const lineData = await lineRes.json();
 
             return {
