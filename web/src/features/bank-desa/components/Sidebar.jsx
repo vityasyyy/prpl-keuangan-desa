@@ -175,9 +175,9 @@ export default function Sidebar() {
               {isPenatausahaanOpen && (
                 <>
                   <SidebarSubItem href="/Kas-umum" indent>Buku Kas Umum</SidebarSubItem>
-                  <SidebarSubItem href="/kas-pembantu/pajak" indent>Buku Pembantu Pajak</SidebarSubItem>
-                  <SidebarSubItem href="/kas-pembantu/panjar" indent>Buku Pembantu Panjar</SidebarSubItem>
-                  <SidebarSubItem href="/kas-pembantu/kegiatan" indent>Buku Pembantu Kegiatan</SidebarSubItem>
+                  <SidebarSubItem href="/Kas-pembantu-pajak" indent>Buku Pembantu Pajak</SidebarSubItem>
+                  <SidebarSubItem href="/Kas-pembantu-panjar" indent>Buku Pembantu Panjar</SidebarSubItem>
+                  <SidebarSubItem href="/Kas-pembantu-kegiatan" indent>Buku Pembantu Kegiatan</SidebarSubItem>
                   <SidebarSubItem href="/buku-bank" indent>Buku Bank Desa</SidebarSubItem>
                 </>
               )}
