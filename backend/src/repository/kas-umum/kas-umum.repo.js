@@ -1,88 +1,197 @@
 // src/repository/kas-umum/kas-umum.repo.js
-export default function createRepo({ db }) {
-  // db = instance Pool (pg)
-  const P = (i) => `$${i}`;
+import crypto from "crypto";
 
+export default function createKasUmumRepo(arg) {
+  // Deteksi instance Pool / BoundPool / Client dari pg
+  const db =
+    arg?.query || arg?.connect || arg?.db?.query
+      ? arg.query
+        ? arg
+        : arg.db
+      : undefined;
+
+  if (!db || typeof db.query !== "function") {
+    console.error("[kas-umum.repo] Invalid db instance received:", arg);
+    throw new Error("Invalid database instance passed to createKasUmumRepo");
+  }
+
+  const P = (i) => `$${i}`;
   // Helper untuk pencocokan bulan
   const monthBku = () =>
     `DATE_TRUNC('month', bku.tanggal) = DATE_TRUNC('month', ${P(1)}::date)`;
   const monthRaw = () =>
     `DATE_TRUNC('month', tanggal) = DATE_TRUNC('month', ${P(1)}::date)`;
 
+  const listRAB = async () => {
+    const { rows } = await db.query(`
+      SELECT *
+      FROM rab
+      ORDER BY id
+    `);
+    return rows;
+  };
+
   /**
    * Ambil daftar transaksi BKU (Buku Kas Umum)
    */
-  async function listBkuRows({ monthDate, rabId, rkkId }) {
-    const where = [monthBku()];
-    const params = [monthDate];
-    let join = "";
+  // repo.js
 
-    if (rabId) {
-      where.push(`bku.rab_id = ${P(2)}`);
-      params.push(rabId);
-    } else if (rkkId) {
-      join = `LEFT JOIN rab r ON r.id = bku.rab_id`;
-      where.push(`r.rkk_id = ${P(2)}`);
-      params.push(rkkId);
+  /**
+   * List baris BKU untuk satu bulan atau tahun tertentu
+   */
+  async function listBkuRows({ monthDate, yearDate }) {
+    const where = [];
+    const params = [];
+    let p = 1;
+
+    if (yearDate && monthDate) {
+      where.push(`
+      bku.tanggal >= date_trunc('month', $${p}::date)
+      AND bku.tanggal < (date_trunc('month', $${p}::date) + INTERVAL '1 month')
+      AND date_part('year', bku.tanggal) = date_part('year', $${p + 1}::date)
+    `);
+      params.push(monthDate, yearDate);
+      p += 2;
+    } else if (yearDate) {
+      where.push(`
+      bku.tanggal >= date_trunc('year', $${p}::date)
+      AND bku.tanggal < (date_trunc('year', $${p}::date) + INTERVAL '1 year')
+    `);
+      params.push(yearDate);
+      p += 1;
+    } else if (monthDate) {
+      where.push(`
+      bku.tanggal >= date_trunc('month', $${p}::date)
+      AND bku.tanggal < (date_trunc('month', $${p}::date) + INTERVAL '1 month')
+    `);
+      params.push(monthDate);
+      p += 1;
+    } else {
+      throw new Error("listBkuRows requires monthDate or yearDate");
     }
 
     const sql = `
-      SELECT ROW_NUMBER() OVER (ORDER BY bku.tanggal, bku.id) AS no,
-             bku.tanggal,
-             ke.full_code AS kode_rekening,
-             bku.uraian,
-             bku.penerimaan AS pemasukan,
-             bku.pengeluaran,
-             bku.no_bukti,
-             (bku.penerimaan - bku.pengeluaran) AS netto_transaksi,
-             bku.saldo_after AS saldo
-      FROM buku_kas_umum bku
-      LEFT JOIN kode_ekonomi ke ON ke.id = bku.kode_ekonomi_id
-      ${join}
-      WHERE ${where.join(" AND ")}
-      ORDER BY bku.tanggal, bku.id
-    `;
+    SELECT
+      ROW_NUMBER() OVER (ORDER BY bku.tanggal ASC, bku.id ASC) AS no,
+      bku.id,
+      bku.tanggal,
+      ke.full_code AS kode_rekening,
+      bku.uraian,
+      bku.persetujuan,
+      bku.penerimaan AS pemasukan,
+      bku.pengeluaran,
+      bku.no_bukti,
+      (bku.penerimaan - bku.pengeluaran) AS netto_transaksi,
+      bku.saldo_after AS saldo
+    FROM buku_kas_umum bku
+    LEFT JOIN kode_ekonomi ke ON ke.id = bku.kode_ekonomi_id
+    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+    ORDER BY bku.tanggal ASC, bku.id ASC
+  `;
 
     const { rows } = await db.query(sql, params);
     return rows;
   }
 
   /**
-   * Hitung rekapitulasi total pemasukan/pengeluaran/netto BKU
+   * Rekap total pemasukan, pengeluaran, dan netto BKU
    */
-  async function getBkuSummary({ monthDate, rabId, rkkId }) {
-    const where = [monthRaw()];
-    const params = [monthDate];
+  async function getBkuSummary({ monthDate, yearDate }) {
+    const where = [];
+    const params = [];
+    let p = 1;
 
-    if (rabId) {
-      where.push(`rab_id = ${P(2)}`);
-      params.push(rabId);
-    } else if (rkkId) {
-      where.push(
-        `EXISTS (
-          SELECT 1
-          FROM rab r
-          WHERE r.id = buku_kas_umum.rab_id
-          AND r.rkk_id = ${P(2)}
-        )`
-      );
-      params.push(rkkId);
+    if (yearDate && monthDate) {
+      where.push(`
+      tanggal >= date_trunc('month', $${p}::date)
+      AND tanggal <  (date_trunc('month', $${p}::date) + INTERVAL '1 month')
+      AND date_part('year', tanggal) = date_part('year', $${p + 1}::date)
+    `);
+      params.push(monthDate, yearDate);
+      p += 2;
+    } else if (yearDate) {
+      where.push(`
+      tanggal >= date_trunc('year', $${p}::date)
+      AND tanggal <  (date_trunc('year', $${p}::date) + INTERVAL '1 year')
+    `);
+      params.push(yearDate);
+      p += 1;
+    } else if (monthDate) {
+      where.push(`
+      tanggal >= date_trunc('month', $${p}::date)
+      AND tanggal <  (date_trunc('month', $${p}::date) + INTERVAL '1 month')
+    `);
+      params.push(monthDate);
+      p += 1;
+    } else {
+      throw new Error("getBkuSummary requires monthDate or yearDate");
     }
 
     const sql = `
-      SELECT
-        COALESCE(SUM(penerimaan), 0) AS total_pemasukan,
-        COALESCE(SUM(pengeluaran), 0) AS total_pengeluaran,
-        COALESCE(SUM(penerimaan - pengeluaran), 0) AS total_netto
-      FROM buku_kas_umum
-      WHERE ${where.join(" AND ")}
-    `;
+    SELECT
+      COALESCE(SUM(penerimaan), 0) AS total_pemasukan,
+      COALESCE(SUM(pengeluaran), 0) AS total_pengeluaran,
+      COALESCE(SUM(penerimaan - pengeluaran), 0) AS total_netto
+    FROM buku_kas_umum
+    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+  `;
 
     const {
       rows: [row],
     } = await db.query(sql, params);
-
     return row || { total_pemasukan: 0, total_pengeluaran: 0, total_netto: 0 };
+  }
+  // kasUmum.repo.js
+  async function getMonthlySaldo({ yearDate }) {
+    const sql = `
+    WITH yr AS (
+      SELECT date_trunc('year', $1::date) AS y0,
+             (date_trunc('year', $1::date) + INTERVAL '1 year') AS y1
+    ),
+    months AS (
+      SELECT generate_series(y0, y1 - INTERVAL '1 month', INTERVAL '1 month')::date AS m
+      FROM yr
+    )
+    SELECT
+      to_char(m.m, 'YYYY-MM') AS ym,
+      (
+        SELECT bku.saldo_after
+        FROM buku_kas_umum bku
+        WHERE bku.tanggal < (m.m + INTERVAL '1 month')
+        ORDER BY bku.tanggal DESC, bku.id DESC
+        LIMIT 1
+      ) AS saldo_after
+    FROM months m
+    ORDER BY m.m
+  `;
+    const { rows } = await db.query(sql, [yearDate]);
+    return rows;
+  }
+  async function getBkuById(id) {
+    const sql = `
+      SELECT
+        bku.id,
+        bku.tanggal,
+        bku.rab_id,
+        bku.kode_ekonomi_id,
+        bku.kode_fungsi_id AS kode_fungsi_id,
+        sub.id AS sub_bidang_id,
+        bid.id AS bidang_id,
+        bku.uraian,
+        bku.persetujuan,
+        bku.penerimaan,
+        bku.pengeluaran,
+        bku.no_bukti,
+        bku.saldo_after
+      FROM buku_kas_umum bku
+      LEFT JOIN kode_fungsi keg ON keg.id = bku.kode_fungsi_id
+      LEFT JOIN kode_fungsi sub ON sub.id = keg.parent_id
+      LEFT JOIN kode_fungsi bid ON bid.id = sub.parent_id
+      WHERE bku.id = $1
+    `;
+
+    const { rows } = await db.query(sql, [id]);
+    return rows[0] || null;
   }
 
   /**
@@ -93,7 +202,7 @@ export default function createRepo({ db }) {
     const { rows } = await db.query(`
       SELECT id, full_code, uraian
       FROM kode_fungsi
-      WHERE level = '1'
+      WHERE level = 'bidang'
       ORDER BY full_code
     `);
     return rows;
@@ -104,7 +213,7 @@ export default function createRepo({ db }) {
       `
       SELECT id, full_code, uraian
       FROM kode_fungsi
-      WHERE level = '2' AND parent_id = ${P(1)}
+      WHERE level = 'sub_bidang' AND parent_id = ${P(1)}
       ORDER BY full_code
     `,
       [bidangId]
@@ -117,7 +226,7 @@ export default function createRepo({ db }) {
       `
       SELECT id, full_code, uraian
       FROM kode_fungsi
-      WHERE level = '3' AND parent_id = ${P(1)}
+      WHERE level = 'kegiatan' AND parent_id = ${P(1)}
       ORDER BY full_code
     `,
       [subBidangId]
@@ -125,11 +234,310 @@ export default function createRepo({ db }) {
     return rows;
   };
 
+  /**
+   * Insert data baru ke tabel Buku_Kas_Umum
+   */
+  async function generateBkuId() {
+    const sql = `
+    SELECT id
+    FROM buku_kas_umum
+    WHERE id LIKE 'bku%'
+    ORDER BY id DESC
+    LIMIT 1
+  `;
+    const { rows } = await db.query(sql);
+    const lastId = rows[0]?.id;
+    if (!lastId) {
+      return "bku001";
+    }
+    const numericPart = parseInt(lastId.slice(3), 10);
+    const next = numericPart + 1;
+    return "bku" + next.toString().padStart(3, "0");
+  }
+
+  const insertBku = async (data) => {
+    const {
+      tanggal,
+      rab_id,
+      kode_ekonomi_id,
+      kode_fungsi_id,
+      uraian,
+      penerimaan = 0,
+      pengeluaran = 0,
+      no_bukti,
+    } = data;
+
+    const penerimaanNum = Number(penerimaan) || 0;
+    const pengeluaranNum = Number(pengeluaran) || 0;
+
+    if (penerimaanNum > 0 && pengeluaranNum > 0) {
+      throw new Error(
+        "Transaksi hanya boleh pemasukan ATAU pengeluaran, tidak keduanya"
+      );
+    }
+
+    const lastSaldoQuery = `
+    SELECT saldo_after
+    FROM buku_kas_umum
+    WHERE rab_id = $1
+    ORDER BY tanggal DESC, id DESC
+    LIMIT 1
+  `;
+    const {
+      rows: [lastRow],
+    } = await db.query(lastSaldoQuery, [rab_id]);
+
+    const saldoBefore = parseFloat(lastRow?.saldo_after) || 0;
+    const saldoAfter = saldoBefore + penerimaanNum - pengeluaranNum;
+
+    const id = await generateBkuId();
+
+    const insertQuery = `
+    INSERT INTO buku_kas_umum (
+      id,
+      tanggal,
+      rab_id,
+      kode_ekonomi_id,
+      kode_fungsi_id,
+      uraian,
+      penerimaan,
+      pengeluaran,
+      no_bukti,
+      saldo_after
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    RETURNING id, tanggal, rab_id, kode_ekonomi_id, kode_fungsi_id,
+              uraian, penerimaan, pengeluaran, no_bukti, saldo_after
+  `;
+
+    const values = [
+      id,
+      tanggal,
+      rab_id,
+      kode_ekonomi_id,
+      kode_fungsi_id,
+      uraian,
+      penerimaanNum,
+      pengeluaranNum,
+      no_bukti,
+      saldoAfter,
+    ];
+
+    const {
+      rows: [newRow],
+    } = await db.query(insertQuery, values);
+
+    // Get detail kode ekonomi dan kode fungsi untuk response
+    const detailQuery = `
+      SELECT 
+        bku.*,
+        ke.full_code AS kode_ekonomi_full,
+        ke.uraian AS kode_ekonomi_uraian,
+        kf.full_code AS kode_fungsi_full,
+        kf.uraian AS kode_fungsi_uraian
+      FROM Buku_Kas_Umum bku
+      LEFT JOIN Kode_Ekonomi ke ON ke.id = bku.kode_ekonomi_id
+      LEFT JOIN Kode_Fungsi kf ON kf.id = bku.kode_fungsi_id
+      WHERE bku.id = $1
+    `;
+
+    const {
+      rows: [detailRow],
+    } = await db.query(detailQuery, [newRow.id]);
+    return detailRow;
+  };
+  
+  async function setPersetujuan(id, status) {
+    const sql = `
+      UPDATE buku_kas_umum
+      SET persetujuan = $1
+      WHERE id = $2
+      RETURNING *
+    `;
+    const { rows } = await db.query(sql, [status, id]);
+    return rows[0];
+  }
+  async function updateBku(id, data) {
+    const {
+      tanggal,
+      rab_id,
+      kode_ekonomi_id,
+      kode_fungsi_id,
+      uraian,
+      penerimaan = 0,
+      pengeluaran = 0,
+      no_bukti,
+    } = data;
+
+    // Ambil saldo sebelum row ini
+    const lastSaldoQuery = `
+    SELECT saldo_after
+    FROM buku_kas_umum
+    WHERE rab_id = $1 AND tanggal < $2
+    ORDER BY tanggal DESC, id DESC
+    LIMIT 1
+  `;
+
+    const {
+      rows: [prev],
+    } = await db.query(lastSaldoQuery, [rab_id, tanggal]);
+
+    const saldoBefore = parseFloat(prev?.saldo_after) || 0;
+    const saldoAfter = saldoBefore + penerimaan - pengeluaran;
+
+    const sql = `
+    UPDATE buku_kas_umum
+    SET
+      tanggal = $1,
+      rab_id = $2,
+      kode_ekonomi_id = $3,
+      kode_fungsi_id = $4,
+      uraian = $5,
+      penerimaan = $6,
+      pengeluaran = $7,
+      no_bukti = $8,
+      saldo_after = $9
+    WHERE id = $10
+    RETURNING *
+  `;
+
+    const values = [
+      tanggal,
+      rab_id,
+      kode_ekonomi_id,
+      kode_fungsi_id,
+      uraian,
+      penerimaan,
+      pengeluaran,
+      no_bukti,
+      saldoAfter,
+      id,
+    ];
+
+    const { rows } = await db.query(sql, values);
+    return rows[0];
+  }
+
+  /**
+   * Dropdown Kode Ekonomi
+   */
+  const listKodeEkonomi = async () => {
+    const { rows } = await db.query(`
+      SELECT id, full_code, uraian 
+      FROM kode_ekonomi 
+      ORDER BY full_code
+    `);
+    return rows;
+  };
+  const listAkun = async () => {
+    const { rows } = await db.query(`
+      SELECT id, full_code, uraian
+      FROM kode_ekonomi
+      WHERE level = 'akun'
+      ORDER BY full_code
+    `);
+    return rows;
+  };
+
+  const listJenis = async (akunID) => {
+    const { rows } = await db.query(
+      `
+    SELECT j.id, j.full_code, j.uraian
+    FROM kode_ekonomi j
+    JOIN kode_ekonomi k ON j.parent_id = k.id
+    JOIN kode_ekonomi a ON k.parent_id = a.id
+    WHERE j.level = 'jenis' AND a.id = ${P(1)}
+    ORDER BY j.full_code
+    `,
+      [akunID]
+    );
+    return rows;
+  };
+
+  const listObjek = async (jenisID) => {
+    const { rows } = await db.query(
+      `
+      SELECT id, full_code, uraian
+      FROM kode_ekonomi
+      WHERE level = 'objek' AND parent_id = ${P(1)}
+      ORDER BY full_code
+    `,
+      [jenisID]
+    );
+    return rows;
+  };
+
+  /**
+   * Ambil saldo terakhir. Jika rabId diberikan, ambil saldo terakhir untuk RAB tersebut,
+   * jika tidak, ambil saldo terakhir secara global.
+   */
+  const getLastSaldo = async (rabId) => {
+    let sql;
+    let params = [];
+    if (rabId) {
+      sql = `
+        SELECT saldo_after
+        FROM buku_kas_umum
+        WHERE rab_id = ${P(1)}
+        ORDER BY tanggal DESC, id DESC
+        LIMIT 1
+      `;
+      params = [rabId];
+    } else {
+      sql = `
+        SELECT saldo_after
+        FROM buku_kas_umum
+        ORDER BY tanggal DESC, id DESC
+        LIMIT 1
+      `;
+    }
+
+    const { rows } = await db.query(sql, params);
+    const row = rows[0];
+    return row?.saldo_after ?? 0;
+  };
+
+  async function deleteBku(id) {
+    // Ambil row yang akan dihapus dulu (optional)
+    const {
+      rows: [rowToDelete],
+    } = await db.query(`SELECT * FROM buku_kas_umum WHERE id = $1`, [id]);
+
+    if (!rowToDelete) {
+      throw new Error(`BKU dengan id ${id} tidak ditemukan`);
+    }
+
+    // Hapus row
+    const {
+      rows: [deletedRow],
+    } = await db.query(
+      `
+    DELETE FROM buku_kas_umum
+    WHERE id = $1
+    RETURNING *
+  `,
+      [id]
+    );
+
+    return deletedRow; // kembalikan row yang dihapus
+  }
+
   return {
+    listRAB,
     listBkuRows,
     getBkuSummary,
+    getMonthlySaldo,
     listBidang,
     listSubBidang,
     listKegiatan,
+    insertBku,
+    listKodeEkonomi,
+    listAkun,
+    listJenis,
+    listObjek,
+    getLastSaldo,
+    getBkuById,
+    setPersetujuan,
+    updateBku,
+    deleteBku,
   };
 }

@@ -1,0 +1,224 @@
+### ============================================
+### MODUL: BUKU KAS PEMBANTU PAJAK
+### QA Testing File
+### ============================================
+
+### --- AUTHENTICATION (Jalankan Pertama!) ---
+POST http://localhost:8081/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "kaur_keuangan",
+  "password": "kaur_keuangan_desa_6769"
+}
+
+### ============================================
+### TEST CASE 1: GET - List Semua Pajak
+### Expected: 200 OK, Array of pajak entries
+### ============================================
+
+### TC1.1: Get all pajak entries
+GET http://localhost:8081/api/kas-pembantu/pajak/
+
+### TC1.2: Get all pajak (tanpa trailing slash)
+GET http://localhost:8081/api/kas-pembantu/pajak
+
+### ============================================
+### TEST CASE 2: GET - Pajak by ID
+### Expected: 200 OK / 404 Not Found
+### ============================================
+
+### TC2.1: Get pajak dengan ID valid
+GET http://localhost:8081/api/kas-pembantu/pajak/bkpj002
+
+### TC2.2: Get pajak dengan ID tidak valid
+### Expected: 404 Not Found
+GET http://localhost:8081/api/kas-pembantu/pajak/invalid_pajak_xyz
+
+### ============================================
+### TEST CASE 3: POST - Create Pajak Entry
+### Expected: 201 Created
+### ============================================
+
+### TC3.1: Create pajak PEMOTONGAN (pajak dipotong dari pembayaran)
+POST http://localhost:8081/api/kas-pembantu/pajak
+Content-Type: application/json
+
+{
+  "bku_id": "bku004",
+  "tanggal": "2025-01-15",
+  "uraian": "QA Test: PPh 21 Honorarium Januari",
+  "no_bukti": "QA-TAX-001",
+  "pemotongan": 250000.00,
+  "penyetoran": 0.00
+}
+
+### TC3.2: Create pajak PENYETORAN (pajak disetor ke kas negara)
+POST http://localhost:8081/api/kas-pembantu/pajak
+Content-Type: application/json
+
+{
+  "bku_id": "bku004",
+  "tanggal": "2025-01-20",
+  "uraian": "QA Test: Penyetoran PPh 21 Januari",
+  "no_bukti": "QA-TAX-002",
+  "pemotongan": 0.00,
+  "penyetoran": 250000.00
+}
+
+### TC3.3: Create pajak PPN
+POST http://localhost:8081/api/kas-pembantu/pajak
+Content-Type: application/json
+
+{
+  "bku_id": "bku004",
+  "tanggal": "2025-01-15",
+  "uraian": "QA Test: PPN Pembelian ATK",
+  "no_bukti": "QA-TAX-003",
+  "pemotongan": 110000.00,
+  "penyetoran": 0.00
+}
+
+### TC3.4: Create pajak - MISSING tanggal (Negative Test)
+### Expected: 400 Bad Request
+POST http://localhost:8081/api/kas-pembantu/pajak
+Content-Type: application/json
+
+{
+  "bku_id": "bku004",
+  "uraian": "Test pajak tanpa tanggal",
+  "no_bukti": "QA-TAX-NEG-001",
+  "pemotongan": 100000.00,
+  "penyetoran": 0.00
+}
+
+### TC3.5: Create pajak - MISSING bku_id (Negative Test)
+### Expected: 400 Bad Request
+POST http://localhost:8081/api/kas-pembantu/pajak
+Content-Type: application/json
+
+{
+  "tanggal": "2025-01-15",
+  "uraian": "Test pajak tanpa bku_id",
+  "no_bukti": "QA-TAX-NEG-002",
+  "pemotongan": 100000.00,
+  "penyetoran": 0.00
+}
+
+### TC3.6: Create pajak - Invalid bku_id (Negative Test)
+### Expected: 400/404 Bad Request
+POST http://localhost:8081/api/kas-pembantu/pajak
+Content-Type: application/json
+
+{
+  "bku_id": "invalid_bku_xyz",
+  "tanggal": "2025-01-15",
+  "uraian": "Test pajak dengan bku_id tidak valid",
+  "no_bukti": "QA-TAX-NEG-003",
+  "pemotongan": 100000.00,
+  "penyetoran": 0.00
+}
+
+### TC3.7: Create pajak - Negative amount (Negative Test)
+### Expected: 400 Bad Request (tergantung validasi)
+POST http://localhost:8081/api/kas-pembantu/pajak
+Content-Type: application/json
+
+{
+  "bku_id": "bku004",
+  "tanggal": "2025-01-15",
+  "uraian": "Test pajak dengan nilai negatif",
+  "no_bukti": "QA-TAX-NEG-004",
+  "pemotongan": -100000.00,
+  "penyetoran": 0.00
+}
+
+### ============================================
+### TEST CASE 4: PUT - Edit Pajak Entry
+### Expected: 200 OK
+### ============================================
+
+### TC4.1: Edit pajak dengan data valid
+PUT http://localhost:8081/api/kas-pembantu/pajak/bkpj002
+Content-Type: application/json
+
+{
+  "bku_id": "bku004",
+  "tanggal": "2025-01-16",
+  "uraian": "QA EDITED: PPh 21 Honorarium (Revised)",
+  "no_bukti": "QA-TAX-EDIT",
+  "pemotongan": 275000.00,
+  "penyetoran": 0.00
+}
+
+### TC4.2: Edit pajak dengan ID tidak valid (Negative Test)
+### Expected: 404 Not Found
+PUT http://localhost:8081/api/kas-pembantu/pajak/invalid_pajak_xyz
+Content-Type: application/json
+
+{
+  "uraian": "Test edit dengan ID tidak valid"
+}
+
+### ============================================
+### TEST CASE 5: DELETE - Hapus Pajak Entry
+### Expected: 200 OK / 204 No Content
+### ============================================
+
+### TC5.1: Delete pajak dengan ID valid
+### NOTE: Ganti dengan ID hasil create atau ID test
+DELETE http://localhost:8081/api/kas-pembantu/pajak/bkpj001
+
+### TC5.2: Delete pajak dengan ID tidak valid (Negative Test)
+### Expected: 404 Not Found
+DELETE http://localhost:8081/api/kas-pembantu/pajak/invalid_pajak_xyz
+
+### ============================================
+### TEST CASE 6: Export ke Excel
+### Expected: File Excel / 200 OK
+### ============================================
+
+### TC6.1: Export buku kas pajak
+GET http://localhost:8081/api/kas-pembantu/pajak/export
+
+### ============================================
+### TEST CASE 7: Saldo Calculation Test
+### Skenario: Verifikasi saldo = pemotongan kumulatif - penyetoran kumulatif
+### ============================================
+
+### TC7.1: Get all untuk verifikasi saldo_after
+### Business Logic: 
+### - Pemotongan menambah saldo (pajak yg dipotong, menunggu disetor)
+### - Penyetoran mengurangi saldo (pajak sudah disetor)
+GET http://localhost:8081/api/kas-pembantu/pajak
+
+### ============================================
+### TEST CASE 8: Edge Cases
+### ============================================
+
+### TC8.1: Create dengan pemotongan dan penyetoran = 0 (keduanya nol)
+### Expected: Tergantung business rule
+POST http://localhost:8081/api/kas-pembantu/pajak
+Content-Type: application/json
+
+{
+  "bku_id": "bku004",
+  "tanggal": "2025-01-15",
+  "uraian": "Test dengan keduanya nol",
+  "no_bukti": "QA-TAX-EDGE-001",
+  "pemotongan": 0.00,
+  "penyetoran": 0.00
+}
+
+### TC8.2: Create dengan nilai decimal panjang
+POST http://localhost:8081/api/kas-pembantu/pajak
+Content-Type: application/json
+
+{
+  "bku_id": "bku004",
+  "tanggal": "2025-01-15",
+  "uraian": "Test dengan nilai decimal",
+  "no_bukti": "QA-TAX-EDGE-002",
+  "pemotongan": 123456.789,
+  "penyetoran": 0.00
+}

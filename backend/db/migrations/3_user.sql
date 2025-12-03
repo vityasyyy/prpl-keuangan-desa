@@ -1,5 +1,5 @@
 -- BEGIN;
---
+
 -- INSERT INTO users (username, password_hash, full_name, role)
 -- VALUES
 -- (
@@ -50,5 +50,5 @@
 --   'Kasi Pelayanan',
 --   'kasi_pelayanan'
 -- );
---
+
 -- COMMIT;

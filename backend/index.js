@@ -1,19 +1,19 @@
-import express from 'express';
-import cookieParser from 'cookie-parser';
-import http from 'http';
-import cors from 'cors';
-import { Pool } from 'pg';
-import logger from './src/common/logger/logger.js';
-import { attachLogging } from './src/api/middleware/logging.middleware.js';
-import { securityHeaders } from './src/api/middleware/security-header.middleware.js';
-import { rateLimiter } from './src/api/middleware/rate-limit.middleware.js';
-import { initializeRoutes } from './src/api/router/container.router.js';
-import { createContainerHandler } from './src/api/handler/container.handler.js';
-import 'dotenv/config';
+import express from "express";
+import cookieParser from "cookie-parser";
+import http from "http";
+import cors from "cors";
+import { Pool } from "pg";
+import logger from "./src/common/logger/logger.js";
+import { attachLogging } from "./src/api/middleware/logging.middleware.js";
+import { securityHeaders } from "./src/api/middleware/security-header.middleware.js";
+import { rateLimiter } from "./src/api/middleware/rate-limit.middleware.js";
+import { initializeRoutes } from "./src/api/router/container.router.js";
+import { createContainerHandler } from "./src/api/handler/container.handler.js";
+import "dotenv/config";
 
 async function main() {
-  const isProduction = process.env.NODE_ENV === 'production';
-  logger.initLogger('backend-api', isProduction);
+  const isProduction = process.env.NODE_ENV === "production";
+  logger.initLogger("backend-api", isProduction);
   const pool = new Pool({
     connectionString: process.env.DB_URL,
     max: 10,
@@ -22,29 +22,38 @@ async function main() {
   });
 
   try {
-    await pool.query('SELECT 1');
+    await pool.query("SELECT 1");
   } catch (err) {
-    logger.logError(err, 'Failed to connect to DB on startup');
+    logger.logError(err, "Failed to connect to DB on startup");
     process.exit(1);
   }
 
   const app = express();
-  app.use(express.json({ limit: '28mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '28mb' }));
+  app.use(express.json({ limit: "28mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "28mb" }));
   app.use(cookieParser());
   app.use(attachLogging());
   app.use(securityHeaders);
 
-  const corsUrls = process.env.CORS_URL || '';
-  const allowedOrigins = corsUrls.split(',').map(s => s.trim()).filter(Boolean);
-  app.use(cors(allowedOrigins.length > 0 ? {
-    origin: allowedOrigins,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-    exposedHeaders: ['Content-Length', 'Authorization', 'Content-Type'],
-    maxAge: 12 * 60 * 60,
-  } : {}));
+  const corsUrls = process.env.CORS_URL || "";
+  const allowedOrigins = corsUrls
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  app.use(
+    cors(
+      allowedOrigins.length > 0
+        ? {
+            origin: allowedOrigins,
+            methods: ["GET", "POST", "PUT", "DELETE"],
+            allowedHeaders: ["Content-Type", "Authorization"],
+            credentials: true,
+            exposedHeaders: ["Content-Length", "Authorization", "Content-Type"],
+            maxAge: 12 * 60 * 60,
+          }
+        : {}
+    )
+  );
 
   app.use(rateLimiter);
 
@@ -52,23 +61,50 @@ async function main() {
   try {
     allHandlers = await createContainerHandler(pool);
   } catch (err) {
-    logger.logError({ err }, 'Failed to initialize handlers');
+    logger.logError({ err }, "Failed to initialize handlers");
     process.exit(1);
   }
 
   // Pass the DB pool into initializeRoutes so routers that need it can use it
   initializeRoutes(app, allHandlers, { db: pool });
 
-  app.use((_, res) => res.status(404).json({ message: 'Not Found' }));
+  app.use((_, res) => res.status(404).json({ message: "Not Found" }));
   app.use((err, req, res, next) => {
-    // Use our logger utility to log errors; if a request logger exists, pass it in
-    try {
-      logger.logError(err, 'Unhandled error', {}, req.log);
-    } catch (_) {
-      // Fallback to console if logger misbehaves for any reason
-      console.error('Unhandled error (fallback):', err);
+    if (req.log) {
+      req.log.error({ err }, "Unhandled error");
+    } else {
+      logger.logError(err, "Unhandled error");
     }
-    res.status(500).json({ error: err?.message || 'Internal Server Error' });
+    
+    // Use the status from the error if provided, otherwise default to 500
+    let status = err.status || 500;
+    const response = {
+      error: err.error || err.message || "Internal Server Error"
+    };
+    
+    // Include hint if provided (for validation errors)
+    if (err.hint) {
+      response.hint = err.hint;
+    }
+    
+    // Handle PostgreSQL foreign key violations
+    if (err.code === '23503') {
+      status = 400;
+      response.error = "Data tidak valid";
+      
+      // Extract more helpful information from the error detail
+      if (err.detail) {
+        const match = err.detail.match(/Key \((\w+)\)=\(([^)]+)\)/);
+        if (match) {
+          const [, column, value] = match;
+          response.hint = `Nilai '${value}' tidak ditemukan. Pastikan Anda memilih dari dropdown yang tersedia.`;
+        } else {
+          response.hint = "Data yang dipilih tidak valid. Pastikan memilih dari dropdown yang tersedia.";
+        }
+      }
+    }
+    
+    res.status(status).json(response);
   });
 
   const port = parseInt(process.env.PORT, 10) || 3000;
@@ -77,32 +113,33 @@ async function main() {
   server.listen(port, () => logger.logInfo(`Server listening on port ${port}`));
 
   const shutdown = () => {
-    logger.logInfo('Received shutdown signal, closing server...');
+    logger.logInfo("Received shutdown signal, closing server...");
     server.close(async (err) => {
       if (err) {
-        logger.logError({ err }, 'Error during server close');
+        logger.logError({ err }, "Error during server close");
         process.exit(1);
       }
       try {
         await pool.end();
-        logger.logInfo('Database pool closed');
+        logger.logInfo("Database pool closed");
       } catch (dbErr) {
-        logger.logInfo({ dbErr }, 'Error closing DB pool');
+        logger.logInfo({ dbErr }, "Error closing DB pool");
       }
-      logger.logInfo('Shutdown complete');
+      logger.logInfo("Shutdown complete");
       process.exit(0);
     });
     setTimeout(() => {
-      logger.logError('Forcing shutdown after timeout');
+      logger.logError("Forcing shutdown after timeout");
       process.exit(1);
     }, 10_000);
   };
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 }
 
 main().catch((err) => {
-  console.error('Failed to start application', err);
+  console.error("Failed to start application", err);
   process.exit(1);
 });
+

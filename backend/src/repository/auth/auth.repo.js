@@ -6,6 +6,22 @@ export class AuthRepository {
     this.db = db; // pg Pool or Client
   }
 
+  async createUser({ username, password_hash, full_name, role }, log) {
+    const sql = `
+      INSERT INTO users (username, password_hash, full_name, role)
+      VALUES ($1, $2, $3, $4)
+      RETURNING user_id, username, full_name, role
+    `;
+    try {
+      const { rows } = await this.db.query(sql, [username, password_hash, full_name, role]);
+      logDebug("User created", { username, layer: "repository", operation: "createUser" }, log);
+      return rows[0];
+    } catch (err) {
+      logError(err, "Failed to create user", { username, layer: "repository", operation: "createUser" }, log);
+      throw err;
+    }
+  }
+
   async getUserByUsername(username, log) {
     const query = `
       SELECT user_id, username, password_hash, full_name, role
