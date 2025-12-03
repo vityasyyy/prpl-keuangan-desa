@@ -10,7 +10,7 @@ process.env.ACCESS_SECRET = process.env.ACCESS_SECRET || "access-secret";
 // Mock the auth middleware to bypass JWT verification
 jest.mock("../../middleware/auth.middleware.js", () => ({
   verifyAccessToken: jest.fn((req, res, next) => {
-    req.user = { user_id: 1, username: "testuser", role: "bendahara" };
+    req.user = { user_id: 1, username: "testuser", role: "kaur_keuangan" };
     next();
   }),
 }));
@@ -47,7 +47,7 @@ describe("Bank Desa Handler (Unit)", () => {
 
     // Create JWT token for auth
     token = jwt.sign(
-      { user_id: 1, username: "testuser", role: "bendahara" },
+      { user_id: 1, username: "testuser", role: "kaur_keuangan" },
       process.env.ACCESS_SECRET || "access-secret"
     );
   });
