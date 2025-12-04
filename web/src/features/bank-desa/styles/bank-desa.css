@@ -1,0 +1,49 @@
+﻿/* Bank Desa Feature Styles */
+/* Font utilities based on Figma design */
+
+.bank-desa-page {
+  font-family: var(--font-plus-jakarta-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Font family utilities */
+.font-poppins {
+  font-family: var(--font-poppins), sans-serif;
+}
+
+.font-jakarta {
+  font-family: var(--font-plus-jakarta-sans), sans-serif;
+}
+
+/* Color tokens from Figma */
+.text-neutral-900 {
+  color: #121926;
+}
+
+.text-neutral-700 {
+  color: #364152;
+}
+
+.text-neutral-600 {
+  color: #4B5565;
+}
+
+.border-neutral-600 {
+  border-color: #4B5565;
+}
+
+/* Button colors */
+.bg-orange-primary {
+  background-color: #EF6820;
+}
+
+.bg-orange-primary:hover {
+  background-color: #d55a1a;
+}
+
+.bg-green-primary {
+  background-color: #099250;
+}
+
+.bg-green-primary:hover {
+  background-color: #077d43;
+}

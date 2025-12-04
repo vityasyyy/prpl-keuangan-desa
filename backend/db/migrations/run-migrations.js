@@ -18,14 +18,9 @@ const migrations = [
   "1_init_schema.sql",
   "2_kode_rekening.sql",
   "3_user.sql",
-  "4_update_tabel_rincian.sql",
-  "5_update_tabel_penjabaran.sql",
-  "6_update_table_rincian.sql",
-  "7_add_status_to_rincian.sql",
+  "4_add_timestamps_to_buku_tables.sql",
+  "5_add_persetujuan_to_buku_kas_umum.sql",
 ];
-
-console.log("Running run-migrations.js...");
-console.log("Migrations array:", migrations);
 
 async function runMigrations() {
   const client = await pool.connect();
@@ -39,12 +34,14 @@ async function runMigrations() {
 
       try {
         const sql = readFileSync(filePath, "utf8");
-
+        
         // Skip if file is empty or only contains comments
-        const hasActualSQL = sql.split("\n").some((line) => {
-          const trimmed = line.trim();
-          return trimmed.length > 0 && !trimmed.startsWith("--");
-        });
+        const hasActualSQL = sql
+          .split('\n')
+          .some(line => {
+            const trimmed = line.trim();
+            return trimmed.length > 0 && !trimmed.startsWith('--');
+          });
 
         if (hasActualSQL) {
           await client.query(sql);
@@ -72,15 +69,17 @@ async function runMigrations() {
   }
 }
 
-// Jalankan langsung tanpa check import.meta.url
-runMigrations()
-  .then(() => {
-    console.log("✅ Migration process completed");
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error("💥 Migration process failed:", error);
-    process.exit(1);
-  });
+// Run migrations if this script is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  runMigrations()
+    .then(() => {
+      console.log("✅ Migration process completed");
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error("💥 Migration process failed:", error);
+      process.exit(1);
+    });
+}
 
 export default runMigrations;
