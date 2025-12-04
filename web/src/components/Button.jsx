@@ -1,40 +1,38 @@
-"use client";
+import React from "react";
 
-export default function Button({
+const Button = ({
   children,
   variant = "primary",
-  onClick,
-  icon,
-  className = "",
-  title,
+  size = "md",
+  className,
+  disabled = false,
   ...props
-}) {
-  const baseClasses =
-    'flex px-[14px] py-2 justify-center items-center gap-2 rounded-lg border shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] font-["Inter"] text-sm font-medium leading-5 cursor-pointer transition transform will-change-auto';
+}) => {
+  const base =
+    "inline-flex items-center justify-center gap-2 rounded-md h-fit font-medium transition-colors duration-200 focus:outline-none";
 
-  const variantClasses = {
-    primary:
-      "border-[#0479ce] bg-[#0479ce] text-white hover:brightness-95 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-[#0479ce]/40",
-    orange:
-      "border-[#ff9500] bg-[#ff9500] text-white hover:brightness-95 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-[#ff9500]/40",
-    green:
-      "border-[#099250] bg-[#099250] text-white hover:brightness-95 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-[#099250]/40",
-    danger:
-      "border-[#dc2626] bg-[#dc2626] text-white hover:brightness-95 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-[#dc2626]/40",
-    outline:
-      "border-[#4b5565] bg-transparent text-[#364152] hover:bg-black/5 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-[#4b5565]/20",
+  const variants = {
+    primary: "bg-[#0479CE] text-white hover:bg-sky-700",
+    danger: "bg-[#DC2626] text-white hover:bg-red-700",
+    neutral: "bg-white text-black hover:bg-gray-200",
+    solid: ""
   };
 
+  const sizes = {
+    sm: "px-2.5 py-1.5 text-sm",
+    md: "px-4 py-2 text-base",
+    lg: "px-5 py-3 text-lg",
+  };
+
+  const disabledStyle = disabled ? "opacity-50 cursor-not-allowed" : "";
+
+  const buttonClassName = `${base} ${variants[variant]} ${sizes[size]} ${disabledStyle} ${className}`;
+
   return (
-    <button
-      aria-label={title}
-      title={title}
-      className={`${baseClasses} ${variantClasses[variant]} ${className}`}
-      onClick={onClick}
-      {...props}
-    >
+    <button className={buttonClassName} disabled={disabled} {...props}>
       {children}
-      {icon && <span className="inline-flex items-center">{icon}</span>}
     </button>
   );
-}
+};
+
+export default Button;

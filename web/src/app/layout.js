@@ -30,13 +30,14 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata = {
-  title: "Sistem Keuangan Desa",
-  description: "Sistem Keuangan Desa Banguntapan",
+  title: "SIPKD - Sistem Informasi Pengelolaan Keuangan Desa",
+  description: "Platform digital untuk pengelolaan keuangan desa yang terintegrasi, mulai dari perencanaan anggaran hingga pelaporan akhir tahun.",
+  keywords: ["keuangan desa", "SIPKD", "APBDes", "kas umum", "pengelolaan keuangan"],
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="id" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${poppins.variable} ${plusJakartaSans.variable} antialiased flex h-screen overflow-hidden font-sans`}
       >

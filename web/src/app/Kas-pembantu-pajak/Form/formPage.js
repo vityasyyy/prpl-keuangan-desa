@@ -5,6 +5,8 @@ import Sidebar from "@/features/kas-pembantu/Sidebar";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { Calendar } from "lucide-react";
 import Footer from "@/features/kas-pembantu/Footer";
+import { useAuth } from "@/lib/auth";
+
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
 
@@ -66,6 +68,9 @@ export default function FormPage() {
   const searchParams = useSearchParams();
   const dateInputRef = useRef(null);
   const editId = searchParams.get("id");
+
+  const { token } = useAuth() || {};
+
 
   // Form state
   const [tanggal, setTanggal] = useState("");
@@ -278,7 +283,7 @@ export default function FormPage() {
   // Helper untuk input Rupiah (dipakai berulang kali)
   const RupiahInput = useCallback(({ label, placeholder, value, onChange }) => {
     return (
-      <div className="relative">
+      <div className="relative w-full">
         <label className="mb-1 block text-sm text-gray-800">{label}</label>
         <span className="absolute top-[34px] left-3 text-sm text-gray-400">Rp</span>
         <input
@@ -293,7 +298,7 @@ export default function FormPage() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 w-full">
       <Sidebar />
 
       <div className="flex-1 overflow-y-auto p-8">
