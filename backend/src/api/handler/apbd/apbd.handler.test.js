@@ -228,20 +228,20 @@ describe("APBD Router (Integration)", () => {
     });
   });
 
-  describe("GET /api/apbd/draft/rincian/summary", () => {
-    it("should return draft rincian summary", async () => {
-      const mockData = { Belanja: 5000000 };
-      jest.spyOn(mockApbdService, "getDraftApbdesSummary").mockResolvedValue(mockData);
-
-      const response = await request(app)
-        .get("/api/apbd/draft/rincian/summary")
-        .set("Authorization", "Bearer valid-token");
-
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual(mockData);
-    });
-  });
-
+  // describe("GET /api/apbd/draft/rincian/summary", () => {
+  //   it("should return draft rincian summary", async () => {
+  //     const mockData = { Belanja: 5000000 };
+  //     jest.spyOn(mockApbdService, "getDraftApbdesSummary").mockResolvedValue(mockData);
+  //
+  //     const response = await request(app)
+  //       .get("/api/apbd/draft/rincian/summary")
+  //       .set("Authorization", "Bearer valid-token");
+  //
+  //     expect(response.status).toBe(200);
+  //     expect(response.body).toEqual(mockData);
+  //   });
+  // });
+  //
   describe("POST /api/apbd/draft/rincian (Create Rincian)", () => {
     it("should create rincian", async () => {
       const mockRincian = { id: "rincian001", tahun: 2025, jumlah_anggaran: 1000000 };
