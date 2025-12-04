@@ -34,7 +34,6 @@ COPY --from=builder /app/pnpm-lock.yaml ./
 
 # Copy PNPM node_modules + virtual store
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.pnpm ./ .pnpm
 
 # Copy project source (everything, not selective)
 COPY --from=builder /app ./
