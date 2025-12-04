@@ -5,7 +5,6 @@ import Sidebar from "@/features/kas-pembantu/Sidebar";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { Calendar } from "lucide-react";
 import Footer from "@/features/kas-pembantu/Footer";
-import { useAuth } from "@/lib/auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
 
@@ -22,31 +21,24 @@ function formatCurrency(value) {
   }).format(num);
 }
 
-function parseCurrency(value) {
-  if (!value) return 0;
-  const cleaned = value.replace(/[^0-9,-]/g, "").replace(",", ".");
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? 0 : num;
-}
-
 // Convert any date format to YYYY-MM-DD
 function toYYYYMMDD(dateValue) {
   if (!dateValue) return "";
-  
+
   try {
     // If already in YYYY-MM-DD format, return as is
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
       return dateValue;
     }
-    
+
     // Parse ISO string or other formats
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return "";
-    
+
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
-    
+
     return `${year}-${month}-${day}`;
   } catch {
     return "";
@@ -56,12 +48,12 @@ function toYYYYMMDD(dateValue) {
 // Format YYYY-MM-DD to DD/MM/YYYY for display
 function formatTanggalDisplay(dateValue) {
   if (!dateValue) return "";
-  
+
   try {
     // Extract YYYY-MM-DD format
     const yyyymmdd = toYYYYMMDD(dateValue);
     if (!yyyymmdd) return "";
-    
+
     const [year, month, day] = yyyymmdd.split("-");
     return `${day}/${month}/${year}`;
   } catch {
@@ -74,7 +66,6 @@ export default function Page() {
   const searchParams = useSearchParams();
   const dateInputRef = useRef(null);
   const editId = searchParams.get("id");
-  const { user, token } = useAuth() || {};
 
   // Form state
   const [tanggal, setTanggal] = useState("");
@@ -93,39 +84,39 @@ export default function Page() {
   useEffect(() => {
     async function fetchPanjar() {
       if (!editId) return;
-      
+
       try {
         setLoading(true);
         setError(null);
-        
+
         const headers = {
           "Content-Type": "application/json",
         };
         if (token) {
           headers.Authorization = `Bearer ${token}`;
         }
-        
+
         const response = await fetch(`${API_BASE_URL}/kas-pembantu/panjar/${editId}`, {
           method: "GET",
           headers: headers,
           credentials: "include",
           cache: "no-store",
         });
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
         }
-        
+
         const result = await response.json();
         const data = result.data;
-        
+
         // Convert tanggal to YYYY-MM-DD format for input
         setTanggal(toYYYYMMDD(data.tanggal));
         setUraian(data.uraian);
         setPemberian(data.pemberian ? String(data.pemberian) : "");
         setPertanggungjawaban(data.pertanggungjawaban ? String(data.pertanggungjawaban) : "");
-        setNoBukti(data.no_bukti || "");  
+        setNoBukti(data.no_bukti || "");
       } catch (err) {
         console.error("Fetch error:", err);
         setError(err.message);
@@ -151,20 +142,20 @@ export default function Page() {
         try {
           setLoading(true);
           setError(null);
-          
+
           const headers = {
             "Content-Type": "application/json",
           };
           if (token) {
             headers.Authorization = `Bearer ${token}`;
           }
-          
+
           const response = await fetch(`${API_BASE_URL}/kas-pembantu/panjar/${editId}`, {
             method: "DELETE",
             headers: headers,
             credentials: "include",
           });
-          
+
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           router.push("/Kas-pembantu-panjar");
         } catch (err) {
@@ -198,35 +189,35 @@ export default function Page() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    
+
     // Validation
     if (!tanggal || !uraian) {
       setError("Tanggal dan Uraian harus diisi");
       return;
     }
-    
+
     try {
       setLoading(true);
       setError(null);
-      
+
       // Parse currency values
       const pemberianAmount = pemberian ? parseFloat(pemberian) : 0;
       const pertanggungjawabanAmount = pertanggungjawaban ? parseFloat(pertanggungjawaban) : 0;
-      
+
       // Ensure tanggal is in YYYY-MM-DD format
       const formattedTanggal = toYYYYMMDD(tanggal);
-      
+
       if (!formattedTanggal) {
         throw new Error("Format tanggal tidak valid");
       }
-      
+
       const headers = {
         "Content-Type": "application/json",
       };
       if (token) {
         headers.Authorization = `Bearer ${token}`;
       }
-      
+
       // Prepare payload
       const payload = {
         tanggal: formattedTanggal, // YYYY-MM-DD format
@@ -235,7 +226,7 @@ export default function Page() {
         pemberian: pemberianAmount,
         pertanggungjawaban: pertanggungjawabanAmount,
       };
-      
+
       // Submit to API
       if (editId) {
         const response = await fetch(`${API_BASE_URL}/kas-pembantu/panjar/${editId}`, {
@@ -244,7 +235,7 @@ export default function Page() {
           credentials: "include",
           body: JSON.stringify(payload),
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(`HTTP ${response.status}: ${errorData.error || errorData.message || 'Unknown error'}`);
@@ -256,13 +247,13 @@ export default function Page() {
           credentials: "include",
           body: JSON.stringify(payload),
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(`HTTP ${response.status}: ${errorData.error || errorData.message || 'Unknown error'}`);
         }
       }
-      
+
       // Success
       if (buatLagi && !editId) {
         handleCreate();

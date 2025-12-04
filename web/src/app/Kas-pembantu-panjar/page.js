@@ -5,7 +5,6 @@ import Sidebar from "@/features/kas-pembantu/Sidebar";
 import Header from "@/features/kas-pembantu/Header";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import MonthCard from "@/features/kas-pembantu/MonthCard";
-import { useAuth } from "@/lib/auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
 
@@ -96,13 +95,10 @@ function transformToMonthCards(apiResponse) {
   }));
 }
 export default function KasPembantuPanjar() {
-  const [open, setOpen] = useState(null);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const router = useRouter();
   const pathname = usePathname();
-  const { user, token } = useAuth() || {};
 
   const formPath = `${pathname}/Form`;
 

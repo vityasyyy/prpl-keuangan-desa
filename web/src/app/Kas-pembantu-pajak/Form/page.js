@@ -5,7 +5,6 @@ import Sidebar from "@/features/kas-pembantu/Sidebar";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { Calendar } from "lucide-react";
 import Footer from "@/features/kas-pembantu/Footer";
-import { useAuth } from "@/lib/auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
 
@@ -25,21 +24,21 @@ function formatCurrency(value) {
 // Convert any date format to YYYY-MM-DD
 function toYYYYMMDD(dateValue) {
   if (!dateValue) return "";
-  
+
   try {
     // If already in YYYY-MM-DD format, return as is
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
       return dateValue;
     }
-    
+
     // Parse ISO string or other formats
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return "";
-    
+
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
-    
+
     return `${year}-${month}-${day}`;
   } catch {
     return "";
@@ -49,12 +48,12 @@ function toYYYYMMDD(dateValue) {
 // Format YYYY-MM-DD to DD/MM/YYYY for display
 function formatTanggalDisplay(dateValue) {
   if (!dateValue) return "";
-  
+
   try {
     // Extract YYYY-MM-DD format
     const yyyymmdd = toYYYYMMDD(dateValue);
     if (!yyyymmdd) return "";
-    
+
     const [year, month, day] = yyyymmdd.split("-");
     return `${day}/${month}/${year}`;
   } catch {
@@ -67,7 +66,6 @@ export default function Page() {
   const searchParams = useSearchParams();
   const dateInputRef = useRef(null);
   const editId = searchParams.get("id");
-  const { user, token } = useAuth() || {};
 
   // Form state
   const [tanggal, setTanggal] = useState("");
@@ -86,33 +84,33 @@ export default function Page() {
   useEffect(() => {
     async function fetchPajak() {
       if (!editId) return;
-      
+
       try {
         setLoading(true);
         setError(null);
-        
+
         const headers = {
           "Content-Type": "application/json",
         };
         if (token) {
           headers.Authorization = `Bearer ${token}`;
         }
-        
+
         const response = await fetch(`${API_BASE_URL}/kas-pembantu/pajak/${editId}`, {
           method: "GET",
           headers: headers,
           credentials: "include",
           cache: "no-store",
         });
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
         }
-        
+
         const result = await response.json();
         const data = result.data;
-        
+
         // Convert tanggal to YYYY-MM-DD format for input
         setTanggal(toYYYYMMDD(data.tanggal));
         setUraian(data.uraian);
@@ -144,14 +142,14 @@ export default function Page() {
         try {
           setLoading(true);
           setError(null);
-          
+
           const headers = {
             "Content-Type": "application/json",
           };
           if (token) {
             headers.Authorization = `Bearer ${token}`;
           }
-          
+
           const response = await fetch(`${API_BASE_URL}/kas-pembantu/pajak/${editId}`, {
             method: "DELETE",
             headers: headers,
@@ -190,35 +188,35 @@ export default function Page() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    
+
     // Validation
     if (!tanggal || !uraian) {
       setError("Tanggal dan Uraian harus diisi");
       return;
     }
-    
+
     try {
       setLoading(true);
       setError(null);
-      
+
       // Parse currency values
       const pemotonganAmount = pemotongan ? parseFloat(pemotongan) : 0;
       const penyetoranAmount = penyetoran ? parseFloat(penyetoran) : 0;
-      
+
       // Ensure tanggal is in YYYY-MM-DD format
       const formattedTanggal = toYYYYMMDD(tanggal);
-      
+
       if (!formattedTanggal) {
         throw new Error("Format tanggal tidak valid");
       }
-      
+
       const headers = {
         "Content-Type": "application/json",
       };
       if (token) {
         headers.Authorization = `Bearer ${token}`;
       }
-      
+
       // Prepare payload
       const payload = {
         tanggal: formattedTanggal, // YYYY-MM-DD format
@@ -228,7 +226,7 @@ export default function Page() {
         penyetoran: penyetoranAmount,
         saldo_after: calculatedSaldo,
       };
-      
+
       // Submit to API
       if (editId) {
         const response = await fetch(`${API_BASE_URL}/kas-pembantu/pajak/${editId}`, {
@@ -237,7 +235,7 @@ export default function Page() {
           credentials: "include",
           body: JSON.stringify(payload),
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(`HTTP ${response.status}: ${errorData.error || errorData.message || 'Unknown error'}`);
@@ -249,13 +247,13 @@ export default function Page() {
           credentials: "include",
           body: JSON.stringify(payload),
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(`HTTP ${response.status}: ${errorData.error || errorData.message || 'Unknown error'}`);
         }
       }
-      
+
       // Success
       if (buatLagi && !editId) {
         handleCreate();
@@ -312,120 +310,120 @@ export default function Page() {
           </div>
         ) : (
           <div className="space-y-5">
-          {/* Error Alert */}
-          {error && (
-            <div className="rounded-md border border-red-200 bg-red-50 p-4">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
+            {/* Error Alert */}
+            {error && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-4">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            )}
 
-          {/* Detail */}
-          <div className="rounded-2xl border border-gray-300 bg-white p-5">
-            <h2 className="mb-4 font-semibold text-gray-800">Detail</h2>
+            {/* Detail */}
+            <div className="rounded-2xl border border-gray-300 bg-white p-5">
+              <h2 className="mb-4 font-semibold text-gray-800">Detail</h2>
 
-            <div className="flex flex-col space-y-4">
-              {/* Tanggal */}
-              <div>
-                <label className="mb-1 block text-sm text-gray-800">Tanggal</label>
+              <div className="flex flex-col space-y-4">
+                {/* Tanggal */}
+                <div>
+                  <label className="mb-1 block text-sm text-gray-800">Tanggal</label>
 
-                <div
-                  className="relative w-[180px] cursor-pointer rounded-md border border-gray-300 bg-white py-2 pr-3 pl-9 transition-colors focus-within:ring-1 focus-within:ring-gray-400 hover:bg-gray-50"
-                  onClick={() => dateInputRef.current?.showPicker()}
-                >
-                  <Calendar className="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-gray-600" />
+                  <div
+                    className="relative w-[180px] cursor-pointer rounded-md border border-gray-300 bg-white py-2 pr-3 pl-9 transition-colors focus-within:ring-1 focus-within:ring-gray-400 hover:bg-gray-50"
+                    onClick={() => dateInputRef.current?.showPicker()}
+                  >
+                    <Calendar className="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-gray-600" />
 
+                    <input
+                      ref={dateInputRef}
+                      type="date"
+                      value={tanggal}
+                      onChange={(e) => setTanggal(e.target.value)}
+                      className="absolute inset-0 h-full w-full cursor-pointer [appearance:none] opacity-0 [&::-webkit-calendar-picker-indicator]:opacity-0"
+                    />
+
+                    <span className="pointer-events-none text-sm text-gray-800 uppercase select-none">
+                      {tanggal ? formatTanggalDisplay(tanggal) : "DD/MM/YYYY"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Uraian */}
+                <div>
+                  <label className="mb-1 block text-sm text-gray-800">Uraian</label>
                   <input
-                    ref={dateInputRef}
-                    type="date"
-                    value={tanggal}
-                    onChange={(e) => setTanggal(e.target.value)}
-                    className="absolute inset-0 h-full w-full cursor-pointer [appearance:none] opacity-0 [&::-webkit-calendar-picker-indicator]:opacity-0"
+                    type="text"
+                    placeholder="Uraian Pajak / Retribusi / Penerimaan Lainnya"
+                    value={uraian}
+                    onChange={(e) => setUraian(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-600 focus:ring-1 focus:ring-gray-400 focus:outline-none"
                   />
-
-                  <span className="pointer-events-none text-sm text-gray-800 uppercase select-none">
-                    {tanggal ? formatTanggalDisplay(tanggal) : "DD/MM/YYYY"}
-                  </span>
                 </div>
               </div>
+            </div>
 
-              {/* Uraian */}
-              <div>
-                <label className="mb-1 block text-sm text-gray-800">Uraian</label>
-                <input
-                  type="text"
-                  placeholder="Uraian Pajak / Retribusi / Penerimaan Lainnya"
-                  value={uraian}
-                  onChange={(e) => setUraian(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-600 focus:ring-1 focus:ring-gray-400 focus:outline-none"
+            {/* Arus Dana */}
+            <div className="rounded-2xl border border-gray-300 bg-white p-5">
+              <h2 className="mb-4 font-semibold text-gray-800">Arus Dana</h2>
+
+              <div className="flex flex-col space-y-4">
+                {/* Pemotongan */}
+                <RupiahInput
+                  label="Pemotongan"
+                  value={pemotongan}
+                  onChange={memoizedSetPemotongan}
+                />
+
+                {/* Penyetoran */}
+                <RupiahInput
+                  label="Penyetoran"
+                  value={penyetoran}
+                  onChange={memoizedSetPenyetoran}
                 />
               </div>
             </div>
-          </div>
 
-          {/* Arus Dana */}
-          <div className="rounded-2xl border border-gray-300 bg-white p-5">
-            <h2 className="mb-4 font-semibold text-gray-800">Arus Dana</h2>
+            {/* Bukti dan Kumulatif */}
+            <div className="rounded-2xl border border-gray-300 bg-white p-5">
+              <h2 className="mb-4 font-semibold text-gray-800">Bukti dan Kumulatif</h2>
 
-            <div className="flex flex-col space-y-4">
-              {/* Pemotongan */}
-              <RupiahInput
-                label="Pemotongan"
-                value={pemotongan}
-                onChange={memoizedSetPemotongan}
-              />
-
-              {/* Penyetoran */}
-              <RupiahInput
-                label="Penyetoran"
-                value={penyetoran}
-                onChange={memoizedSetPenyetoran}
-              />
-            </div>
-          </div>
-
-          {/* Bukti dan Kumulatif */}
-          <div className="rounded-2xl border border-gray-300 bg-white p-5">
-            <h2 className="mb-4 font-semibold text-gray-800">Bukti dan Kumulatif</h2>
-
-            <div className="relative">
-              <label className="mb-1 block text-sm text-gray-800">Nomor Bukti</label>
-              <span className="absolute top-[34px] left-3 text-sm text-gray-400">No</span>
-              <input
-                type="text"
-                placeholder="12345"
-                value={noBukti}
-                onChange={(e) => setNoBukti(e.target.value)}
-                className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Saldo (Automated) */}
-          <div>
-            <h2 className="mb-2 font-semibold text-gray-800">Saldo (Automated)</h2>
-            <div className="rounded-md border border-gray-300 bg-white px-3 py-2">
-              <div className="relative flex items-center">
-                <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm text-gray-400">
-                  Rp
-                </span>
+              <div className="relative">
+                <label className="mb-1 block text-sm text-gray-800">Nomor Bukti</label>
+                <span className="absolute top-[34px] left-3 text-sm text-gray-400">No</span>
                 <input
                   type="text"
-                  value={formatCurrency(calculatedSaldo)}
-                  readOnly
-                  className="w-full bg-white py-1.5 pr-3 pl-9 text-sm text-gray-800 focus:outline-none"
+                  placeholder="12345"
+                  value={noBukti}
+                  onChange={(e) => setNoBukti(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
                 />
               </div>
             </div>
-          </div>
 
-          {/* Footer (Tombol Aksi) */}
-          <Footer
-            onDelete={handleDelete}
-            onCreate={handleCreate}
-            onSave={handleSave}
-            isLoading={loading}
-          />
-        </div>
+            {/* Saldo (Automated) */}
+            <div>
+              <h2 className="mb-2 font-semibold text-gray-800">Saldo (Automated)</h2>
+              <div className="rounded-md border border-gray-300 bg-white px-3 py-2">
+                <div className="relative flex items-center">
+                  <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm text-gray-400">
+                    Rp
+                  </span>
+                  <input
+                    type="text"
+                    value={formatCurrency(calculatedSaldo)}
+                    readOnly
+                    className="w-full bg-white py-1.5 pr-3 pl-9 text-sm text-gray-800 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer (Tombol Aksi) */}
+            <Footer
+              onDelete={handleDelete}
+              onCreate={handleCreate}
+              onSave={handleSave}
+              isLoading={loading}
+            />
+          </div>
         )}
       </div>
     </div>

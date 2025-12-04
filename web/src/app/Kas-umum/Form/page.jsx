@@ -33,7 +33,6 @@ export default function FormInputKasUmum() {
   const [rabList, setRabList] = useState([]);
 
   const [kodeRekError, setKodeRekError] = useState(""); // Error state (opsional ditampilkan di UI)
-  const [kodeEkoError, setKodeEkoError] = useState("");
 
   // Parse "5.3 5 3" → ["5","3","5","3"]
   const ekoParse = (s) =>
@@ -794,9 +793,8 @@ export default function FormInputKasUmum() {
                       value={formData.kodeEko}
                       onChange={handleInputChange}
                       placeholder="Kode Rek"
-                      className={`w-[159px] rounded-lg border ${
-                        kodeRekError ? "border-red-500" : "border-[#d4d4d8]"
-                      } bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]`}
+                      className={`w-[159px] rounded-lg border ${kodeRekError ? "border-red-500" : "border-[#d4d4d8]"
+                        } bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]`}
                     />
                     {kodeRekError && <span className="text-xs text-red-500">{kodeRekError}</span>}
                   </div>
@@ -905,9 +903,8 @@ export default function FormInputKasUmum() {
                       value={formData.kodeRek}
                       onChange={handleInputChange}
                       placeholder="Kode Rek"
-                      className={`w-[159px] rounded-lg border ${
-                        kodeRekError ? "border-red-500" : "border-[#d4d4d8]"
-                      } bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]`}
+                      className={`w-[159px] rounded-lg border ${kodeRekError ? "border-red-500" : "border-[#d4d4d8]"
+                        } bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]`}
                     />
                     {kodeRekError && <span className="text-xs text-red-500">{kodeRekError}</span>}
                   </div>

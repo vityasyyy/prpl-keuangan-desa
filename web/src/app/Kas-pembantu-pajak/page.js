@@ -22,9 +22,6 @@ function formatCurrency(value) {
   }).format(num);
 }
 
-function formatMonthDisplay(monthNumber) {
-  return `Bulan ${monthNumber}`;
-}
 
 // Format bulan + tahun langsung
 function formatMonthYearDisplay(month, year) {
@@ -101,13 +98,10 @@ function transformToMonthCards(apiResponse) {
 }
 
 export default function KasPembantuPajak() {
-  const [open, setOpen] = useState(null);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const router = useRouter();
   const pathname = usePathname();
-  const { user, token } = useAuth() || {};
 
   const formPath = `${pathname}/Form`;
 
