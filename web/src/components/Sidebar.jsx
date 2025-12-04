@@ -1,140 +1,123 @@
-'use client';
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import Button from "./button";
+import { Chevron, Logout } from "./icons";
 
 export default function Sidebar() {
+  const [openMenu, setOpenMenu] = useState(null);
+  const pathname = usePathname();
+
+  const toggleMenu = (menu) => {
+    setOpenMenu(openMenu === menu ? null : menu);
+  };
+
+  // pastikan route sesuai struktur project
+  const navRoutes = {
+    "Draft APBDes": "/APBDes/output-draft-apbdes",
+    "Draft Penjabaran APBDes": "/APBDes/output-draft-penjabaran",
+    "Buku APBDes": "/APBDes/buku-apbdes",
+    "Rencana Kegiatan dan Anggaran": "/Rencana/RKA",
+    "Rencana Kerja Kegiatan": "/Rencana/RKK",
+    "Rencana Anggaran Biaya": "/Rencana/RAB",
+    "Buku Kas Umum": "/Penatausahaan/BKU",
+    "Buku Pembantu Pajak": "/Penatausahaan/Pajak",
+    "Buku Pembantu Panjar": "/Penatausahaan/Panjar",
+    "Buku Pembantu Kegiatan": "/Penatausahaan/Kegiatan",
+    "Buku Bank Desa": "/Penatausahaan/Bank",
+    "Laporan Realisasi Akhir Tahun": "/Laporan/AkhirTahun",
+  };
+
+  const listNav = [
+    { title: "APBDes", subItems: ["Draft APBDes", "Draft Penjabaran APBDes", "Buku APBDes"] },
+    {
+      title: "Rencana & Kegiatan",
+      subItems: [
+        "Rencana Kegiatan dan Anggaran",
+        "Rencana Kerja Kegiatan",
+        "Rencana Anggaran Biaya",
+      ],
+    },
+    {
+      title: "Penatausahaan",
+      subItems: [
+        "Buku Kas Umum",
+        "Buku Pembantu Pajak",
+        "Buku Pembantu Panjar",
+        "Buku Pembantu Kegiatan",
+        "Buku Bank Desa",
+      ],
+    },
+    {
+      title: "Laporan Akhir",
+      subItems: ["Laporan Realisasi Akhir Tahun"],
+    },
+  ];
+
   return (
-    <aside className="flex w-[333px] min-h-screen px-[18px] py-[35px] justify-center items-center gap-2.5 flex-shrink-0 bg-[#414141]">
-      <div className="flex w-[287px] flex-col justify-between items-start flex-shrink-0 self-stretch">
-        <div className="flex flex-col justify-center items-start gap-[35px] self-stretch">
-          {/* User Section */}
-          <div className="flex flex-col items-center gap-2.5 self-stretch">
-            <div className="flex flex-col items-start gap-[5px] self-stretch">
-              <div className="self-stretch text-white text-center font-['Plus_Jakarta_Sans'] text-base font-bold leading-6">
-                Kepala Desa
-              </div>
-              <div className="self-stretch text-white text-center font-['Plus_Jakarta_Sans'] text-sm font-bold leading-[19.5px]">
-                Desa Banguntapan
-              </div>
-            </div>
-            <div className="w-[70px] h-[70px] rounded-full bg-[#d9d9d9]"></div>
-            <div className="flex flex-col items-start self-stretch">
-              <div className="self-stretch text-white text-center font-['Plus_Jakarta_Sans'] text-sm font-bold leading-[19.5px]">
-                Sudaryono
-              </div>
-              <div className="self-stretch text-white text-center font-['Plus_Jakarta_Sans'] text-sm font-normal leading-[19.5px]">
-                9232753828
-              </div>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="w-[280px] h-0 border-t border-white/25 mx-auto"></div>
-
-          {/* Navigation Menu */}
-          <nav className="flex w-[287px] flex-col items-start gap-2.5">
-            <div className="flex items-center gap-[5px] self-stretch">
-              <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Poppins'] text-base font-bold leading-6">
-                Beranda
-              </div>
-            </div>
-
-            {/* APBDes Section */}
-            <div className="flex flex-col items-start gap-1 self-stretch">
-              <div className="flex items-center gap-[5px] self-stretch">
-                <svg className="w-5 h-5 flex-shrink-0" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M5 7.5L10 12.5L15 7.5" stroke="#FCFCFD" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Poppins'] text-base font-bold leading-6">
-                  APBDes
-                </div>
-              </div>
-              <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 pl-[25px]">
-                Draft APBDes
-              </div>
-              <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 pl-[25px]">
-                Draft Penjabaran APBDes
-              </div>
-              <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 pl-[25px]">
-                Buku APBDes
-              </div>
-            </div>
-
-            {/* Rencana & Kegiatan Section */}
-            <div className="flex flex-col items-start gap-1 self-stretch">
-              <div className="flex items-center gap-[5px] self-stretch">
-                <svg className="w-5 h-5 flex-shrink-0" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M5 7.5L10 12.5L15 7.5" stroke="#FCFCFD" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Poppins'] text-base font-bold leading-6">
-                  Rencana & Kegiatan
-                </div>
-              </div>
-              <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 pl-[25px]">
-                Rencana Kegiatan dan Anggaran
-              </div>
-              <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 pl-[25px]">
-                Rencana Kerja Kegiatan
-              </div>
-              <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 pl-[25px]">
-                Rencana Anggaran Biaya
-              </div>
-            </div>
-
-            {/* Penatausahaan Section */}
-            <div className="flex flex-col items-start gap-1 self-stretch">
-              <div className="flex items-center gap-[5px] self-stretch">
-                <svg className="w-5 h-5 flex-shrink-0" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M5 7.5L10 12.5L15 7.5" stroke="#FCFCFD" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Poppins'] text-base font-bold leading-6">
-                  Penatausahaan
-                </div>
-              </div>
-              <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 pl-[25px]">
-                <a href="/Kas-umum">Buku Kas Umum</a>
-              </div>
-              <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 pl-[25px]">
-                Buku Pembantu Pajak
-              </div>
-              <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 pl-[25px]">
-                Buku Pembantu Panjar
-              </div>
-              <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 pl-[25px]">
-                Buku Pembantu Kegiatan
-              </div>
-              <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 pl-[25px]">
-                Buku Bank Desa
-              </div>
-            </div>
-
-            {/* Laporan Akhir Section */}
-            <div className="flex flex-col items-start gap-1 self-stretch">
-              <div className="flex items-center gap-[5px] self-stretch">
-                <svg className="w-5 h-5 flex-shrink-0" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M5 7.5L10 12.5L15 7.5" stroke="#FCFCFD" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Poppins'] text-base font-bold leading-6">
-                  Laporan Akhir
-                </div>
-              </div>
-              <div className="flex flex-col justify-center flex-1 self-stretch text-white font-['Plus_Jakarta_Sans'] text-base font-normal leading-6 pl-[25px]">
-                Laporan Realisasi Akhir Tahun
-              </div>
-            </div>
-          </nav>
+    <aside className="sticky top-0 left-0 flex max-h-screen min-h-screen w-66 flex-col justify-between bg-[#3D3D3D] px-6 py-8 text-white">
+      <div>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <h2 className="text-lg font-semibold">Kepala Desa</h2>
+          <p className="text-sm text-gray-300">Desa Banguntapan</p>
+          <div className="mt-4 mb-3 h-20 w-20 rounded-full bg-gray-400"></div>
+          <p className="font-medium">Sudaryono</p>
+          <p className="text-sm text-gray-300">9232753828</p>
         </div>
 
-        {/* Logout Button */}
-        <button className="flex w-[94px] h-[34px] p-2.5 justify-center items-center gap-2.5 rounded-[10px] bg-[#e9e9e9] border-none cursor-pointer">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path
-              d="M10 14H12.6667C13.0203 14 13.3594 13.8595 13.6095 13.6095C13.8595 13.3594 14 13.0203 14 12.6667V3.33333C14 2.97971 13.8595 2.64057 13.6095 2.39052C13.3594 2.14048 13.0203 2 12.6667 2H10M5.33333 11.3333L2 8M2 8L5.33333 4.66667M2 8H10"
-              stroke="#121926"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <span className="text-black font-['Plus_Jakarta_Sans'] text-sm font-normal leading-[19.5px]">Keluar</span>
-        </button>
+        <hr className="my-6 border-gray-600" />
+
+        <nav className="space-y-3">
+          <div>
+            <h3 className="font-semibold text-white">Beranda</h3>
+          </div>
+
+          {listNav.map((item) => (
+            <div key={item.title}>
+              <div
+                onClick={() => toggleMenu(item.title)}
+                className="w-full cursor-pointer px-2 py-1 rounded-md hover:bg-gray-700 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">{item.title}</span>
+                  <Chevron open={openMenu === item.title} />
+                </div>
+              </div>
+
+              {openMenu === item.title && (
+                <ul className="mt-2 space-y-1 font-medium">
+                  {item.subItems.map((subItem) => {
+                    const route = navRoutes[subItem] || "#";
+                    const active = pathname === route;
+                    return (
+                      <li key={subItem}>
+                        <Link
+                          href={route}
+                          className={`block w-full py-1 px-3 rounded-md ${
+                            active
+                              ? "text-white font-light"
+                              : "text-gray-300 hover:text-white"
+                          }`}
+                        >
+                          {subItem}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          ))}
+        </nav>
+      </div>
+
+      <div>
+        <Button variant="neutral">
+          <Logout />
+          <span>Keluar</span>
+        </Button>
       </div>
     </aside>
   );
