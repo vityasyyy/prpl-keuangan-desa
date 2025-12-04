@@ -1,0 +1,366 @@
+###############################################
+# QA TEST SUITE - MODUL KAS PEMBANTU
+# (Kegiatan, Panjar, Pajak)
+#
+# Cara menggunakan:
+#   1. Install extension "REST Client" di VS Code
+#   2. Pastikan backend running di localhost:8081
+#   3. Klik "Send Request" pada setiap request
+#   4. WAJIB login terlebih dahulu sebelum test lainnya
+###############################################
+
+@baseUrl = http://localhost:8081/api
+
+###############################################
+# AUTHENTICATION (WAJIB JALANKAN PERTAMA)
+###############################################
+
+### 🔐 LOGIN - Jalankan ini PERTAMA
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "kaur_keuangan",
+  "password": "kaur_keuangan_desa_6769"
+}
+
+###############################################
+# MODUL 1: KEGIATAN (Buku Kas Pembantu Kegiatan)
+###############################################
+
+### ━━━ READ OPERATIONS ━━━
+
+### 📋 TC-K-01: GET semua kegiatan
+GET {{baseUrl}}/kas-pembantu/kegiatan?showAll=true
+
+### 📋 TC-K-02: GET kegiatan dengan filter bulan/tahun
+GET {{baseUrl}}/kas-pembantu/kegiatan?bulan=1&tahun=2024
+
+### 📋 TC-K-03: GET kegiatan by ID (valid)
+GET {{baseUrl}}/kas-pembantu/kegiatan/bkp001
+
+### 📋 TC-K-04: GET kegiatan by ID (invalid) - Expected: 404
+GET {{baseUrl}}/kas-pembantu/kegiatan/invalid-id-xyz
+
+### 📋 TC-K-05: GET daftar bidang
+GET {{baseUrl}}/kas-pembantu/kegiatan/bidang
+
+### 📋 TC-K-06: GET sub-bidang by bidang ID
+GET {{baseUrl}}/kas-pembantu/kegiatan/sub-bidang/1
+
+### 📋 TC-K-07: GET kegiatan by sub-bidang ID
+GET {{baseUrl}}/kas-pembantu/kegiatan/sub-bidang/kegiatan/4.2
+
+### 📋 TC-K-08: GET BKU ID by kode fungsi
+GET {{baseUrl}}/kas-pembantu/kegiatan/get-bku-id-by-kode-fungsi/2.3.10
+
+### ━━━ CREATE OPERATIONS ━━━
+
+### ➕ TC-K-09: POST create kegiatan (valid)
+# @name createKegiatan
+POST {{baseUrl}}/kas-pembantu/kegiatan
+Content-Type: application/json
+
+{
+  "bku_id": "bku003",
+  "type_enum": "1.1.01",
+  "tanggal": "2024-12-01",
+  "uraian": "TEST: Belanja ATK untuk kantor",
+  "no_bukti": "TEST-KEG-001",
+  "penerimaan_bendahara": 0,
+  "penerimaan_swadaya": 0,
+  "pengeluaran_barang_dan_jasa": 500000,
+  "pengeluaran_modal": 0
+}
+
+### ➕ TC-K-10: POST create kegiatan (missing tanggal) - Expected: 400/500
+POST {{baseUrl}}/kas-pembantu/kegiatan
+Content-Type: application/json
+
+{
+  "bku_id": "bku003",
+  "type_enum": "1.1.01",
+  "uraian": "TEST: Tanpa tanggal",
+  "no_bukti": "TEST-VAL-001"
+}
+
+### ➕ TC-K-11: POST create kegiatan (invalid bku_id) - Expected: 400/500
+POST {{baseUrl}}/kas-pembantu/kegiatan
+Content-Type: application/json
+
+{
+  "bku_id": "invalid-bku-id",
+  "type_enum": "1.1.01",
+  "tanggal": "2024-12-01",
+  "uraian": "TEST: Invalid BKU ID",
+  "no_bukti": "TEST-VAL-002"
+}
+
+### ━━━ UPDATE OPERATIONS ━━━
+### ⚠️ Ganti ID dengan hasil dari createKegiatan di atas
+
+### ✏️ TC-K-12: PUT update kegiatan (valid)
+PUT {{baseUrl}}/kas-pembantu/kegiatan/bkp001
+Content-Type: application/json
+
+{
+  "uraian": "TEST: Honorarium Kepala Desa (UPDATED)",
+  "no_bukti": "NB1-REV",
+  "pengeluaran_barang_dan_jasa": 150000
+}
+
+### ✏️ TC-K-13: PUT update kegiatan (invalid ID) - Expected: 404
+PUT {{baseUrl}}/kas-pembantu/kegiatan/invalid-id-xyz
+Content-Type: application/json
+
+{
+  "uraian": "TEST: Should fail",
+  "no_bukti": "TEST"
+}
+
+### ━━━ DELETE OPERATIONS ━━━
+### ⚠️ Ganti ID dengan ID yang ingin dihapus
+
+### 🗑️ TC-K-14: DELETE kegiatan (valid)
+DELETE {{baseUrl}}/kas-pembantu/kegiatan/bkp1234567890
+
+### 🗑️ TC-K-15: DELETE kegiatan (invalid ID) - Expected: 404
+DELETE {{baseUrl}}/kas-pembantu/kegiatan/invalid-id-xyz
+
+### ━━━ EXPORT ━━━
+
+### 📥 TC-K-16: Export kegiatan ke Excel
+GET {{baseUrl}}/kas-pembantu/kegiatan/export
+
+###############################################
+# MODUL 2: PANJAR (Buku Pembantu Panjar)
+###############################################
+
+### ━━━ READ OPERATIONS ━━━
+
+### 📋 TC-P-01: GET semua panjar
+GET {{baseUrl}}/kas-pembantu/panjar
+
+### 📋 TC-P-02: GET panjar dengan pagination
+GET {{baseUrl}}/kas-pembantu/panjar?page=1&per_page=10
+
+### 📋 TC-P-03: GET panjar dengan filter tanggal
+GET {{baseUrl}}/kas-pembantu/panjar?from=2024-01-01&to=2024-12-31
+
+### 📋 TC-P-04: GET panjar by ID (valid)
+GET {{baseUrl}}/kas-pembantu/panjar/panjar001
+
+### 📋 TC-P-05: GET panjar by ID (invalid) - Expected: 404/message
+GET {{baseUrl}}/kas-pembantu/panjar/invalid-id-xyz
+
+### ━━━ CREATE OPERATIONS ━━━
+
+### ➕ TC-P-06: POST create panjar - pemberian
+# @name createPanjar
+POST {{baseUrl}}/kas-pembantu/panjar
+Content-Type: application/json
+
+{
+  "bku_id": "bku005",
+  "tanggal": "2024-12-01",
+  "uraian": "TEST: Panjar untuk kegiatan desa",
+  "no_bukti": "TEST-PJR-001",
+  "pemberian": 1000000,
+  "pertanggungjawaban": 0
+}
+
+### ➕ TC-P-07: POST create panjar - pertanggungjawaban
+POST {{baseUrl}}/kas-pembantu/panjar
+Content-Type: application/json
+
+{
+  "bku_id": "bku005",
+  "tanggal": "2024-12-05",
+  "uraian": "TEST: Pertanggungjawaban panjar",
+  "no_bukti": "TEST-PJR-002",
+  "pemberian": 0,
+  "pertanggungjawaban": 950000
+}
+
+### ➕ TC-P-08: POST create panjar (missing tanggal) - Expected: 400
+POST {{baseUrl}}/kas-pembantu/panjar
+Content-Type: application/json
+
+{
+  "bku_id": "bku005",
+  "uraian": "TEST: Tanpa tanggal",
+  "no_bukti": "TEST-VAL",
+  "pemberian": 100000
+}
+
+### ➕ TC-P-09: POST create panjar (negative pemberian) - Expected: 400
+POST {{baseUrl}}/kas-pembantu/panjar
+Content-Type: application/json
+
+{
+  "bku_id": "bku005",
+  "tanggal": "2024-12-01",
+  "uraian": "TEST: Pemberian negatif",
+  "no_bukti": "TEST-VAL-NEG",
+  "pemberian": -100000
+}
+
+### ━━━ UPDATE OPERATIONS ━━━
+
+### ✏️ TC-P-10: PUT update panjar (valid)
+PUT {{baseUrl}}/kas-pembantu/panjar/panjar001
+Content-Type: application/json
+
+{
+  "uraian": "TEST: Panjar UPDATED",
+  "no_bukti": "NB1-REV",
+  "pemberian": 550000
+}
+
+### ✏️ TC-P-11: PUT update panjar (invalid ID) - Expected: 404
+PUT {{baseUrl}}/kas-pembantu/panjar/invalid-id-xyz
+Content-Type: application/json
+
+{
+  "uraian": "TEST: Should fail",
+  "no_bukti": "TEST"
+}
+
+### ━━━ DELETE OPERATIONS ━━━
+
+### 🗑️ TC-P-12: DELETE panjar (valid)
+DELETE {{baseUrl}}/kas-pembantu/panjar/panjar1234567890
+
+### 🗑️ TC-P-13: DELETE panjar (invalid ID) - Expected: 404
+DELETE {{baseUrl}}/kas-pembantu/panjar/invalid-id-xyz
+
+### ━━━ EXPORT ━━━
+
+### 📥 TC-P-14: Export panjar ke Excel
+GET {{baseUrl}}/kas-pembantu/panjar/export
+
+###############################################
+# MODUL 3: PAJAK (Buku Kas Pajak)
+###############################################
+
+### ━━━ READ OPERATIONS ━━━
+
+### 📋 TC-T-01: GET semua pajak
+GET {{baseUrl}}/kas-pembantu/pajak
+
+### 📋 TC-T-02: GET pajak dengan pagination
+GET {{baseUrl}}/kas-pembantu/pajak?page=1&per_page=10
+
+### 📋 TC-T-03: GET pajak dengan filter tanggal
+GET {{baseUrl}}/kas-pembantu/pajak?from=2024-01-01&to=2024-12-31
+
+### 📋 TC-T-04: GET pajak by ID (valid)
+GET {{baseUrl}}/kas-pembantu/pajak/bkpj001
+
+### 📋 TC-T-05: GET pajak by ID (invalid) - Expected: 404/message
+GET {{baseUrl}}/kas-pembantu/pajak/invalid-id-xyz
+
+### ━━━ CREATE OPERATIONS ━━━
+
+### ➕ TC-T-06: POST create pajak - pemotongan
+# @name createPajak
+POST {{baseUrl}}/kas-pembantu/pajak
+Content-Type: application/json
+
+{
+  "bku_id": "bku004",
+  "tanggal": "2024-12-15",
+  "uraian": "TEST: PPh 21 Honorarium Desember",
+  "no_bukti": "TEST-PJK-001",
+  "pemotongan": 250000,
+  "penyetoran": 0
+}
+
+### ➕ TC-T-07: POST create pajak - penyetoran
+POST {{baseUrl}}/kas-pembantu/pajak
+Content-Type: application/json
+
+{
+  "bku_id": null,
+  "tanggal": "2024-12-20",
+  "uraian": "TEST: Setor PPh 21 Desember",
+  "no_bukti": "TEST-PJK-002",
+  "pemotongan": 0,
+  "penyetoran": 250000
+}
+
+### ➕ TC-T-08: POST create pajak (missing tanggal) - Expected: 400
+POST {{baseUrl}}/kas-pembantu/pajak
+Content-Type: application/json
+
+{
+  "bku_id": "bku004",
+  "uraian": "TEST: Tanpa tanggal",
+  "no_bukti": "TEST-VAL",
+  "pemotongan": 100000
+}
+
+### ➕ TC-T-09: POST create pajak (missing no_bukti) - Expected: 400
+POST {{baseUrl}}/kas-pembantu/pajak
+Content-Type: application/json
+
+{
+  "bku_id": "bku004",
+  "tanggal": "2024-12-01",
+  "uraian": "TEST: Tanpa no_bukti",
+  "pemotongan": 100000
+}
+
+### ➕ TC-T-10: POST create pajak (negative pemotongan) - Expected: 400
+POST {{baseUrl}}/kas-pembantu/pajak
+Content-Type: application/json
+
+{
+  "bku_id": "bku004",
+  "tanggal": "2024-12-01",
+  "uraian": "TEST: Pemotongan negatif",
+  "no_bukti": "TEST-VAL-NEG",
+  "pemotongan": -100000
+}
+
+### ━━━ UPDATE OPERATIONS ━━━
+
+### ✏️ TC-T-11: PUT update pajak (valid)
+PUT {{baseUrl}}/kas-pembantu/pajak/bkpj001
+Content-Type: application/json
+
+{
+  "uraian": "TEST: PPh 21 UPDATED",
+  "no_bukti": "NB1123-REV",
+  "pemotongan": 175000
+}
+
+### ✏️ TC-T-12: PUT update pajak (invalid ID) - Expected: 404
+PUT {{baseUrl}}/kas-pembantu/pajak/invalid-id-xyz
+Content-Type: application/json
+
+{
+  "uraian": "TEST: Should fail",
+  "no_bukti": "TEST"
+}
+
+### ━━━ DELETE OPERATIONS ━━━
+
+### 🗑️ TC-T-13: DELETE pajak (valid)
+DELETE {{baseUrl}}/kas-pembantu/pajak/pajak1234567890
+
+### 🗑️ TC-T-14: DELETE pajak (invalid ID) - Expected: 404
+DELETE {{baseUrl}}/kas-pembantu/pajak/invalid-id-xyz
+
+### ━━━ EXPORT ━━━
+
+### 📥 TC-T-15: Export pajak ke Excel
+GET {{baseUrl}}/kas-pembantu/pajak/export
+
+###############################################
+# HEALTH CHECK
+###############################################
+
+### 💚 Health check endpoint
+GET {{baseUrl}}/kas-pembantu/health

@@ -1,132 +1,145 @@
-import express from 'express';
-const http = require('http');
-const cors = require('cors');
-const { Pool } = require('pg');  // example
-const logger = require('./src/common/logger');
-const {
-  attachLogging,
-  rateLimiter,
-  securityHeaders
-} = require('./src/api/middleware');
-const { initializeRoutes } = require('./src/api/router');
+import express from "express";
+import cookieParser from "cookie-parser";
+import http from "http";
+import cors from "cors";
+import { Pool } from "pg";
+import logger from "./src/common/logger/logger.js";
+import { attachLogging } from "./src/api/middleware/logging.middleware.js";
+import { securityHeaders } from "./src/api/middleware/security-header.middleware.js";
+import { rateLimiter } from "./src/api/middleware/rate-limit.middleware.js";
+import { initializeRoutes } from "./src/api/router/container.router.js";
+import { createContainerHandler } from "./src/api/handler/container.handler.js";
+import "dotenv/config";
 
 async function main() {
-  // Initialize logger
-  const isProduction = process.env.NODE_ENV === 'production';
-  logger.initLogger('backend-api', isProduction);
-
-  const log = logger.getLogger();
-
-  // Database connection (example with pg Pool)
-  const dbConfig = {
+  const isProduction = process.env.NODE_ENV === "production";
+  logger.initLogger("backend-api", isProduction);
+  const pool = new Pool({
     connectionString: process.env.DB_URL,
-    // optionally: max, idleTimeoutMillis, etc
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000
-  };
-  const pool = new Pool(dbConfig);
+    connectionTimeoutMillis: 2000,
+  });
 
   try {
-    // Test connection
-    await pool.query('SELECT 1');
+    await pool.query("SELECT 1");
   } catch (err) {
-    log.error({ err }, 'Failed to connect to DB on startup');
+    logger.logError(err, "Failed to connect to DB on startup");
     process.exit(1);
   }
 
   const app = express();
-
-  // Middlewares
-
-  // Body parsing + request size limit
-  app.use(express.json({ limit: '28mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '28mb' }));
-
-  // Logging (request id + request logging)
+  app.use(express.json({ limit: "28mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "28mb" }));
+  app.use(cookieParser());
   app.use(attachLogging());
+  app.use(securityHeaders);
 
-  // Security headers
-  app.use(securityHeaders());
+  const corsUrls = process.env.CORS_URL || "";
+  const allowedOrigins = corsUrls
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  app.use(
+    cors(
+      allowedOrigins.length > 0
+        ? {
+            origin: allowedOrigins,
+            methods: ["GET", "POST", "PUT", "DELETE"],
+            allowedHeaders: ["Content-Type", "Authorization"],
+            credentials: true,
+            exposedHeaders: ["Content-Length", "Authorization", "Content-Type"],
+            maxAge: 12 * 60 * 60,
+          }
+        : {}
+    )
+  );
 
-  // CORS
-  const corsUrls = process.env.CORS_URL || '';
-  const allowedOrigins = corsUrls.split(',').map(s => s.trim()).filter(s => s);
-  if (allowedOrigins.length > 0) {
-    app.use(cors({
-      origin: allowedOrigins,
-      methods: ['GET', 'POST', 'PUT', 'DELETE'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-      credentials: true,
-      exposedHeaders: ['Content-Length', 'Authorization', 'Content-Type'],
-      maxAge: 12 * 60 * 60, // in seconds
-    }));
-  } else {
-    // If no allowedOrigins configured, you could default to allow all or none
-    app.use(cors());
+  app.use(rateLimiter);
+
+  let allHandlers;
+  try {
+    allHandlers = await createContainerHandler(pool);
+  } catch (err) {
+    logger.logError({ err }, "Failed to initialize handlers");
+    process.exit(1);
   }
 
-  // Rate limiter
-  app.use(rateLimiter());
+  // Pass the DB pool into initializeRoutes so routers that need it can use it
+  initializeRoutes(app, allHandlers, { db: pool });
 
-  // Mount routers
-  // `initializeRoutes` should accept (app, dependencies) or return a router
-  initializeRoutes(app, { db: pool /*, other dependencies if any */ });
-
-  // 404 fallback
-  app.use((_, res) => {
-    res.status(404).json({ message: 'Not Found' });
-  });
-
-  // Error handling
-  app.use((err, req, res, _) => {
-    // Log via request logger if exists
+  app.use((_, res) => res.status(404).json({ message: "Not Found" }));
+  app.use((err, req, res, next) => {
     if (req.log) {
-      req.log.error({ err }, 'Unhandled error');
+      req.log.error({ err }, "Unhandled error");
     } else {
-      log.error({ err }, 'Unhandled error (no req.log)');
+      logger.logError(err, "Unhandled error");
     }
-    res.status(500).json({ error: err.message || 'Internal Server Error' });
+    
+    // Use the status from the error if provided, otherwise default to 500
+    let status = err.status || 500;
+    const response = {
+      error: err.error || err.message || "Internal Server Error"
+    };
+    
+    // Include hint if provided (for validation errors)
+    if (err.hint) {
+      response.hint = err.hint;
+    }
+    
+    // Handle PostgreSQL foreign key violations
+    if (err.code === '23503') {
+      status = 400;
+      response.error = "Data tidak valid";
+      
+      // Extract more helpful information from the error detail
+      if (err.detail) {
+        const match = err.detail.match(/Key \((\w+)\)=\(([^)]+)\)/);
+        if (match) {
+          const [, column, value] = match;
+          response.hint = `Nilai '${value}' tidak ditemukan. Pastikan Anda memilih dari dropdown yang tersedia.`;
+        } else {
+          response.hint = "Data yang dipilih tidak valid. Pastikan memilih dari dropdown yang tersedia.";
+        }
+      }
+    }
+    
+    res.status(status).json(response);
   });
 
   const port = parseInt(process.env.PORT, 10) || 3000;
   const server = http.createServer(app);
 
-  server.listen(port, () => {
-    log.info(`Server listening on port ${port}`);
-  });
+  server.listen(port, () => logger.logInfo(`Server listening on port ${port}`));
 
-  // Graceful shutdown logic
   const shutdown = () => {
-    log.info('Received shutdown signal, closing server...');
+    logger.logInfo("Received shutdown signal, closing server...");
     server.close(async (err) => {
       if (err) {
-        log.error({ err }, 'Error during server close');
+        logger.logError({ err }, "Error during server close");
         process.exit(1);
       }
       try {
-        // close DB
         await pool.end();
-        log.info('Database pool closed');
+        logger.logInfo("Database pool closed");
       } catch (dbErr) {
-        log.error({ dbErr }, 'Error closing DB pool');
+        logger.logInfo({ dbErr }, "Error closing DB pool");
       }
-      log.info('Shutdown complete');
+      logger.logInfo("Shutdown complete");
       process.exit(0);
     });
-
-    // Fallback: force exit if not closed in N ms
     setTimeout(() => {
-      log.error('Forcing shutdown after timeout');
+      logger.logError("Forcing shutdown after timeout");
       process.exit(1);
-    }, 10 * 1000);
+    }, 10_000);
   };
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 }
 
-main().catch(err => {
-  console.error('Failed to start application', err);
+main().catch((err) => {
+  console.error("Failed to start application", err);
   process.exit(1);
 });
+

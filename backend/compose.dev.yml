@@ -17,14 +17,14 @@ services:
   backend-api:
     build:
       context: .
-      dockerfile: dockerfiles/Dockerfile.dev
+      dockerfile: dockerfiles/Dockerfile.prod
     env_file:
       - .env
     depends_on:
       backend-db:
         condition: service_healthy
     volumes:
-      - ./backend:/app
+      - .:/app
       - /app/node_modules
     networks:
       - prpl-network
@@ -32,7 +32,7 @@ services:
       - "${PORT}:${PORT}"
     environment:
       NODE_ENV: development
-    command: sh -c "pnpm run seed && pnpm dev"
+    command: sh -c "pnpm seed && pnpm dev"
 
 networks:
   prpl-network:

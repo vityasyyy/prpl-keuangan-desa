@@ -2,6 +2,9 @@
 -- DROP (for clean re-run)
 -- =========================
 DROP TABLE IF EXISTS 
+    refresh_tokens,
+    users,
+    buku_pembantu_panjar,
     buku_bank,
     buku_kas_pajak,
     buku_kas_pembantu,
@@ -141,31 +144,44 @@ CREATE TABLE buku_kas_umum (
     no_bukti TEXT,
     penerimaan NUMERIC(18,2) DEFAULT 0,
     pengeluaran NUMERIC(18,2) DEFAULT 0,
-    saldo_after NUMERIC(18,2) DEFAULT 0
+    saldo_after NUMERIC(18,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    persetujuan TEXT DEFAULT 'pending'
 );
 
 CREATE TABLE buku_kas_pembantu (
     id TEXT PRIMARY KEY,
-    bku_id TEXT NOT NULL REFERENCES buku_kas_umum(id) ON DELETE CASCADE,
+    bku_id TEXT REFERENCES buku_kas_umum(id) ON DELETE CASCADE,
     type_enum TEXT,
     tanggal DATE NOT NULL,
     uraian TEXT,
-    penerimaan NUMERIC(18,2) DEFAULT 0,
-    pengeluaran NUMERIC(18,2) DEFAULT 0,
-    saldo_after NUMERIC(18,2) DEFAULT 0
+    no_bukti TEXT,
+    penerimaan_bendahara NUMERIC(18,2) DEFAULT 0,
+    penerimaan_swadaya NUMERIC(18,2) DEFAULT 0,
+    pengeluaran_barang_dan_jasa NUMERIC(18,2) DEFAULT 0,
+    pengeluaran_modal NUMERIC(18,2) DEFAULT 0,
+    saldo_after NUMERIC(18,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE buku_kas_pajak (
     id TEXT PRIMARY KEY,
+    bku_id TEXT REFERENCES buku_kas_umum(id) ON DELETE CASCADE,
     tanggal DATE NOT NULL,
     uraian TEXT,
+    no_bukti TEXT,
     pemotongan NUMERIC(18,2) DEFAULT 0,
     penyetoran NUMERIC(18,2) DEFAULT 0,
-    saldo_after NUMERIC(18,2) DEFAULT 0
+    saldo_after NUMERIC(18,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE buku_bank (
     id TEXT PRIMARY KEY,
+    bku_id TEXT REFERENCES buku_kas_umum(id) ON DELETE CASCADE,
     tanggal DATE NOT NULL,
     uraian TEXT,
     bukti_transaksi TEXT,
@@ -174,11 +190,26 @@ CREATE TABLE buku_bank (
     penarikan NUMERIC(18,2) DEFAULT 0,
     pajak NUMERIC(18,2) DEFAULT 0,
     biaya_admin NUMERIC(18,2) DEFAULT 0,
-    saldo_after NUMERIC(18,2) DEFAULT 0
+    saldo_after NUMERIC(18,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE buku_pembantu_panjar (
+    id TEXT PRIMARY KEY,
+    bku_id TEXT REFERENCES buku_kas_umum(id) ON DELETE CASCADE,
+    tanggal DATE NOT NULL,
+    uraian TEXT,
+    no_bukti TEXT,
+    pemberian NUMERIC(18,2) DEFAULT 0,
+    pertanggungjawaban NUMERIC(18,2) DEFAULT 0,
+    saldo_after NUMERIC(18,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE users (
-  id TEXT PRIMARY KEY,
+  user_id SERIAL PRIMARY KEY,
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   full_name TEXT NOT NULL,
@@ -191,9 +222,18 @@ CREATE TABLE users (
       'kasi_pelayanan',
       'kaur_perencanaan',
       'kaur_tu_umum',
-      'kades'
+      'kepala_desa'
     )
-  ),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  )
+);
+
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    refresh_token_id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    refresh_token VARCHAR(255) NOT NULL,
+    expiry TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked BOOLEAN NOT NULL DEFAULT FALSE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );

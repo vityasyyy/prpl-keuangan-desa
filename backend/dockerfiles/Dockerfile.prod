@@ -14,8 +14,7 @@ COPY pnpm-lock.yaml package.json ./
 RUN pnpm install --frozen-lockfile
 
 # Copy source code
-COPY src ./src
-
+COPY . .
 # (Optional) build step if using TS or bundlers
 # RUN pnpm run build
 
@@ -33,8 +32,6 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/pnpm-lock.yaml ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/src ./src
-
-RUN chmod +x database/scripts/migrate.sh
 
 USER node
 
