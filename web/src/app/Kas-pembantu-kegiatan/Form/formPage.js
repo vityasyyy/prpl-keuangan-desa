@@ -459,7 +459,7 @@ export default function FormPage() {
   );
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 w-full">
       <Sidebar />
 
       <div className="flex-1 overflow-y-auto p-8">

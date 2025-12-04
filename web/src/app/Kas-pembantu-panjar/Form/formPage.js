@@ -5,6 +5,8 @@ import Sidebar from "@/features/kas-pembantu/Sidebar";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import { Calendar } from "lucide-react";
 import Footer from "@/features/kas-pembantu/Footer";
+import { useAuth } from "@/lib/auth";
+
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
 
@@ -66,6 +68,9 @@ export default function FormPage() {
   const searchParams = useSearchParams();
   const dateInputRef = useRef(null);
   const editId = searchParams.get("id");
+
+  const { token } = useAuth() || {};
+
 
   // Form state
   const [tanggal, setTanggal] = useState("");
@@ -293,7 +298,7 @@ export default function FormPage() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 w-full">
       <Sidebar />
 
       <div className="flex-1 overflow-y-auto p-8">
