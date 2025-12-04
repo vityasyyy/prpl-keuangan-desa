@@ -4,7 +4,7 @@ import kasPembantuRouter from "./kas-pembantu/kas-pembantu.router.js";
 import createKasUmumRouter from "./kas-umum/kas-umum.router.js";
 import rabRouter from "./rab/rab.router.js";
 import createAuthRouter from "./auth/auth.router.js";
-
+import apbdRouter from "./apbd/apbd.router.js";
 // Accept a third argument for shared dependencies (e.g., db pool)
 export function initializeRoutes(app, handlers, deps = {}) {
   // auth routes
