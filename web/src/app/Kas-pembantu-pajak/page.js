@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Sidebar from "@/features/kas-pembantu/Sidebar";
 import Header from "@/features/kas-pembantu/Header";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
@@ -102,6 +102,7 @@ export default function KasPembantuPajak() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const pathname = usePathname();
+  const { token } = useAuth() || {};
 
   const formPath = `${pathname}/Form`;
 

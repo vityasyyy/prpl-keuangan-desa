@@ -273,7 +273,7 @@ export default function BukuKasUmumPage() {
             {monthNames.map((label, idx) => {
               const key = toMonthKey(year, idx);
               const monthLabel = `${label}`;
-              const data = store[key];
+              // const data = store[key];
               const isOpen = !!expanded[key];
 
               return (
@@ -422,7 +422,7 @@ export default function BukuKasUmumPage() {
                                     col.key === "saldo" ? (
                                     fmtIDR(
                                       row[col.key] ??
-                                        (col.key === "netto_transaksi" ? row.nettoTransaksi : "")
+                                      (col.key === "netto_transaksi" ? row.nettoTransaksi : "")
                                     )
                                   ) : (
                                     row[col.key]

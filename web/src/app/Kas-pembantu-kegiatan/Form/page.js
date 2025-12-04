@@ -25,21 +25,21 @@ function formatCurrency(value) {
 // Convert any date format to YYYY-MM-DD
 function toYYYYMMDD(dateValue) {
   if (!dateValue) return "";
-  
+
   try {
     // If already in YYYY-MM-DD format, return as is
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
       return dateValue;
     }
-    
+
     // Parse ISO string or other formats
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return "";
-    
+
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
-    
+
     return `${year}-${month}-${day}`;
   } catch {
     return "";
@@ -49,12 +49,12 @@ function toYYYYMMDD(dateValue) {
 // Format YYYY-MM-DD to DD/MM/YYYY for display
 function formatTanggalDisplay(dateValue) {
   if (!dateValue) return "";
-  
+
   try {
     // Extract YYYY-MM-DD format
     const yyyymmdd = toYYYYMMDD(dateValue);
     if (!yyyymmdd) return "";
-    
+
     const [year, month, day] = yyyymmdd.split("-");
     return `${day}/${month}/${year}`;
   } catch {
@@ -67,7 +67,7 @@ export default function Page() {
   const searchParams = useSearchParams();
   const dateInputRef = useRef(null);
   const editId = searchParams.get("id");
-  const { user, token } = useAuth() || {};
+  const { token } = useAuth() || {};
 
   // Form state
   const [tanggal, setTanggal] = useState("");
@@ -128,7 +128,7 @@ export default function Page() {
   useEffect(() => {
     async function fetchKegiatanData() {
       if (!editId) return;
-      
+
       try {
         setLoading(true);
         const headers = {
@@ -137,7 +137,7 @@ export default function Page() {
         if (token) {
           headers.Authorization = `Bearer ${token}`;
         }
-        
+
         const response = await fetch(`${API_BASE_URL}/kas-pembantu/kegiatan/${editId}`, {
           headers: headers,
           credentials: "include",
@@ -145,24 +145,24 @@ export default function Page() {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const result = await response.json();
         const data = result.data;
-        
+
         // Convert tanggal to YYYY-MM-DD format for input
         setTanggal(toYYYYMMDD(data.tanggal));
         setUraian(data.uraian || "");
-        
+
         // Map stored data back to form fields
         setDariBendahara(String(data.penerimaan_bendahara || 0));
         setSwadaya(String(data.penerimaan_swadaya || 0));
-        setBelanjaBarang(String(data.pengeluaran_barang_dan_jasa || 0));  
+        setBelanjaBarang(String(data.pengeluaran_barang_dan_jasa || 0));
         setBelanjaModal(String(data.pengeluaran_modal || 0));
-        
+
         // Set type_enum to kegiatan dropdown if available
         setKodeRek(data.type_enum || "");
         setBidang("");
         setSubBidang("");
-        setNomorBukti(data.no_bukti || ""); 
+        setNomorBukti(data.no_bukti || "");
         setJumlahPengembalian("0");
-        
+
       } catch (err) {
         setError(err.message);
       } finally {
@@ -183,7 +183,7 @@ export default function Page() {
         if (token) {
           headers.Authorization = `Bearer ${token}`;
         }
-        
+
         const response = await fetch(`${API_BASE_URL}/kas-pembantu/kegiatan/bidang`, {
           headers: headers,
           credentials: "include",
@@ -210,7 +210,7 @@ export default function Page() {
           if (token) {
             headers.Authorization = `Bearer ${token}`;
           }
-          
+
           const response = await fetch(`${API_BASE_URL}/kas-pembantu/kegiatan/sub-bidang/${bidang}`, {
             headers: headers,
             credentials: "include",
@@ -243,7 +243,7 @@ export default function Page() {
           if (token) {
             headers.Authorization = `Bearer ${token}`;
           }
-          
+
           const response = await fetch(`${API_BASE_URL}/kas-pembantu/kegiatan/sub-bidang/kegiatan/${subBidang}`, {
             headers: headers,
             credentials: "include",
@@ -271,7 +271,7 @@ export default function Page() {
     else {
       setKodeRek("");
     }
-  }, [kegiatan, kegiatanOptions]);  
+  }, [kegiatan, kegiatanOptions]);
 
   // Calculate saldo automatically when input values change
   useEffect(() => {
@@ -327,16 +327,16 @@ export default function Page() {
   const handleCreate = () => {
     setBuatLagi(true);
   };
-  
+
   const handleSave = async (e) => {
     e.preventDefault();
 
     // Validation
-    if (!tanggal || !uraian || !kodeRek){
+    if (!tanggal || !uraian || !kodeRek) {
       setError(`Tanggal, Uraian, dan Kode Rek harus diisi`);
       return;
     }
-    
+
     try {
       setLoading(true);
       setError(null);
@@ -349,16 +349,16 @@ export default function Page() {
 
       // Ensure tanggal is in YYYY-MM-DD format
       const formattedTanggal = toYYYYMMDD(tanggal);
-      
+
       if (!formattedTanggal) {
         throw new Error("Format tanggal tidak valid");
       }
 
       // Map classification to type_enum
       const bku_id = await getBKUidByKodeFungsi(kodeRek);
-      if(bku_id === null){
+      if (bku_id === null) {
         // setError("Kode Rek tidak valid atau tidak ditemukan");
-        return ;
+        return;
       }
 
       // Prepare payload
@@ -371,7 +371,7 @@ export default function Page() {
         penerimaan_bendahara: penerimaan_bendahara,
         penerimaan_swadaya: penerimaan_swadaya,
         pengeluaran_barang_dan_jasa: pengeluaran_barang_dan_jasa,
-        pengeluaran_modal: pengeluaran_modal, 
+        pengeluaran_modal: pengeluaran_modal,
       };
 
       // Submit to API - use update if editId exists, otherwise create
@@ -382,7 +382,7 @@ export default function Page() {
           credentials: "include",
           body: JSON.stringify(payload),
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(`HTTP ${response.status}: ${errorData.error || errorData.message || 'Unknown error'}`);
@@ -394,13 +394,13 @@ export default function Page() {
           credentials: "include",
           body: JSON.stringify(payload),
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(`HTTP ${response.status}: ${errorData.error || errorData.message || 'Unknown error'}`);
         }
       }
-      
+
       // Success - check if "buat lagi" is enabled
       if (buatLagi && !editId) {
         handleCreate();
@@ -476,190 +476,190 @@ export default function Page() {
           </div>
         ) : (
           <form className="space-y-5" onSubmit={handleSave}>
-          {/* Error Alert */}
-          {error && (
-            <div className="rounded-md border border-red-200 bg-red-50 p-4">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
-
-          {/* Detail */}
-          <div className="rounded-2xl border border-gray-300 bg-white p-5">
-            <h2 className="mb-4 font-semibold text-gray-800">Detail</h2>
-
-            <div className="flex flex-col space-y-4">
-              {/* Tanggal */}
-              <div>
-                <label className="mb-1 block text-sm text-gray-800">Tanggal</label>
-                <div
-                  className="relative w-[180px] cursor-pointer rounded-md border border-gray-300 bg-white py-2 pr-3 pl-9 transition-colors focus-within:ring-1 focus-within:ring-gray-400 hover:bg-gray-50"
-                  onClick={() => dateInputRef.current?.showPicker()}
-                >
-                  <Calendar className="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-gray-600" />
-                  <input
-                    ref={dateInputRef}
-                    type="date"
-                    value={tanggal}
-                    onChange={(e) => setTanggal(e.target.value)}
-                    className="absolute inset-0 h-full w-full cursor-pointer [appearance:none] opacity-0 [&::-webkit-calendar-picker-indicator]:opacity-0"
-                  />
-                  <span className="pointer-events-none text-sm text-gray-800 uppercase select-none">
-                    {tanggal ? formatTanggalDisplay(tanggal) : "DD/MM/YYYY"}
-                  </span>
-                </div>
+            {/* Error Alert */}
+            {error && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-4">
+                <p className="text-sm text-red-700">{error}</p>
               </div>
+            )}
 
-              {/* Klasifikasi Bidang Kegiatan */}
-              <div>
-                <label className="mb-1 block text-sm text-gray-800">
-                  Klasifikasi Bidang Kegiatan
-                </label>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+            {/* Detail */}
+            <div className="rounded-2xl border border-gray-300 bg-white p-5">
+              <h2 className="mb-4 font-semibold text-gray-800">Detail</h2>
+
+              <div className="flex flex-col space-y-4">
+                {/* Tanggal */}
+                <div>
+                  <label className="mb-1 block text-sm text-gray-800">Tanggal</label>
+                  <div
+                    className="relative w-[180px] cursor-pointer rounded-md border border-gray-300 bg-white py-2 pr-3 pl-9 transition-colors focus-within:ring-1 focus-within:ring-gray-400 hover:bg-gray-50"
+                    onClick={() => dateInputRef.current?.showPicker()}
+                  >
+                    <Calendar className="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-gray-600" />
+                    <input
+                      ref={dateInputRef}
+                      type="date"
+                      value={tanggal}
+                      onChange={(e) => setTanggal(e.target.value)}
+                      className="absolute inset-0 h-full w-full cursor-pointer [appearance:none] opacity-0 [&::-webkit-calendar-picker-indicator]:opacity-0"
+                    />
+                    <span className="pointer-events-none text-sm text-gray-800 uppercase select-none">
+                      {tanggal ? formatTanggalDisplay(tanggal) : "DD/MM/YYYY"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Klasifikasi Bidang Kegiatan */}
+                <div>
+                  <label className="mb-1 block text-sm text-gray-800">
+                    Klasifikasi Bidang Kegiatan
+                  </label>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+                    <input
+                      type="text"
+                      placeholder="Kode Rek"
+                      value={kodeRek}
+                      onChange={(e) => setKodeRek(e.target.value)}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
+                    />
+                    <select
+                      value={bidang}
+                      onChange={(e) => setBidang(e.target.value)}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:ring-1 focus:ring-gray-400 focus:outline-none"
+                    >
+                      <option value="">Bidang</option>
+                      {bidangOptions.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.id}) {item.uraian}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={subBidang}
+                      onChange={(e) => setSubBidang(e.target.value)}
+                      disabled={!bidang}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:ring-1 focus:ring-gray-400 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                    >
+                      <option value="">Sub-Bidang</option>
+                      {subBidangOptions.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.id}) {item.uraian}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={kegiatan}
+                      onChange={(e) => setKegiatan(e.target.value)}
+                      disabled={!subBidang}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:ring-1 focus:ring-gray-400 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                    >
+                      <option value="">Kegiatan</option>
+                      {kegiatanOptions.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.id}) {item.uraian}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Uraian */}
+                <div>
+                  <label className="mb-1 block text-sm text-gray-800">Uraian</label>
                   <input
                     type="text"
-                    placeholder="Kode Rek"
-                    value={kodeRek}
-                    onChange={(e) => setKodeRek(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
+                    placeholder="Uraian Pajak / Retribusi / Penerimaan Lainnya"
+                    value={uraian}
+                    onChange={(e) => setUraian(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-600 focus:ring-1 focus:ring-gray-400 focus:outline-none"
                   />
-                  <select
-                    value={bidang}
-                    onChange={(e) => setBidang(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:ring-1 focus:ring-gray-400 focus:outline-none"
-                  >
-                    <option value="">Bidang</option>
-                    {bidangOptions.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.id}) {item.uraian}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={subBidang}
-                    onChange={(e) => setSubBidang(e.target.value)}
-                    disabled={!bidang}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:ring-1 focus:ring-gray-400 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
-                  >
-                    <option value="">Sub-Bidang</option>
-                    {subBidangOptions.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.id}) {item.uraian}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={kegiatan}
-                    onChange={(e) => setKegiatan(e.target.value)}
-                    disabled={!subBidang}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:ring-1 focus:ring-gray-400 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
-                  >
-                    <option value="">Kegiatan</option>
-                    {kegiatanOptions.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.id}) {item.uraian}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               </div>
+            </div>
 
-              {/* Uraian */}
-              <div>
-                <label className="mb-1 block text-sm text-gray-800">Uraian</label>
-                <input
-                  type="text"
-                  placeholder="Uraian Pajak / Retribusi / Penerimaan Lainnya"
-                  value={uraian}
-                  onChange={(e) => setUraian(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-600 focus:ring-1 focus:ring-gray-400 focus:outline-none"
+            {/* Penerimaan */}
+            <div className="rounded-2xl border border-gray-300 bg-white p-5">
+              <h2 className="mb-4 font-semibold text-gray-800">Penerimaan</h2>
+              <div className="flex flex-col space-y-4">
+                <RupiahInput
+                  label="Dari Bendahara"
+                  value={dariBendahara}
+                  onChange={memoizedSetDariBendahara}
+                />
+                <RupiahInput
+                  label="Swadaya Masyarakat"
+                  value={swadaya}
+                  onChange={memoizedSetSwadaya}
                 />
               </div>
             </div>
-          </div>
 
-          {/* Penerimaan */}
-          <div className="rounded-2xl border border-gray-300 bg-white p-5">
-            <h2 className="mb-4 font-semibold text-gray-800">Penerimaan</h2>
-            <div className="flex flex-col space-y-4">
-              <RupiahInput
-                label="Dari Bendahara"
-                value={dariBendahara}
-                onChange={memoizedSetDariBendahara}
-              />
-              <RupiahInput
-                label="Swadaya Masyarakat"
-                value={swadaya}
-                onChange={memoizedSetSwadaya}
-              />
-            </div>
-          </div>
-
-          {/* Pengeluaran */}
-          <div className="rounded-2xl border border-gray-300 bg-white p-5">
-            <h2 className="mb-4 font-semibold text-gray-800">Pengeluaran</h2>
-            <div className="flex flex-col space-y-4">
-              <RupiahInput
-                label="Belanja Barang dan Jasa"
-                value={belanjaBarang}
-                onChange={memoizedSetBelanjaBarang}
-              />
-              <RupiahInput
-                label="Belanja Modal"
-                value={belanjaModal}
-                onChange={memoizedSetBelanjaModal}
-              />
-            </div>
-          </div>
-
-          {/* Bukti dan Kumulatif */}
-          <div className="rounded-2xl border border-gray-300 bg-white p-5">
-            <h2 className="mb-4 font-semibold text-gray-800">Bukti dan Kumulatif</h2>
-            <div className="flex flex-col space-y-4">
-              <div className="relative">
-                <label className="mb-1 block text-sm text-gray-800">Nomor Bukti</label>
-                <span className="absolute top-[34px] left-3 text-sm text-gray-400">No</span>
-                <input
-                  type="text"
-                  placeholder="nomor bukti"
-                  value={nomorBukti}
-                  onChange={(e) => setNomorBukti(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
+            {/* Pengeluaran */}
+            <div className="rounded-2xl border border-gray-300 bg-white p-5">
+              <h2 className="mb-4 font-semibold text-gray-800">Pengeluaran</h2>
+              <div className="flex flex-col space-y-4">
+                <RupiahInput
+                  label="Belanja Barang dan Jasa"
+                  value={belanjaBarang}
+                  onChange={memoizedSetBelanjaBarang}
                 />
-              </div>
-              <RupiahInput
-                label="Jumlah Pengembalian ke Bendahara"
-                value={jumlahPengembalian}
-                onChange={memoizedSetJumlahPengembalian}
-              />
-            </div>
-          </div>
-
-          {/* Saldo Kas (Automated) */}
-          <div>
-            <h2 className="mb-2 font-semibold text-gray-800">Saldo Kas (Automated)</h2>
-            <div className="rounded-md border border-gray-300 bg-white px-3 py-2">
-              <div className="relative flex items-center">
-                <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm text-gray-400">
-                  Rp
-                </span>
-                <input
-                  type="text"
-                  value={formatCurrency(calculatedSaldo)}
-                  readOnly
-                  className="w-full bg-white py-1.5 pr-3 pl-9 text-sm text-gray-800 focus:outline-none"
+                <RupiahInput
+                  label="Belanja Modal"
+                  value={belanjaModal}
+                  onChange={memoizedSetBelanjaModal}
                 />
               </div>
             </div>
-          </div>
 
-          {/* Footer (Tombol Aksi) */}
-          <Footer
-            onDelete={handleDelete}
-            onCreate={handleCreate}
-            onSave={handleSave}
-            isLoading={loading}
-          />
-        </form>
+            {/* Bukti dan Kumulatif */}
+            <div className="rounded-2xl border border-gray-300 bg-white p-5">
+              <h2 className="mb-4 font-semibold text-gray-800">Bukti dan Kumulatif</h2>
+              <div className="flex flex-col space-y-4">
+                <div className="relative">
+                  <label className="mb-1 block text-sm text-gray-800">Nomor Bukti</label>
+                  <span className="absolute top-[34px] left-3 text-sm text-gray-400">No</span>
+                  <input
+                    type="text"
+                    placeholder="nomor bukti"
+                    value={nomorBukti}
+                    onChange={(e) => setNomorBukti(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-sm text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
+                  />
+                </div>
+                <RupiahInput
+                  label="Jumlah Pengembalian ke Bendahara"
+                  value={jumlahPengembalian}
+                  onChange={memoizedSetJumlahPengembalian}
+                />
+              </div>
+            </div>
+
+            {/* Saldo Kas (Automated) */}
+            <div>
+              <h2 className="mb-2 font-semibold text-gray-800">Saldo Kas (Automated)</h2>
+              <div className="rounded-md border border-gray-300 bg-white px-3 py-2">
+                <div className="relative flex items-center">
+                  <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm text-gray-400">
+                    Rp
+                  </span>
+                  <input
+                    type="text"
+                    value={formatCurrency(calculatedSaldo)}
+                    readOnly
+                    className="w-full bg-white py-1.5 pr-3 pl-9 text-sm text-gray-800 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer (Tombol Aksi) */}
+            <Footer
+              onDelete={handleDelete}
+              onCreate={handleCreate}
+              onSave={handleSave}
+              isLoading={loading}
+            />
+          </form>
         )}
       </div>
     </div>

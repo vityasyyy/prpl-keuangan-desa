@@ -39,6 +39,7 @@ export default function FormEditKasUmum() {
   const [rabList, setRabList] = useState([]);
 
   const [kodeRekError, setKodeRekError] = useState(""); // Error state (opsional ditampilkan di UI)
+  const [kodeEkoError, setKodeEkoError] = useState("");
 
   const [bidangList, setBidangList] = useState([]);
   const [subBidangList, setSubBidangList] = useState([]);
@@ -115,20 +116,20 @@ export default function FormEditKasUmum() {
     return "";
   };
 
-  const formatKodeRek = (kode) => {
-    const cleanKode = kode.replace(/\./g, " ");
-    const parts = cleanKode.split(/\s+/);
-
-    const formattedParts = parts.map((part, index) => {
-      if (index === 2) {
-        return part.padStart(2, "0");
-      }
-      return parseInt(part); // hilangkan leading zero
-    });
-
-    return formattedParts.join(" ");
-  };
-
+  // const formatKodeRek = (kode) => {
+  //   const cleanKode = kode.replace(/\./g, " ");
+  //   const parts = cleanKode.split(/\s+/);
+  //
+  //   const formattedParts = parts.map((part, index) => {
+  //     if (index === 2) {
+  //       return part.padStart(2, "0");
+  //     }
+  //     return parseInt(part); // hilangkan leading zero
+  //   });
+  //
+  //   return formattedParts.join(" ");
+  // };
+  //
   const formatNumber = (num) => {
     if (num === null || num === undefined) return "";
     try {
@@ -487,27 +488,27 @@ export default function FormEditKasUmum() {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      tanggal: "",
-      kodeEko: "",
-      kodeRek: "",
-      bidang: "",
-      subBidang: "",
-      kegiatan: "",
-      akun: "",
-      kelompok: "",
-      jenis: "",
-      objek: "",
-      uraian: "",
-      pemasukan: "",
-      pengeluaran: "",
-      nomorBukti: "",
-      nettoTransaksi: "",
-      buatLagi: true,
-      kodeRAB: "",
-    });
-  };
+  // const resetForm = () => {
+  //   setFormData({
+  //     tanggal: "",
+  //     kodeEko: "",
+  //     kodeRek: "",
+  //     bidang: "",
+  //     subBidang: "",
+  //     kegiatan: "",
+  //     akun: "",
+  //     kelompok: "",
+  //     jenis: "",
+  //     objek: "",
+  //     uraian: "",
+  //     pemasukan: "",
+  //     pengeluaran: "",
+  //     nomorBukti: "",
+  //     nettoTransaksi: "",
+  //     buatLagi: true,
+  //     kodeRAB: "",
+  //   });
+  // };
 
   const handleDelete = async () => {
     if (!confirm("Apakah yakin ingin menghapus data ini?")) return;

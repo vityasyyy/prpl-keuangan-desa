@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Sidebar from "@/features/kas-pembantu/Sidebar";
 import Header from "@/features/kas-pembantu/Header";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
 import MonthCard from "@/features/kas-pembantu/MonthCard";
+import { useAuth } from "@/lib/auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
 
@@ -99,6 +100,7 @@ export default function KasPembantuPanjar() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const pathname = usePathname();
+  const { token } = useAuth() || {};
 
   const formPath = `${pathname}/Form`;
 
