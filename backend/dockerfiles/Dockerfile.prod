@@ -1,5 +1,5 @@
 # ----------------------------
-# 1. Builder Stage (optional for JS)
+# 1. Builder Stage
 # ----------------------------
 FROM node:24-alpine3.21 AS builder
 
@@ -7,15 +7,16 @@ RUN corepack enable
 
 WORKDIR /app
 
-# Copy lockfile & manifest
-COPY ./pnpm-lock.yaml ./package.json ./
+# Copy lockfile & manifest first (cache layer)
+COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies (including dev)
+# Install deps (including dev)
 RUN pnpm install --frozen-lockfile
 
-# Copy source code
+# Copy full project
 COPY . .
-# (Optional) build step if using TS or bundlers
+
+# If you use TypeScript or need a build, uncomment:
 # RUN pnpm run build
 
 # ----------------------------
@@ -27,16 +28,23 @@ RUN corepack enable
 
 WORKDIR /app
 
-# Copy necessary files from builder
+# Copy only needed files from builder
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/pnpm-lock.yaml ./
+
+# Copy PNPM node_modules + virtual store
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/utils ./utils
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/db ./db
-COPY --from=builder /app/index.js ./index.js
+COPY --from=builder /app/.pnpm ./ .pnpm
+
+# Copy project source (everything, not selective)
+COPY --from=builder /app ./
+
+# Make everything owned by node user
+RUN chown -R node:node /app
 
 USER node
 
-# Start app (assuming plain JS entry)
+# If using TS compiled output, you'd run:
+# CMD ["node", "dist/index.js"]
+
 CMD ["node", "index.js"]
