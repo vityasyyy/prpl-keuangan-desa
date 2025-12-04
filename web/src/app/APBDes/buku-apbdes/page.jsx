@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import BreadCrumb from "@/components/breadCrumb";
+import BreadCrumb from "@/components/Breadcrumb";
 
 export default function BukuAPBDes() {
   const [data, setData] = useState([]);
@@ -16,7 +16,7 @@ export default function BukuAPBDes() {
       const res = await fetch(`${API}/kode-ekonomi`);
       if (!res.ok) throw new Error("Failed to fetch kode ekonomi");
       const ekonomiData = await res.json();
-      
+
       const map = {};
       ekonomiData.forEach((item) => {
         map[item.id] = item;
@@ -32,23 +32,23 @@ export default function BukuAPBDes() {
     setLoading(true);
     try {
       const tahun = new Date().getFullYear();
-      
+
       // Fetch rincian yang sudah diposting
       const rincianRes = await fetch(`${API}?tahun=${tahun}&status=posted`);
       if (!rincianRes.ok) throw new Error("Failed to fetch posted APBDes");
       const result = await rincianRes.json();
 
       console.log("📊 Posted APBDes rincian data:", result);
-      
+
       setData(result.rows || []);
 
       // Fetch penjabaran yang terkait dengan rincian yang sudah diposting
       const penjabaranRes = await fetch(`${API}/draft/penjabaran`);
       if (!penjabaranRes.ok) throw new Error("Failed to fetch penjabaran");
       const penjabaranResult = await penjabaranRes.json();
-      
+
       console.log("📋 Penjabaran data:", penjabaranResult);
-      
+
       setPenjabaranData(penjabaranResult || []);
     } catch (error) {
       console.error("Error fetching posted APBDes:", error);
@@ -113,10 +113,10 @@ export default function BukuAPBDes() {
       if (itemsAtKode) {
         itemsAtKode.forEach(item => {
           const itemWithDetails = { ...item };
-          
+
           // Cari penjabaran untuk rincian ini
           const itemPenjabaran = penjabaranData.filter(p => String(p.rincian_id) === String(item.id));
-          
+
           // Hitung total: max antara jumlah rincian vs sum penjabaran
           const penjabaranSum = itemPenjabaran.reduce((s, p) => s + sanitizeNumber(p.jumlah_anggaran || 0), 0);
           itemWithDetails.calculatedTotal = Math.max(sanitizeNumber(item.jumlah_anggaran || 0), penjabaranSum);
@@ -127,7 +127,7 @@ export default function BukuAPBDes() {
           itemWithDetails.displayUraian = fungsiInfo?.uraian || ekonomiInfo?.uraian || "Tidak ada uraian";
           itemWithDetails.level = ekonomiInfo?.level || 'unknown';
           itemWithDetails.kode = ekonomiInfo?.full_code;
-          
+
           // Tambahkan penjabaran sebagai children
           if (itemPenjabaran.length > 0) {
             itemWithDetails.penjabaranChildren = itemPenjabaran.map(penjabaran => {
@@ -184,7 +184,7 @@ export default function BukuAPBDes() {
 
         const aParts = aKode.split('.').map(Number);
         const bParts = bKode.split('.').map(Number);
-        
+
         for (let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
           if (aParts[i] !== bParts[i]) {
             return aParts[i] - bParts[i];

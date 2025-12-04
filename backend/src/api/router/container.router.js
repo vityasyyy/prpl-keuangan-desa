@@ -10,13 +10,13 @@ export function initializeRoutes(app, handlers, deps = {}) {
   // auth routes
   app.use("/api/auth", createAuthRouter(handlers.authHandler));
 
-  // app.use('/api/apbd', apbdRouter(handlers.apbdHandler));
-  
+  app.use('/api/apbd', apbdRouter(handlers.apbdHandler));
+
   // Wire buku bank desa routes; router expects { db } dependency
   if (deps.db) {
     app.use('/api/bank-desa', bankDesaRouter({ db: deps.db }));
   }
-  
+
   app.use('/api/kas-pembantu', kasPembantuRouter(handlers.kasPembantuHandler));
   app.use("/api/kas-umum", createKasUmumRouter(handlers.kasUmumHandler));
   // app.use('/api/rab', rabRouter(handlers.rabHandler));

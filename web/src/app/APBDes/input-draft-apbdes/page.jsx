@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import BreadCrumb from "@/components/breadCrumb";
-import Button from "@/components/button";
+import BreadCrumb from "@/components/Breadcrumb";
+import Button from "@/components/Button";
 import FormDropdown from "@/components/formDropdown";
 import { TextInput } from "@/components/formInput";
 import { Trash, Floppy, ToggleLeft, ToggleRight } from "@/components/icons";
@@ -57,7 +57,7 @@ export default function InputDraftAPBDes() {
   });
 
   // ====== PARSING & FORMATTING UTILITIES (dari Kas-umum form) ======
-  
+
   // Parse "4.1.1.01" atau "4.1.1.90-99" → ["4","1","1","01"] atau ["4","1","1","90-99"]
   const ekoParse = (s) =>
     (s || "")
@@ -101,9 +101,9 @@ export default function InputDraftAPBDes() {
       // Validate DD: either 1-2 digits or a range like DD-DD
       if (p[3].includes('-')) {
         const rangeParts = p[3].split('-');
-        if (rangeParts.length !== 2 || 
-            rangeParts[0].length > 2 || rangeParts[1].length > 2 ||
-            !/^\d+$/.test(rangeParts[0]) || !/^\d+$/.test(rangeParts[1])) {
+        if (rangeParts.length !== 2 ||
+          rangeParts[0].length > 2 || rangeParts[1].length > 2 ||
+          !/^\d+$/.test(rangeParts[0]) || !/^\d+$/.test(rangeParts[1])) {
           return "Objek (DD) harus 1-2 digit atau range (contoh: 90-99)";
         }
       } else if (p[3].length > 2) {
@@ -133,9 +133,9 @@ export default function InputDraftAPBDes() {
       // Validate xx: either 1-2 digits or a range like xx-xx
       if (parts[2].includes('-')) {
         const rangeParts = parts[2].split('-');
-        if (rangeParts.length !== 2 || 
-            rangeParts[0].length > 2 || rangeParts[1].length > 2 ||
-            !/^\d+$/.test(rangeParts[0]) || !/^\d+$/.test(rangeParts[1])) {
+        if (rangeParts.length !== 2 ||
+          rangeParts[0].length > 2 || rangeParts[1].length > 2 ||
+          !/^\d+$/.test(rangeParts[0]) || !/^\d+$/.test(rangeParts[1])) {
           return "Kode kegiatan harus 1-2 digit atau range (contoh: 90-99)";
         }
       } else if (parts[2].length > 2) {
@@ -283,48 +283,48 @@ export default function InputDraftAPBDes() {
   // Load data kalau sedang edit
   useEffect(() => {
     // Only require the basic dropdown data to be loaded, not all of them
-    if (id && akunData.length > 0 && kelompokData.length > 0 && 
-        bidangData.length > 0 && subBidangData.length > 0 && kegiatanData.length > 0) {
-      
+    if (id && akunData.length > 0 && kelompokData.length > 0 &&
+      bidangData.length > 0 && subBidangData.length > 0 && kegiatanData.length > 0) {
+
       // Fetch data dari API
       const fetchEditData = async () => {
         try {
           setIsLoadingEditData(true);
-          
+
           const res = await fetch(`${API}/draft/rincian/${id}`);
           if (!res.ok) throw new Error("Failed to fetch data");
-          
+
           const result = await res.json();
           const existing = result.data || result;
-          
+
           console.log("📝 Loading edit data:", existing);
-          
+
           if (existing) {
             console.log("Debug: existing.jumlah_anggaran =", existing.jumlah_anggaran);
 
             // Map kode_ekonomi_id ke format form
-            const ekonomiInfo = kelompokData.find(k => k.id === existing.kode_ekonomi_id) 
+            const ekonomiInfo = kelompokData.find(k => k.id === existing.kode_ekonomi_id)
               || akunData.find(a => a.id === existing.kode_ekonomi_id);
-            
+
             // Map kode_fungsi_id ke format form  
             const fungsiInfo = bidangData.find(b => b.id === existing.kode_fungsi_id)
               || subBidangData.find(s => s.id === existing.kode_fungsi_id)
               || kegiatanData.find(k => k.id === existing.kode_fungsi_id);
-            
+
             // Convert ID ke full_code untuk display
             const kodeRekEkonomi = ekonomiInfo?.full_code || "";
             const kodeRekBidang = fungsiInfo?.full_code || "";
-            
+
             // Find all hierarchy items
             let akunItem = null, kelompokItem = null, bidangItem = null, subBidangItem = null, kegiatanItem = null;
-            
+
             if (existing.kode_ekonomi_id) {
               // First, try to find the exact item
               const exactEkonomiItem = akunData.find(a => a.id === existing.kode_ekonomi_id)
                 || kelompokData.find(k => k.id === existing.kode_ekonomi_id);
-              
+
               console.log("🔍 Exact ekonomi item:", exactEkonomiItem);
-              
+
               if (exactEkonomiItem) {
                 // Determine level by checking if it has parent_id
                 // If no parent_id or parent_id is null, it's akun level
@@ -338,33 +338,33 @@ export default function InputDraftAPBDes() {
                   kelompokItem = exactEkonomiItem;
                   console.log("✅ Found kelompok:", kelompokItem);
                   console.log("🔍 Looking for parent with ID:", exactEkonomiItem.parent_id);
-                  
+
                   // Find the akun parent
-                  akunItem = akunData.find(a => 
+                  akunItem = akunData.find(a =>
                     String(a.id) === String(exactEkonomiItem.parent_id)
                   );
-                  
+
                   console.log("✅ Found akun parent:", akunItem);
                 }
               } else {
                 console.log("❌ Exact ekonomi item not found for ID:", existing.kode_ekonomi_id);
               }
             }
-            
+
             if (existing.kode_fungsi_id) {
               // First, try to find the exact item
               const exactFungsiItem = bidangData.find(b => b.id === existing.kode_fungsi_id)
                 || subBidangData.find(s => s.id === existing.kode_fungsi_id)
                 || kegiatanData.find(k => k.id === existing.kode_fungsi_id);
-              
+
               console.log("🔍 Exact fungsi item:", exactFungsiItem);
-              
+
               if (exactFungsiItem) {
                 // Determine hierarchy by checking parent_id chain
                 const isInBidang = bidangData.some(b => b.id === exactFungsiItem.id);
                 const isInSubBidang = subBidangData.some(s => s.id === exactFungsiItem.id);
                 const isInKegiatan = kegiatanData.some(k => k.id === exactFungsiItem.id);
-                
+
                 if (isInBidang && !exactFungsiItem.parent_id) {
                   // Top level bidang
                   bidangItem = exactFungsiItem;
@@ -384,23 +384,23 @@ export default function InputDraftAPBDes() {
                 }
               }
             }
-            
+
             console.log("📊 Found items:", { akunItem, kelompokItem, bidangItem, subBidangItem, kegiatanItem });
-            
+
             // Set all IDs first (this triggers filtering in useEffects)
             if (akunItem) setSelectedAkunId(akunItem.id);
             if (kelompokItem) setSelectedKelompokId(kelompokItem.id);
             if (bidangItem) setSelectedBidangId(bidangItem.id);
             if (subBidangItem) setSelectedSubBidangId(subBidangItem.id);
-            
+
             // Set form data with all values
             // For anggaran: only set if value exists and > 0, otherwise leave empty
-            const anggaranValue = existing.jumlah_anggaran && existing.jumlah_anggaran > 0 
+            const anggaranValue = existing.jumlah_anggaran && existing.jumlah_anggaran > 0
               ? String(Math.floor(existing.jumlah_anggaran)) // Ensure it's an integer without decimals
               : "";
-            
+
             console.log("💰 Setting anggaran from DB:", existing.jumlah_anggaran, "→ formData:", anggaranValue);
-            
+
             setFormData({
               id: existing.id,
               kodeRekEkonomi: kodeRekEkonomi,
@@ -413,7 +413,7 @@ export default function InputDraftAPBDes() {
               anggaran: anggaranValue,
               sumberDana: existing.sumber_dana || "",
             });
-            
+
             // Give time for filtering to complete, then disable loading flag
             setTimeout(() => {
               setIsLoadingEditData(false);
@@ -425,7 +425,7 @@ export default function InputDraftAPBDes() {
           setIsLoadingEditData(false);
         }
       };
-      
+
       fetchEditData();
     }
   }, [id, akunData, bidangData, subBidangData, kelompokData, kegiatanData]);
@@ -440,7 +440,7 @@ export default function InputDraftAPBDes() {
   // Handle Kode Rek Ekonomi change dengan parsing logic (dari Kas-umum form)
   const handleKodeRekEkonomiChange = (value) => {
     if (value === formData.kodeRekEkonomi) return;
-    
+
     const err = validateKodeEko(value);
     setKodeEkoError(err);
     handleOnChange("kodeRekEkonomi", value);
@@ -483,17 +483,17 @@ export default function InputDraftAPBDes() {
   const handleKodeRekBidangChange = (value) => {
     // Hanya proses jika ada perubahan
     if (value === formData.kodeRekBidang) return;
-    
+
     const error = validateKodeRek(value);
     setKodeRekError(error);
     // Update form dengan kode yang diinput
     handleOnChange("kodeRekBidang", value);
-    
+
     if (!error) {
       // Format: ubah titik jadi spasi dan trim
       const cleanKode = value.replace(/\./g, " ").trim();
       const parts = cleanKode.split(/\s+/).filter(Boolean);
-      
+
       // Jika kosong total → kosongkan semua dropdown dan selected IDs
       if (parts.length === 0 || !value.trim()) {
         handleOnChange("bidang", "");
@@ -503,19 +503,19 @@ export default function InputDraftAPBDes() {
         setSelectedSubBidangId(null);
         return;
       }
-      
+
       if (parts[0]) {
         const matchingBidang = bidangData.find((b) => {
           const bidangParts = b.full_code.replace(/\./g, " ").trim().split(/\s+/);
           return parseInt(bidangParts[0]) === parseInt(parts[0]);
         });
-        
+
         if (matchingBidang) {
           handleOnChange("bidang", matchingBidang.uraian);
           setSelectedBidangId(matchingBidang.id);
           handleOnChange("subBidang", "");
           handleOnChange("kegiatan", "");
-          
+
           if (parts[1] && subBidangData.length > 0) {
             const matchingSubBidang = subBidangData.find((s) => {
               const subParts = s.full_code.replace(/\./g, " ").trim().split(/\s+/);
@@ -524,12 +524,12 @@ export default function InputDraftAPBDes() {
                 parseInt(subParts[1]) === parseInt(parts[1])
               );
             });
-            
+
             if (matchingSubBidang) {
               handleOnChange("subBidang", matchingSubBidang.uraian);
               setSelectedSubBidangId(matchingSubBidang.id);
               handleOnChange("kegiatan", "");
-              
+
               if (parts[2] && kegiatanData.length > 0) {
                 const matchingKegiatan = kegiatanData.find((k) => {
                   // Handle both regular numbers and ranges
@@ -537,7 +537,7 @@ export default function InputDraftAPBDes() {
                   const targetKode = `${parseInt(parts[0])} ${parseInt(parts[1])} ${kegiatanCode}`;
                   return k.full_code.replace(/\./g, " ").trim() === targetKode;
                 });
-                
+
                 if (matchingKegiatan) {
                   handleOnChange("kegiatan", matchingKegiatan.uraian);
                 }
@@ -574,8 +574,8 @@ export default function InputDraftAPBDes() {
 
       // Determine if this is an edit (id from query param) or a new entry
       const isEditing = !!id;
-      const url = isEditing 
-        ? `${API}/draft/rincian/${id}` 
+      const url = isEditing
+        ? `${API}/draft/rincian/${id}`
         : `${API}/draft/rincian`;
       const method = isEditing ? "PUT" : "POST";
 

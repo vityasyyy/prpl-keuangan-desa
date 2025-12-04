@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import BreadCrumb from "@/components/breadCrumb";
-import Button from "@/components/button";
+import BreadCrumb from "@/components/Breadcrumb";
+import Button from "@/components/Button";
 import FormDropdown from "@/components/formDropdown";
 import { TextInput } from "@/components/formInput";
 import { Trash, Floppy, ToggleLeft, ToggleRight } from "@/components/icons";
@@ -87,35 +87,35 @@ export default function InputDraftPenjabaran() {
           const result = await res.json();
           if (result.success && result.data) {
             setParentItem(result.data);
-            
+
             // Fetch kode ekonomi dan fungsi untuk mendapatkan uraian
             const [kodeEkonomiRes, kodeFungsiRes] = await Promise.all([
               fetch(`${API}/kode-ekonomi`),
               fetch(`${API}/kode-fungsi`)
             ]);
-            
+
             if (kodeEkonomiRes.ok && kodeFungsiRes.ok) {
               const kodeEkonomiData = await kodeEkonomiRes.json();
               const kodeFungsiData = await kodeFungsiRes.json();
-              
+
               // Create maps
               const ekoMap = {};
               kodeEkonomiData.forEach((item) => {
                 ekoMap[item.id] = item;
               });
               setKodeEkonomiMap(ekoMap);
-              
+
               const fungsiMap = {};
               kodeFungsiData.forEach((item) => {
                 fungsiMap[item.id] = item;
               });
               setKodeFungsiMap(fungsiMap);
-              
+
               // Find uraian - prioritaskan ekonomi (child terakhir)
               const ekonomiInfo = ekoMap[result.data.kode_ekonomi_id];
               const fungsiInfo = fungsiMap[result.data.kode_fungsi_id];
               const uraian = ekonomiInfo?.uraian || fungsiInfo?.uraian || "Tidak ada uraian";
-              
+
               setParentItemUraian(uraian);
             }
           }
@@ -128,7 +128,7 @@ export default function InputDraftPenjabaran() {
   }, [rincian_id, API]);
 
   // ====== PARSING & FORMATTING UTILITIES (dari InputDraftAPBDes) ======
-  
+
   // Parse "4.1.1.01" atau "4.1.1.90-99" → ["4","1","1","01"] atau ["4","1","1","90-99"]
   const ekoParse = (s) =>
     (s || "")
@@ -172,9 +172,9 @@ export default function InputDraftPenjabaran() {
       // Validate DD: either 1-2 digits or a range like DD-DD
       if (p[3].includes('-')) {
         const rangeParts = p[3].split('-');
-        if (rangeParts.length !== 2 || 
-            rangeParts[0].length > 2 || rangeParts[1].length > 2 ||
-            !/^\d+$/.test(rangeParts[0]) || !/^\d+$/.test(rangeParts[1])) {
+        if (rangeParts.length !== 2 ||
+          rangeParts[0].length > 2 || rangeParts[1].length > 2 ||
+          !/^\d+$/.test(rangeParts[0]) || !/^\d+$/.test(rangeParts[1])) {
           return "Range objek harus format DD-DD (contoh: 90-99)";
         }
       } else if (p[3].length > 2) {
@@ -203,9 +203,9 @@ export default function InputDraftPenjabaran() {
       // Validate xx: either 1-2 digits or a range like xx-xx
       if (parts[2].includes('-')) {
         const rangeParts = parts[2].split('-');
-        if (rangeParts.length !== 2 || 
-            rangeParts[0].length > 2 || rangeParts[1].length > 2 ||
-            !/^\d+$/.test(rangeParts[0]) || !/^\d+$/.test(rangeParts[1])) {
+        if (rangeParts.length !== 2 ||
+          rangeParts[0].length > 2 || rangeParts[1].length > 2 ||
+          !/^\d+$/.test(rangeParts[0]) || !/^\d+$/.test(rangeParts[1])) {
           return "Range kegiatan harus format xx-xx (contoh: 90-99)";
         }
       } else if (parts[2].length > 2) {
@@ -385,32 +385,32 @@ export default function InputDraftPenjabaran() {
 
   // Load data kalau sedang edit
   useEffect(() => {
-    if (id && akunData.length > 0 && bidangData.length > 0 && subBidangData.length > 0 && 
-        kelompokData.length > 0 && jenisData.length > 0 && objekData.length > 0) {
+    if (id && akunData.length > 0 && bidangData.length > 0 && subBidangData.length > 0 &&
+      kelompokData.length > 0 && jenisData.length > 0 && objekData.length > 0) {
       // Fetch existing penjabaran data from API
       const fetchExistingData = async () => {
         try {
           setIsLoadingEditData(true);
-          
+
           const res = await fetch(`${API}/draft/penjabaran/${id}`);
           if (!res.ok) throw new Error("Failed to fetch penjabaran data");
           const existing = await res.json();
-          
+
           console.log("📝 Loading penjabaran edit data:", existing);
-          
+
           if (existing) {
             // Find hierarchy items for ekonomi
             let akunItem = null, kelompokItem = null, jenisItem = null, objekItem = null;
-            
+
             if (existing.kode_ekonomi_id) {
               // Try to find the exact item in all ekonomi levels
               const exactEkonomiItem = akunData.find(a => a.id === existing.kode_ekonomi_id)
                 || kelompokData.find(k => k.id === existing.kode_ekonomi_id)
                 || jenisData.find(j => j.id === existing.kode_ekonomi_id)
                 || objekData.find(o => o.id === existing.kode_ekonomi_id);
-              
+
               console.log("🔍 Exact ekonomi item:", exactEkonomiItem);
-              
+
               if (exactEkonomiItem) {
                 // Determine which level it is and build hierarchy
                 if (objekData.some(o => o.id === exactEkonomiItem.id)) {
@@ -443,17 +443,17 @@ export default function InputDraftPenjabaran() {
                 }
               }
             }
-            
+
             // Find hierarchy items for fungsi
             let bidangItem = null, subBidangItem = null, kegiatanItem = null;
-            
+
             if (existing.kode_fungsi_id) {
               const exactFungsiItem = bidangData.find(b => b.id === existing.kode_fungsi_id)
                 || subBidangData.find(s => s.id === existing.kode_fungsi_id)
                 || kegiatanData.find(k => k.id === existing.kode_fungsi_id);
-              
+
               console.log("🔍 Exact fungsi item:", exactFungsiItem);
-              
+
               if (exactFungsiItem) {
                 if (kegiatanData.some(k => k.id === exactFungsiItem.id)) {
                   // It's a kegiatan (level 3)
@@ -473,9 +473,9 @@ export default function InputDraftPenjabaran() {
                 }
               }
             }
-            
-            console.log("📊 Found hierarchy:", { 
-              akun: akunItem?.uraian, 
+
+            console.log("📊 Found hierarchy:", {
+              akun: akunItem?.uraian,
               kelompok: kelompokItem?.uraian,
               jenis: jenisItem?.uraian,
               objek: objekItem?.uraian,
@@ -483,25 +483,25 @@ export default function InputDraftPenjabaran() {
               subBidang: subBidangItem?.uraian,
               kegiatan: kegiatanItem?.uraian
             });
-            
+
             // Set all IDs first (this triggers filtering in useEffects)
             if (akunItem) setSelectedAkunId(akunItem.id);
             if (kelompokItem) setSelectedKelompokId(kelompokItem.id);
             if (jenisItem) setSelectedJenisId(jenisItem.id);
             if (bidangItem) setSelectedBidangId(bidangItem.id);
             if (subBidangItem) setSelectedSubBidangId(subBidangItem.id);
-            
+
             // Build kode rek strings
             const kodeRekEkonomi = objekItem?.full_code || jenisItem?.full_code || kelompokItem?.full_code || akunItem?.full_code || "";
             const kodeRekBidang = kegiatanItem?.full_code || subBidangItem?.full_code || bidangItem?.full_code || "";
-            
+
             // Format anggaran - ensure integer display
-            const anggaranValue = existing.jumlah_anggaran && existing.jumlah_anggaran > 0 
+            const anggaranValue = existing.jumlah_anggaran && existing.jumlah_anggaran > 0
               ? String(Math.floor(existing.jumlah_anggaran))
               : "";
-            
+
             console.log("💰 Setting anggaran:", existing.jumlah_anggaran, "→", anggaranValue);
-            
+
             // Set form data with all values
             setFormData({
               id: existing.id,
@@ -522,7 +522,7 @@ export default function InputDraftPenjabaran() {
               satuanOutput: existing.satuan || "",
               satuanInput: existing.satuan || "",
             });
-            
+
             // Give time for filtering to complete, then disable loading flag
             setTimeout(() => {
               setIsLoadingEditData(false);
@@ -548,7 +548,7 @@ export default function InputDraftPenjabaran() {
   // Handle Kode Rek Ekonomi change dengan parsing logic (dari InputDraftAPBDes)
   const handleKodeRekEkonomiChange = (value) => {
     if (value === formData.kodeRekEkonomi) return;
-    
+
     const err = validateKodeEko(value);
     setKodeEkoError(err);
     handleOnChange("kodeRekEkonomi", value);
@@ -615,8 +615,8 @@ export default function InputDraftPenjabaran() {
       if (parts.length >= 4 && objekData.length > 0) {
         const matchedObjek = objekData.find((x) => {
           const xParts = ekoParse(x.full_code);
-          return xParts[0] === parts[0] && xParts[1] === parts[1] && 
-                 xParts[2] === parts[2] && xParts[3] === parts[3];
+          return xParts[0] === parts[0] && xParts[1] === parts[1] &&
+            xParts[2] === parts[2] && xParts[3] === parts[3];
         });
         if (matchedObjek) {
           setObjekOptions([matchedObjek.uraian]);
@@ -638,12 +638,12 @@ export default function InputDraftPenjabaran() {
   const handleKodeRekBidangChange = (value) => {
     // Hanya proses jika ada perubahan
     if (value === formData.kodeRekBidang) return;
-    
+
     const error = validateKodeRek(value);
     setKodeRekError(error);
     // Update form dengan kode yang diinput
     handleOnChange("kodeRekBidang", value);
-    
+
     // Jika user menghapus seluruh input kode bidang → reset dropdown & state
     if (!value || value.trim() === "") {
       handleOnChange("bidang", "");
@@ -656,12 +656,12 @@ export default function InputDraftPenjabaran() {
       setSelectedSubBidangId(null);
       return; // Stop lanjut parsing
     }
-    
+
     if (!error) {
       // Format: ubah titik jadi spasi dan trim
       const cleanKode = value.replace(/\./g, " ").trim();
       const parts = cleanKode.split(/\s+/).filter(Boolean);
-      
+
       // Jika kosong total → kosongkan semua dropdown dan selected IDs
       if (parts.length === 0 || !value.trim()) {
         setBidangOptions(allBidangOptions);
@@ -671,7 +671,7 @@ export default function InputDraftPenjabaran() {
         setSelectedSubBidangId(null);
         return;
       }
-      
+
       if (parts[0]) {
         // 1) BIDANG = token[0]
         const matchedBidang = bidangData.find((b) => {
@@ -715,7 +715,7 @@ export default function InputDraftPenjabaran() {
   const handleSimpan = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       // Jika ada rincian_id, simpan penjabaran
       if (rincian_id) {
@@ -1214,20 +1214,20 @@ export default function InputDraftPenjabaran() {
           />
         </div>
 
-        {!formData.pendapatanBelanja.toLowerCase().includes("pendapatan") && 
-         !formData.pendapatanBelanja.toLowerCase().includes("pembiayaan") && (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-[#011829]">
-              Sumber Dana
-            </label>
-            <FormDropdown
-              label="PBH / DDS / ADD / DLL / PBP"
-              options={sumberDanaOptions}
-              value={formData.sumberDana}
-              onChange={(val) => handleOnChange("sumberDana", val)}
-            />
-          </div>
-        )}
+        {!formData.pendapatanBelanja.toLowerCase().includes("pendapatan") &&
+          !formData.pendapatanBelanja.toLowerCase().includes("pembiayaan") && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[#011829]">
+                Sumber Dana
+              </label>
+              <FormDropdown
+                label="PBH / DDS / ADD / DLL / PBP"
+                options={sumberDanaOptions}
+                value={formData.sumberDana}
+                onChange={(val) => handleOnChange("sumberDana", val)}
+              />
+            </div>
+          )}
       </div>
 
       {/* ===== BUTTONS ===== */}

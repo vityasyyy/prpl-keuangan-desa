@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import BreadCrumb from "@/components/breadCrumb";
-import Button from "@/components/button";
+import BreadCrumb from "@/components/Breadcrumb";
+import Button from "@/components/Button";
 import { ArrowUpRight, Download, Plus, SquarePlus, Pencil } from "@/components/icons";
 
 export default function OutputAPBDes() {
@@ -40,7 +40,7 @@ export default function OutputAPBDes() {
       const res = await fetch(`${API}/kode-ekonomi`);
       if (!res.ok) throw new Error("Failed to fetch kode ekonomi");
       const ekonomiData = await res.json();
-      
+
       // Create map: id -> full item
       const map = {};
       ekonomiData.forEach((item) => {
@@ -58,7 +58,7 @@ export default function OutputAPBDes() {
       const res = await fetch(`${API}/kode-fungsi`);
       if (!res.ok) throw new Error("Failed to fetch kode fungsi");
       const fungsiData = await res.json();
-      
+
       // Create map: id -> full item
       const map = {};
       fungsiData.forEach((item) => {
@@ -95,7 +95,7 @@ export default function OutputAPBDes() {
 
       // Filter penjabaran: hanya yang parent rinciannya masih draft
       const rincianDraftIds = rincianData.map(r => r.id);
-      const filteredPenjabaran = penjabaranDataList.filter(p => 
+      const filteredPenjabaran = penjabaranDataList.filter(p =>
         rincianDraftIds.includes(p.rincian_id)
       );
       console.log("🔍 Filtered penjabaran (only draft parents):", filteredPenjabaran.length, "items");
@@ -183,7 +183,7 @@ export default function OutputAPBDes() {
     try {
       // Get all penjabaran IDs
       const penjabaranIds = penjabaranData.map(p => p.id);
-      
+
       console.log("🔍 Posting penjabaran:", penjabaranIds.length, "items");
 
       const confirmPost = window.confirm(
@@ -191,7 +191,7 @@ export default function OutputAPBDes() {
         `Parent rincian yang belum diposting akan ikut diposting.\n\n` +
         `Setelah diposting, data tidak dapat diubah lagi.`
       );
-      
+
       if (!confirmPost) return;
 
       // Post semua penjabaran beserta parent rinciannya
@@ -214,7 +214,7 @@ export default function OutputAPBDes() {
         `📝 ${result.data.penjabaran_count} penjabaran diposting\n` +
         `📋 ${result.data.posted_rincian_count} parent rincian diposting`
       );
-      
+
       router.push("/APBDes/buku-apbdes");
     } catch (error) {
       console.error("❌ Error posting penjabaran:", error);
@@ -262,11 +262,11 @@ export default function OutputAPBDes() {
                 const penjabaranSum = (itemPenjabaran || []).reduce((s, p) => s + sanitizeNumber(p.jumlah_anggaran || 0), 0);
                 // jika penjabaran sum lebih besar, tunjukkan penjabaranSum sebagai total parent
                 const parentTotal = Math.max(sanitizeNumber(item.jumlah_anggaran || 0), penjabaranSum);
-                
+
                 // Get uraian - prioritaskan kode_ekonomi_id karena itu yang paling spesifik (child terakhir)
                 const ekonomiInfo = kodeEkonomiMap[item.kode_ekonomi_id];
                 const fungsiInfo = kodeFungsiMap[item.kode_fungsi_id];
-                
+
                 // Gunakan uraian dari kode ekonomi (level child terakhir: objek > jenis > kelompok > akun)
                 // Jika tidak ada, baru gunakan fungsi (kegiatan > sub-bidang > bidang)
                 const displayUraian = ekonomiInfo?.uraian || fungsiInfo?.uraian || "Tidak ada uraian";
@@ -311,7 +311,7 @@ export default function OutputAPBDes() {
                           // Get uraian for penjabaran - prioritaskan kode_ekonomi_id (child terakhir)
                           const penjabaranEkonomiInfo = kodeEkonomiMap[penjabaran.kode_ekonomi_id];
                           const penjabaranFungsiInfo = kodeFungsiMap[penjabaran.kode_fungsi_id];
-                          
+
                           // Gunakan uraian dari kode ekonomi (level child terakhir)
                           const penjabaranUraian = penjabaranEkonomiInfo?.uraian || penjabaranFungsiInfo?.uraian || "Penjabaran";
 
@@ -389,7 +389,7 @@ export default function OutputAPBDes() {
             <ArrowUpRight width={18} height={18} />
           </Button>
 
-          
+
 
           {/* <Button
             variant="solid"

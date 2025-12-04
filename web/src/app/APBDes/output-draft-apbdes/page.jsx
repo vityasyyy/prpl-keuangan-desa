@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import BreadCrumb from "@/components/breadCrumb";
-import Button from "@/components/button";
+import BreadCrumb from "@/components/Breadcrumb";
+import Button from "@/components/Button";
 import { ArrowUpRight, Download, Plus, SquarePlus, Pencil } from "@/components/icons";
 
 export default function OutputAPBDes() {
@@ -37,9 +37,9 @@ export default function OutputAPBDes() {
       const res = await fetch(`${API}/kode-ekonomi`);
       if (!res.ok) throw new Error("Failed to fetch kode ekonomi");
       const ekonomiData = await res.json();
-      
+
       console.log("💰 Kode ekonomi data:", ekonomiData.slice(0, 5)); // Log sample
-      
+
       // Create map: id -> {uraian, level}
       const map = {};
       ekonomiData.forEach((item) => {
@@ -175,7 +175,7 @@ export default function OutputAPBDes() {
 
         const aParts = aKode.split('.').map(Number);
         const bParts = bKode.split('.').map(Number);
-        
+
         for (let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
           if (aParts[i] !== bParts[i]) {
             return aParts[i] - bParts[i];

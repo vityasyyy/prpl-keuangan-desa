@@ -19,7 +19,11 @@ const migrations = [
   "2_kode_rekening.sql",
   "3_user.sql",
   "4_add_timestamps_to_buku_tables.sql",
+  "4_update_tabel_rincian.sql",
   "5_add_persetujuan_to_buku_kas_umum.sql",
+  "5_update_tabel_penjabaran.sql",
+  "6_update_table_rincian.sql",
+  "7_add_status_to_rincian"
 ];
 
 async function runMigrations() {
@@ -34,7 +38,7 @@ async function runMigrations() {
 
       try {
         const sql = readFileSync(filePath, "utf8");
-        
+
         // Skip if file is empty or only contains comments
         const hasActualSQL = sql
           .split('\n')
