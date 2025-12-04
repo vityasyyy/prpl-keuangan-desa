@@ -274,7 +274,8 @@ INSERT INTO kode_fungsi (id, full_code, uraian, level, parent_id) VALUES
 
 -- SUB BIDANG 5.3
 ('5.3', '5 3', 'Sub Bidang Keadaan Mendesak.', 'sub_bidang', '5'),
-('5.3.00', '5 3 00', 'Keadaan Mendesak', 'kegiatan', '5.3');
+('5.3.00', '5 3 00', 'Keadaan Mendesak', 'kegiatan', '5.3')
+ON CONFLICT (id) DO NOTHING;
 
 
 -- =========================
@@ -508,6 +509,7 @@ INSERT INTO kode_ekonomi (id, full_code, uraian, level, parent_id) VALUES
 ('6.2.2', '6 2 2', 'Penyertaan Modal Desa', 'jenis', '6.2'),
 ('6.2.2.01', '6 2 2 01', 'Penyertaan Modal Desa', 'objek', '6.2.2'),
 ('6.2.9', '6 2 9', 'Pengeluaran Pembiayaan lainnya', 'jenis', '6.2'),
-('6.2.9.90', '6 2 9 90-99', 'Pengeluaran Pembiayaan lainnya', 'objek', '6.2.9');
+('6.2.9.90', '6 2 9 90-99', 'Pengeluaran Pembiayaan lainnya', 'objek', '6.2.9')
+ON CONFLICT (id) DO NOTHING;
 
 COMMIT;

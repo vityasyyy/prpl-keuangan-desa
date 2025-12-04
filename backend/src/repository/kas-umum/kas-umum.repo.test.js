@@ -59,21 +59,11 @@ describe("KasUmumRepository (Integration)", () => {
     );
     const testRkaId = rkaRes.rows[0].id;
 
-    // Create RKK
-    const rkkRes = await client.query(
-      `INSERT INTO rkk (id, rka_id, lokasi, biaya_rkk)
-       VALUES ('rkk-test-1', $1, 'Desa Test', 30000000)
-       RETURNING id`,
-      [testRkaId]
-    );
-    const testRkkId = rkkRes.rows[0].id;
-
-    // Create RAB
+    // Create RAB (without rkk_id as per migration 4_revisi_RAB.sql)
     const rabRes = await client.query(
-      `INSERT INTO rab (id, rkk_id, total_amount)
-       VALUES ('rab-test-1', $1, 25000000)
-       RETURNING id`,
-      [testRkkId]
+      `INSERT INTO rab (id, total_amount, mulai, selesai, status_rab)
+       VALUES ('rab-test-1', 25000000, '2025-01-01', '2025-12-31', 'belum diajukan')
+       RETURNING id`
     );
     testRabId = rabRes.rows[0].id;
 
@@ -142,7 +132,7 @@ describe("KasUmumRepository (Integration)", () => {
   describe("listRAB", () => {
     it("should return list of RAB entries", async () => {
       const result = await kasUmumRepo.listRAB();
-      
+
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
       expect(result.length).toBeGreaterThan(0);
@@ -426,27 +416,11 @@ describe("KasUmumRepository (Integration)", () => {
     });
 
     it("should return 0 if no transactions exist for RAB", async () => {
-      // Create a new RKK and RAB with no transactions  
-      const newRkaRes = await client.query(
-        `INSERT INTO rka (id, kegiatan_id, uraian, jumlah)
-         VALUES ('rka-empty-1', 'kegiatan-test-1', 'Empty RKA', 10000000)
-         RETURNING id`
-      );
-      const emptyRkaId = newRkaRes.rows[0].id;
-
-      const newRkkRes = await client.query(
-        `INSERT INTO rkk (id, rka_id, lokasi, biaya_rkk)
-         VALUES ('rkk-empty-1', $1, 'Empty Location', 5000000)
-         RETURNING id`,
-        [emptyRkaId]
-      );
-      const emptyRkkId = newRkkRes.rows[0].id;
-
+      // Create a new RAB with no transactions (without rkk_id as per migration 4_revisi_RAB.sql)
       const newRabRes = await client.query(
-        `INSERT INTO rab (id, rkk_id, total_amount)
-         VALUES ('rab-empty-1', $1, 2500000)
-         RETURNING id`,
-        [emptyRkkId]
+        `INSERT INTO rab (id, total_amount, mulai, selesai, status_rab)
+         VALUES ('rab-empty-1', 2500000, '2025-01-01', '2025-12-31', 'belum diajukan')
+         RETURNING id`
       );
       const emptyRabId = newRabRes.rows[0].id;
 
