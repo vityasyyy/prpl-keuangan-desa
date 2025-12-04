@@ -34,10 +34,12 @@ const MODULE_FIELDS = {
   kegiatan: {
     columns: [
       { key: "tanggal", label: "Tanggal", width: "100px" },
-      { key: "uraian", label: "Uraian", width: "auto" },
-      { key: "penerimaan", label: "Penerimaan", width: "120px" },
-      { key: "pengeluaran", label: "Pengeluaran", width: "120px" },
-      { key: "saldo_after", label: "Saldo", width: "120px" },
+      { key: "uraian", label: "Uraian", width: "200px" },
+      { key: "penerimaan_bendahara", label: "Penerimaan dari Bendahara", width: "auto" },
+      { key: "penerimaan_swadaya", label: "Penerimaan dari Swadaya", width: "auto" },
+      { key: "pengeluaran_barang_dan_jasa", label: "Pengeluaran Barang dan Jasa", width: "auto" },
+      { key: "pengeluaran_modal", label: "Pengeluaran Modal", width: "auto" },
+      { key: "saldo_hitung", label: "Saldo", width: "120px" },
     ],
   },
   panjar: {
@@ -46,7 +48,7 @@ const MODULE_FIELDS = {
       { key: "uraian", label: "Uraian", width: "auto" },
       { key: "pemberian", label: "Pemberian", width: "120px" },
       { key: "pertanggungjawaban", label: "Pertanggungjawaban", width: "140px" },
-      { key: "saldo_after", label: "Saldo", width: "120px" },
+      { key: "saldo_hitung", label: "Saldo", width: "120px" },
     ],
   },
   pajak: {
@@ -55,7 +57,7 @@ const MODULE_FIELDS = {
       { key: "uraian", label: "Uraian", width: "auto" },
       { key: "pemotongan", label: "Pemotongan", width: "120px" },
       { key: "penyetoran", label: "Penyetoran", width: "120px" },
-      { key: "saldo_after", label: "Saldo", width: "120px" },
+      { key: "saldo_hitung", label: "Saldo", width: "120px" },
     ],
   },
 };
@@ -72,6 +74,23 @@ export default function MonthCard({
   const router = useRouter();
 
   const columns = MODULE_FIELDS[moduleType]?.columns || [];
+
+  const handleDownload = (e) => {
+    e.stopPropagation();
+    const bulan = parseInt(transactions[0].tanggal.slice(5, 7));
+    const tahun = parseInt(transactions[0].tanggal.slice(0, 4));
+
+    const locationPath = window.location.pathname.toLowerCase();
+    const moduleMap = {
+      "kas-pembantu-kegiatan": "kegiatan",
+      "kas-pembantu-panjar": "panjar",
+      "kas-pembantu-pajak": "pajak",
+    };
+    const moduleType = moduleMap[Object.keys(moduleMap).find(key => locationPath.includes(key))] || "kegiatan";
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
+    const exportUrl = `${API_BASE_URL}/kas-pembantu/${moduleType}/export?bulan=${bulan}&tahun=${tahun}`;
+    window.location.href = exportUrl;
+  };
 
   return (
     <div className="rounded-2xl border border-gray-300 bg-white shadow-sm">
@@ -108,16 +127,16 @@ export default function MonthCard({
         <div className="flex items-center gap-2">
           <button
             className="rounded-md border border-gray-300 px-2 py-1 hover:bg-gray-50"
-            onClick={(e) => e.stopPropagation()}
+            onClick={handleDownload}
           >
-            <Download size={16} className="text-gray-600" />
+            <Download size={16} className="text-gray-600 hover:cursor-pointer" />
           </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
               router.push(formPath);
             }}
-            className="rounded-md border border-gray-300 px-2 py-1 hover:bg-gray-50"
+            className="rounded-md border border-gray-300 px-2 py-1 hover:bg-gray-50 hover:cursor-pointer"
           >
             <Plus size={16} className="text-gray-600" />
           </button>

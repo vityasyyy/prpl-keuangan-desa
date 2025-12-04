@@ -35,7 +35,7 @@ export default function FormInputKasUmum() {
   const [rabList, setRabList] = useState([]);
 
   const [kodeRekError, setKodeRekError] = useState(""); // Error state (opsional ditampilkan di UI)
-  const [kodeEkoError, setKodeEkoError] = useState("");
+  const [kodeEkoError, setKodeEkoError] = useState(""); // Error state (opsional ditampilkan di UI)
 
   // Parse "5.3 5 3" → ["5","3","5","3"]
   const ekoParse = (s) =>
@@ -105,23 +105,23 @@ export default function FormInputKasUmum() {
   };
 
   // Format kode rekening ke format yang benar (x x xx)
-  const formatKodeRek = (kode) => {
-    // Bersihkan input (ubah titik jadi spasi)
-    const cleanKode = kode.replace(/\./g, " ");
-    const parts = cleanKode.split(/\s+/);
-
-    // Format: bidang dan sub-bidang single digit, kegiatan 2 digit
-    const formattedParts = parts.map((part, index) => {
-      if (index === 2) {
-        // kegiatan
-        return part.padStart(2, "0");
-      }
-      return parseInt(part); // hilangkan leading zero untuk bidang dan sub-bidang
-    });
-
-    return formattedParts.join(" ");
-  };
-
+  // const formatKodeRek = (kode) => {
+  //   // Bersihkan input (ubah titik jadi spasi)
+  //   const cleanKode = kode.replace(/\./g, " ");
+  //   const parts = cleanKode.split(/\s+/);
+  //
+  //   // Format: bidang dan sub-bidang single digit, kegiatan 2 digit
+  //   const formattedParts = parts.map((part, index) => {
+  //     if (index === 2) {
+  //       // kegiatan
+  //       return part.padStart(2, "0");
+  //     }
+  //     return parseInt(part); // hilangkan leading zero untuk bidang dan sub-bidang
+  //   });
+  //
+  //   return formattedParts.join(" ");
+  // };
+  //
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
@@ -305,7 +305,7 @@ export default function FormInputKasUmum() {
 
           if (matchingBidang) {
             // Format ulang kode untuk menghilangkan leading zero di bidang
-            const formattedCode = `${parseInt(parts[0])}${parts[1] ? ` ${parts[1]}` : ""}${parts[2] ? ` ${parts[2].padStart(2, "0")}` : ""}`;
+            // const formattedCode = `${parseInt(parts[0])}${parts[1] ? ` ${parts[1]}` : ""}${parts[2] ? ` ${parts[2].padStart(2, "0")}` : ""}`;
 
             // Set bidang id but keep the user's raw input in kodeRek so they can type spaces
             setFormData((prev) => ({
@@ -346,7 +346,7 @@ export default function FormInputKasUmum() {
                 // Cek kegiatan jika ada
                 if (parts[2] && kegiatanList.length > 0) {
                   const matchingKegiatan = kegiatanList.find((k) => {
-                    const kegParts = k.full_code.replace(/\./g, " ").trim().split(/\s+/);
+                    // const kegParts = k.full_code.replace(/\./g, " ").trim().split(/\s+/);
                     const targetKode = `${parseInt(parts[0])} ${parseInt(parts[1])} ${parts[2].padStart(2, "0")}`;
                     return k.full_code.replace(/\./g, " ").trim() === targetKode;
                   });
@@ -834,9 +834,8 @@ export default function FormInputKasUmum() {
                       value={formData.kodeEko}
                       onChange={handleInputChange}
                       placeholder="Kode Rek"
-                      className={`w-[159px] rounded-lg border ${
-                        kodeRekError ? "border-red-500" : "border-[#d4d4d8]"
-                      } bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]`}
+                      className={`w-[159px] rounded-lg border ${kodeRekError ? "border-red-500" : "border-[#d4d4d8]"
+                        } bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]`}
                     />
                     {kodeRekError && <span className="text-xs text-red-500">{kodeRekError}</span>}
                   </div>
@@ -945,9 +944,8 @@ export default function FormInputKasUmum() {
                       value={formData.kodeRek}
                       onChange={handleInputChange}
                       placeholder="Kode Rek"
-                      className={`w-[159px] rounded-lg border ${
-                        kodeRekError ? "border-red-500" : "border-[#d4d4d8]"
-                      } bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]`}
+                      className={`w-[159px] rounded-lg border ${kodeRekError ? "border-red-500" : "border-[#d4d4d8]"
+                        } bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]`}
                     />
                     {kodeRekError && <span className="text-xs text-red-500">{kodeRekError}</span>}
                   </div>

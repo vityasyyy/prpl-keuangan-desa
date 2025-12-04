@@ -1,19 +1,24 @@
 "use client";
 import { useState, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Sidebar from "@/features/kas-pembantu/Sidebar";
 import Header from "@/features/kas-pembantu/Header";
 import BreadcrumbHeader from "@/features/kas-pembantu/BreadcrumbHeader";
-import { ChevronDown, ChevronRight, Download, Plus } from "lucide-react";
 import MonthCard from "@/features/kas-pembantu/MonthCard";
+import { useAuth } from "@/lib/auth";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081/api";
 
-// Utility functions (inline)
+// 1. parse aman (hapus Rp, koma)
+// 1. parse aman (hapus Rp, koma)
+function parseToNumber(value) {
+  if (!value) return 0;
+  return Number(String(value).replace(/[^0-9.-]+/g, "")) || 0;
+}
+
+// 2. format tampilan rupiah
 function formatCurrency(value) {
-  if (!value) return "Rp0,00";
-  const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) return "Rp0,00";
+  const num = parseToNumber(value);
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
@@ -22,19 +27,85 @@ function formatCurrency(value) {
   }).format(num);
 }
 
-function formatMonthDisplay(monthNumber) {
-  return `Bulan ${monthNumber}`;
+function formatMonthYearDisplay(month, year) {
+  const namaBulan = [
+    "", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ];
+  return `${namaBulan[month]} ${year}`;
 }
 
+function transformToMonthCards(apiResponse) {
+  if (!apiResponse?.data?.length) return [];
+
+  const all = [...apiResponse.data].sort((a, b) => {
+    const ta = new Date(a.tanggal).getTime();
+    const tb = new Date(b.tanggal).getTime();
+    return ta - tb;
+  });
+
+  let runningSaldo = 0;
+  const allWithSaldo = all.map((trx) => {
+    const delta =
+      (parseFloat(trx.penerimaan_bendahara) || 0) +
+      (parseFloat(trx.penerimaan_swadaya) || 0) -
+      (parseFloat(trx.pengeluaran_modal) || 0) -
+      (parseFloat(trx.pengeluaran_barang_dan_jasa) || 0);
+
+    runningSaldo += delta;
+
+    return {
+      ...trx,
+      delta,
+      saldo_hitung: runningSaldo,
+      delta_formatted: formatCurrency(delta),
+      saldo_hitung_formatted: formatCurrency(runningSaldo),
+    };
+  });
+
+  const monthGroups = {};
+  allWithSaldo.forEach((trx) => {
+    const date = new Date(trx.tanggal);
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    const key = `${year}-${month}`;
+
+    if (!monthGroups[key]) {
+      monthGroups[key] = {
+        month,
+        year,
+        transactions: [],
+        total: 0,
+      };
+    }
+
+    monthGroups[key].transactions.push(trx);
+    monthGroups[key].total = trx.saldo_hitung;
+  });
+
+  const sorted = Object.values(monthGroups).sort((a, b) => {
+    if (b.year !== a.year) return b.year - a.year;
+    return b.month - a.month;
+  });
+
+  return sorted.map((group, index) => ({
+    bulan: formatMonthYearDisplay(group.month, group.year),
+    total: formatCurrency(group.total),
+    isCurrentMonth: index === 0,
+    month: group.month,
+    year: group.year,
+    transactions: group.transactions,
+  }));
+}
+
+
 export default function KasPembantuKegiatan() {
-  const [open, setOpen] = useState(null);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const router = useRouter();
-  const pathname = usePathname(); // deteksi halaman sekarang
+  const pathname = usePathname();
+  const { token } = useAuth() || {};
 
-  // path form otomatis disesuaikan
   const formPath = `${pathname}/Form`;
 
   // Fetch data from API on component mount
@@ -42,9 +113,30 @@ export default function KasPembantuKegiatan() {
     async function fetchData() {
       try {
         setLoading(true);
-        // GET http://localhost:8081/api/kas-pembantu/kegiatan?showAll=true
-        const response = await fetch(`${API_BASE_URL}/api/kas-pembantu/kegiatan?showAll=true`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        setError(null);
+        const headers = {
+          "Content-Type": "application/json",
+        };
+
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+        const response = await fetch(
+          `${API_BASE_URL}/kas-pembantu/kegiatan?showAll=true`,
+          {
+            method: "GET",
+            headers: headers,
+            credentials: "include",
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `HTTP ${response.status}: ${errorText || response.statusText}`
+          );
+        }
         const result = await response.json();
 
         // Transform API response to match UI data structure
@@ -52,7 +144,6 @@ export default function KasPembantuKegiatan() {
         setData(transformed);
       } catch (err) {
         setError(err.message);
-        // Fallback to empty array on error
         setData([]);
       } finally {
         setLoading(false);
@@ -60,50 +151,7 @@ export default function KasPembantuKegiatan() {
     }
 
     fetchData();
-  }, []);
-
-  // Transform API response to month cards format
-  function transformToMonthCards(apiResponse) {
-    if (!apiResponse || !apiResponse.data || apiResponse.data.length === 0) {
-      return [];
-    }
-
-    // Group transactions by month
-    const monthGroups = {};
-
-    apiResponse.data.forEach((transaction) => {
-      const date = new Date(transaction.tanggal);
-      const month = date.getMonth() + 1;
-      const year = date.getFullYear();
-      const monthKey = `${month}-${year}`;
-
-      if (!monthGroups[monthKey]) {
-        monthGroups[monthKey] = {
-          month,
-          year,
-          total: 0,
-          transactions: [],
-        };
-      }
-
-      monthGroups[monthKey].transactions.push(transaction);
-      const saldo = parseFloat(transaction.saldo_after) || 0;
-      monthGroups[monthKey].total = saldo;
-    });
-
-    // Convert to array and sort by month descending
-    const sorted = Object.values(monthGroups).sort((a, b) => b.month - a.month);
-
-    // Map to MonthCard format
-    return sorted.map((group, index) => ({
-      bulan: formatMonthDisplay(group.month),
-      total: formatCurrency(group.total),
-      isCurrentMonth: index === 0,
-      month: group.month,
-      year: group.year,
-      transactions: group.transactions,
-    }));
-  }
+  }, []); // Dependency array dengan token agar re-fetch saat token berubah
 
   return (
     <div className="flex h-screen bg-gray-100">

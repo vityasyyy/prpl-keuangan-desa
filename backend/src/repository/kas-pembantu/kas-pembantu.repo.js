@@ -1,9 +1,12 @@
+import { logError } from "../../common/logger/logger.js";
+
 export default function createRepo(db) {
   const P = (i) => `$${i}`;
 
   /**
    * Ambil daftar transaksi kas pembantu dengan filter dan pagination
    */
+
   async function listKegiatanTransaksi({
     bulan,
     tahun,
@@ -39,7 +42,9 @@ export default function createRepo(db) {
 
     const offset = (page - 1) * limit;
     const sql = `
-      SELECT id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after
+      SELECT id, bku_id, type_enum, tanggal, uraian, no_bukti,
+        penerimaan_bendahara, penerimaan_swadaya,
+        pengeluaran_barang_dan_jasa, pengeluaran_modal, saldo_after
       FROM buku_kas_pembantu
       ${where.length ? "WHERE " + where.join(" AND ") : ""}
       ORDER BY tanggal, id
@@ -49,9 +54,12 @@ export default function createRepo(db) {
     const { rows } = await db.query(sql, params);
     return rows;
   }
+
   async function getKegiatanById(id) {
     const sql = `
-      SELECT id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after
+      SELECT id, bku_id, type_enum, tanggal, uraian, no_bukti,
+        penerimaan_bendahara, penerimaan_swadaya,
+        pengeluaran_barang_dan_jasa, pengeluaran_modal, saldo_after
       FROM buku_kas_pembantu
       WHERE id = ${P(1)}
       LIMIT 1
@@ -116,7 +124,7 @@ export default function createRepo(db) {
       const result = await db.query(query);
       return result.rows;
     } catch (err) {
-      console.error("ERROR getAllData:", err);
+      logError("ERROR in getAllData():", err);
       throw err;
     }
   }
@@ -152,32 +160,28 @@ export default function createRepo(db) {
     const { rows } = await db.query(q, [bku_id]);
     return rows.length > 0;
   }
-  async function getLastSaldoByBkuId(bku_id) {
-    const q = `SELECT saldo_after FROM buku_kas_pembantu WHERE bku_id = ${P(
-      1
-    )} ORDER BY tanggal DESC, id DESC LIMIT 1`;
-    const { rows } = await db.query(q, [bku_id]);
-    if (rows.length === 0) return null;
-    return Number(rows[0].saldo_after);
-  }
-  /**
-   * Insert satu row ke buku_kas_pembantu
-   * payload: { id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after }
-   */
+  
   async function insertKegiatan(payload) {
     const q = `
       INSERT INTO buku_kas_pembantu
-        (id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after)
-      VALUES (${P(1)},${P(2)},${P(3)},${P(4)},${P(5)},${P(6)},${P(7)},${P(8)})
-      RETURNING *`;
+        (id, bku_id, type_enum, tanggal, uraian, no_bukti,
+        penerimaan_bendahara, penerimaan_swadaya,
+        pengeluaran_barang_dan_jasa, pengeluaran_modal, saldo_after)
+      VALUES (${P(1)},${P(2)},${P(3)},${P(4)},${P(5)},${P(6)},
+              ${P(7)},${P(8)},${P(9)},${P(10)},${P(11)})
+      RETURNING *
+    `;
     const values = [
       payload.id,
       payload.bku_id,
       payload.type_enum,
       payload.tanggal,
       payload.uraian,
-      payload.penerimaan ?? 0,
-      payload.pengeluaran ?? 0,
+      payload.no_bukti,
+      payload.penerimaan_bendahara ?? 0,
+      payload.penerimaan_swadaya ?? 0,
+      payload.pengeluaran_barang_dan_jasa ?? 0,
+      payload.pengeluaran_modal ?? 0,
       payload.saldo_after,
     ];
     const { rows } = await db.query(q, values);
@@ -191,7 +195,9 @@ export default function createRepo(db) {
 
       // ambil row lama
       const qOld = `
-        SELECT id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after
+        SELECT id, bku_id, type_enum, tanggal, uraian, no_bukti,
+          penerimaan_bendahara, penerimaan_swadaya,
+          pengeluaran_barang_dan_jasa, pengeluaran_modal, saldo_after
         FROM buku_kas_pembantu
         WHERE id = ${P(1)}
         LIMIT 1
@@ -206,14 +212,23 @@ export default function createRepo(db) {
       // nilai baru (pakai nilai lama bila tidak di-provide)
       const newTanggal = updates.tanggal ?? oldRow.tanggal;
       const newUraian = updates.uraian ?? oldRow.uraian;
-      const newPenerimaan =
-        updates.penerimaan !== undefined
-          ? Number(updates.penerimaan)
-          : Number(oldRow.penerimaan ?? 0);
-      const newPengeluaran =
-        updates.pengeluaran !== undefined
-          ? Number(updates.pengeluaran)
-          : Number(oldRow.pengeluaran ?? 0);
+      const newNoBukti = updates.no_bukti ?? oldRow.no_bukti;
+      const newPenerimaanBendahara =
+        updates.penerimaan_bendahara !== undefined
+          ? Number(updates.penerimaan_bendahara)
+          : Number(oldRow.penerimaan_bendahara ?? 0);
+      const newPenerimaanSwadaya =
+        updates.penerimaan_swadaya !== undefined
+          ? Number(updates.penerimaan_swadaya)
+          : Number(oldRow.penerimaan_swadaya ?? 0);
+      const newPengeluaranBarangJasa =
+        updates.pengeluaran_barang_dan_jasa !== undefined
+          ? Number(updates.pengeluaran_barang_dan_jasa)
+          : Number(oldRow.pengeluaran_barang_dan_jasa ?? 0);
+      const newPengeluaranModal =
+        updates.pengeluaran_modal !== undefined
+          ? Number(updates.pengeluaran_modal)
+          : Number(oldRow.pengeluaran_modal ?? 0);
       const newTypeEnum = updates.type_enum ?? oldRow.type_enum;
 
       // ambil saldo_before (saldo_after dari row sebelum row ini) berdasarkan ordering tanggal,id
@@ -233,7 +248,7 @@ export default function createRepo(db) {
 
       // hitung saldo baru untuk row ini
       const newSaldoAfter = Number(
-        (prevSaldo + newPenerimaan - newPengeluaran).toFixed(2)
+        (prevSaldo + newPenerimaanBendahara + newPenerimaanSwadaya - newPengeluaranBarangJasa - newPengeluaranModal).toFixed(2)
       );
       const oldSaldoAfter = Number(oldRow.saldo_after ?? 0);
       const delta = Number((newSaldoAfter - oldSaldoAfter).toFixed(2));
@@ -243,18 +258,26 @@ export default function createRepo(db) {
         UPDATE buku_kas_pembantu
         SET tanggal = ${P(1)},
             uraian = ${P(2)},
-            penerimaan = ${P(3)},
-            pengeluaran = ${P(4)},
-            saldo_after = ${P(5)},
-            type_enum = ${P(6)}
-        WHERE id = ${P(7)}
-        RETURNING id, bku_id, type_enum, tanggal, uraian, penerimaan, pengeluaran, saldo_after
+            no_bukti = ${P(3)},
+            penerimaan_bendahara = ${P(4)},
+            penerimaan_swadaya = ${P(5)},
+            pengeluaran_barang_dan_jasa = ${P(6)},
+            pengeluaran_modal = ${P(7)},
+            saldo_after = ${P(8)},
+            type_enum = ${P(9)}
+        WHERE id = ${P(10)}
+        RETURNING id, bku_id, type_enum, tanggal, uraian, no_bukti,
+          penerimaan_bendahara, penerimaan_swadaya,
+          pengeluaran_barang_dan_jasa, pengeluaran_modal, saldo_after
       `;
       const valuesUpdate = [
         newTanggal,
         newUraian,
-        newPenerimaan,
-        newPengeluaran,
+        newNoBukti,
+        newPenerimaanBendahara,
+        newPenerimaanSwadaya,
+        newPengeluaranBarangJasa,
+        newPengeluaranModal,
         newSaldoAfter,
         newTypeEnum,
         id,
@@ -282,6 +305,43 @@ export default function createRepo(db) {
       throw err;
     } finally {
       client.release();
+    }
+  }
+
+  async function getAllKasPanjar({ bulan, tahun }) {  // khusus untuk export semua data ke excel
+    try {
+      const values = [];
+      let conditions = [];
+
+      if (tahun) {
+        values.push(tahun);
+        conditions.push(`EXTRACT(YEAR FROM tanggal) = $${values.length}`);
+      }
+
+      if (bulan) {
+        values.push(bulan);
+        conditions.push(`EXTRACT(MONTH FROM tanggal) = $${values.length}`);
+      }
+
+      // base query
+      let query = `
+        SELECT *
+        FROM buku_pembantu_panjar
+      `;
+
+      // apply filters only if exist
+      if (conditions.length > 0) {
+        query += " WHERE " + conditions.join(" AND ");
+      }
+
+      query += " ORDER BY tanggal ASC, id ASC";
+
+      const result = await db.query(query, values);
+      return result.rows;
+
+    } catch (err) {
+      logError("ERROR in getAllKasPanjar():", err);
+      throw err;
     }
   }
 
@@ -327,7 +387,7 @@ export default function createRepo(db) {
     // Paging
     const offset = (page - 1) * per_page;
     const sql = `
-      SELECT id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
+      SELECT id, bku_id, tanggal, uraian, no_bukti, pemberian, pertanggungjawaban, saldo_after
       FROM buku_pembantu_panjar
       ${whereSql}
       ORDER BY ${sort_by} ${order.toUpperCase()}, id ${order.toUpperCase()}
@@ -347,7 +407,7 @@ export default function createRepo(db) {
 
   async function getPanjarById(id) {
     const sql = `
-      SELECT id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
+      SELECT id, bku_id, tanggal, uraian, no_bukti, pemberian, pertanggungjawaban, saldo_after
       FROM buku_pembantu_panjar
       WHERE id = $1
       LIMIT 1
@@ -359,15 +419,16 @@ export default function createRepo(db) {
   async function insertPanjar(payload) {
     const sql = `
       INSERT INTO buku_pembantu_panjar
-        (id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
-      RETURNING id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
+        (id, bku_id, tanggal, uraian, no_bukti, pemberian, pertanggungjawaban, saldo_after)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      RETURNING id, bku_id, tanggal, uraian, no_bukti, pemberian, pertanggungjawaban, saldo_after
     `;
     const values = [
       payload.id,
       payload.bku_id,
       payload.tanggal,
       payload.uraian,
+      payload.no_bukti,
       payload.pemberian ?? 0,
       payload.pertanggungjawaban ?? 0,
       payload.saldo_after ?? 0,
@@ -379,7 +440,7 @@ export default function createRepo(db) {
   async function updatePanjarById(id, updates) {
     // ambil row lama
     const qOld = `
-      SELECT id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
+      SELECT id, bku_id, tanggal, uraian, no_bukti, pemberian, pertanggungjawaban, saldo_after
       FROM buku_pembantu_panjar
       WHERE id = $1
       LIMIT 1
@@ -392,6 +453,7 @@ export default function createRepo(db) {
     const newBkuId = updates.bku_id ?? oldRow.bku_id;
     const newTanggal = updates.tanggal ?? oldRow.tanggal;
     const newUraian = updates.uraian ?? oldRow.uraian;
+    const newNoBukti = updates.no_bukti ?? oldRow.no_bukti;
     const newPemberian =
       updates.pemberian !== undefined
         ? Number(updates.pemberian)
@@ -404,22 +466,25 @@ export default function createRepo(db) {
       updates.saldo_after !== undefined
         ? Number(updates.saldo_after)
         : newPemberian - newPertanggungjawaban;
+    
 
     const qUpdate = `
       UPDATE buku_pembantu_panjar
       SET bku_id = $1,
           tanggal = $2,
           uraian = $3,
-          pemberian = $4,
-          pertanggungjawaban = $5,
-          saldo_after = $6
-      WHERE id = $7
+          no_bukti = $4,
+          pemberian = $5,
+          pertanggungjawaban = $6,
+          saldo_after = $7
+      WHERE id = $8
       RETURNING id, bku_id, tanggal, uraian, pemberian, pertanggungjawaban, saldo_after
     `;
     const values = [
       newBkuId,
       newTanggal,
       newUraian,
+      newNoBukti,
       newPemberian,
       newPertanggungjawaban,
       newSaldoAfter,
@@ -432,6 +497,43 @@ export default function createRepo(db) {
   // =========================
   // BUKU KAS PAJAK (buku_kas_pajak)
   // =========================
+  
+  async function getAllKasPajak({ bulan, tahun }) { // khusus untuk export semua data ke excel  
+    try {
+      const values = [];
+      let conditions = [];
+
+      if (tahun) {
+        values.push(tahun);
+        conditions.push(`EXTRACT(YEAR FROM tanggal) = $${values.length}`);
+      }
+
+      if (bulan) {
+        values.push(bulan);
+        conditions.push(`EXTRACT(MONTH FROM tanggal) = $${values.length}`);
+      }
+
+      // build query dasar
+      let query = `
+        SELECT *
+        FROM buku_kas_pajak
+      `;
+
+      // jika ada filter, tambahkan WHERE
+      if (conditions.length > 0) {
+        query += " WHERE " + conditions.join(" AND ");
+      }
+
+      query += " ORDER BY tanggal ASC, id ASC";
+
+      const result = await db.query(query, values);
+      return result.rows;
+
+    } catch (err) {
+      logError("ERROR in getAllKasPajak():", err);
+      throw err;
+    }
+  }
 
   async function listPajak({
     page = 1,
@@ -476,7 +578,7 @@ export default function createRepo(db) {
     // Paging
     const offset = (page - 1) * per_page;
     const sql = `
-      SELECT id, bku_id, tanggal, uraian, pemotongan, penyetoran, saldo_after
+      SELECT id, bku_id, tanggal, uraian, no_bukti, pemotongan, penyetoran, saldo_after
       FROM buku_kas_pajak
       ${whereSql}
       ORDER BY ${sort_by} ${order.toUpperCase()}, id ${order.toUpperCase()}
@@ -490,7 +592,7 @@ export default function createRepo(db) {
 
   async function getPajakById(id) {
     const sql = `
-      SELECT id, bku_id, tanggal, uraian, pemotongan, penyetoran, saldo_after
+      SELECT id, bku_id, tanggal, uraian, no_bukti, pemotongan, penyetoran, saldo_after
       FROM buku_kas_pajak
       WHERE id = $1
       LIMIT 1
@@ -505,30 +607,19 @@ export default function createRepo(db) {
     return rowCount > 0;
   }
 
-  async function getLastSaldoPajak() {
-    const sql = `
-      SELECT saldo_after
-      FROM buku_kas_pajak
-      ORDER BY tanggal DESC, id DESC
-      LIMIT 1
-    `;
-    const { rows } = await db.query(sql);
-    if (!rows.length) return 0;
-    return Number(rows[0].saldo_after ?? 0);
-  }
-
   async function insertPajak(payload) {
     const sql = `
       INSERT INTO buku_kas_pajak
-        (id, bku_id, tanggal, uraian, pemotongan, penyetoran, saldo_after)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
-      RETURNING id, bku_id, tanggal, uraian, pemotongan, penyetoran, saldo_after
+        (id, bku_id, tanggal, uraian, no_bukti, pemotongan, penyetoran, saldo_after)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      RETURNING id, bku_id, tanggal, uraian, no_bukti, pemotongan, penyetoran, saldo_after
     `;
     const values = [
       payload.id,
       payload.bku_id ?? null,
       payload.tanggal,
       payload.uraian,
+      payload.no_bukti ?? null,
       payload.pemotongan ?? 0,
       payload.penyetoran ?? 0,
       payload.saldo_after ?? 0,
@@ -537,101 +628,60 @@ export default function createRepo(db) {
     return rows[0];
   }
 
-  async function updatePajakById(id, updates = {}) {
-    const client = await db.connect();
-    try {
-      await client.query("BEGIN");
-
-      // ambil row lama
-      const qOld = `
-        SELECT id, bku_id, tanggal, uraian, pemotongan, penyetoran, saldo_after
-        FROM buku_kas_pajak
-        WHERE id = ${P(1)}
-        LIMIT 1
-      `;
-      const { rows: oldRows } = await client.query(qOld, [id]);
-      const oldRow = oldRows[0];
-      if (!oldRow) {
-        await client.query("ROLLBACK");
-        return null;
-      }
-
-      // nilai baru (pakai nilai lama bila tidak di-provide)
-      const newTanggal = updates.tanggal ?? oldRow.tanggal;
-      const newUraian = updates.uraian ?? oldRow.uraian;
-      const newPemotongan =
-        updates.pemotongan !== undefined
-          ? Number(updates.pemotongan)
-          : Number(oldRow.pemotongan ?? 0);
-      const newPenyetoran =
-        updates.penyetoran !== undefined
-          ? Number(updates.penyetoran)
-          : Number(oldRow.penyetoran ?? 0);
-      const newBkuId = Object.prototype.hasOwnProperty.call(updates, "bku_id")
-        ? updates.bku_id
-        : oldRow.bku_id;
-
-      // ambil saldo_before (global, tidak per bku_id)
-      const qPrev = `
-        SELECT saldo_after FROM buku_kas_pajak
-        WHERE (tanggal < ${P(1)} OR (tanggal = ${P(1)} AND id < ${P(2)}))
-        ORDER BY tanggal DESC, id DESC
-        LIMIT 1
-      `;
-      const { rows: prevRows } = await client.query(qPrev, [newTanggal, id]);
-      const prevSaldo = prevRows.length ? Number(prevRows[0].saldo_after) : 0;
-
-      // hitung saldo baru untuk row ini
-      const newSaldoAfter = Number(
-        (prevSaldo + newPemotongan - newPenyetoran).toFixed(2)
-      );
-      const oldSaldoAfter = Number(oldRow.saldo_after ?? 0);
-      const delta = Number((newSaldoAfter - oldSaldoAfter).toFixed(2));
-
-      // update baris ini
-      const qUpdate = `
-        UPDATE buku_kas_pajak
-        SET bku_id = ${P(1)},
-            tanggal = ${P(2)},
-            uraian = ${P(3)},
-            pemotongan = ${P(4)},
-            penyetoran = ${P(5)},
-            saldo_after = ${P(6)}
-        WHERE id = ${P(7)}
-        RETURNING id, bku_id, tanggal, uraian, pemotongan, penyetoran, saldo_after
-      `;
-      const valuesUpdate = [
-        newBkuId,
-        newTanggal,
-        newUraian,
-        newPemotongan,
-        newPenyetoran,
-        newSaldoAfter,
-        id,
-      ];
-      const { rows: updatedRows } = await client.query(qUpdate, valuesUpdate);
-      const updatedRow = updatedRows[0];
-
-      // kalau saldo berubah, adjust semua row setelahnya (global)
-      if (delta !== 0) {
-        const qAdjust = `
-          UPDATE buku_kas_pajak
-          SET saldo_after = (saldo_after + ${P(1)})
-          WHERE (tanggal > ${P(2)} OR (tanggal = ${P(2)} AND id > ${P(3)}))
-        `;
-        await client.query(qAdjust, [delta, newTanggal, id]);
-      }
-
-      await client.query("COMMIT");
-      return updatedRow;
-    } catch (err) {
-      try {
-        await client.query("ROLLBACK");
-      } catch (_) {}
-      throw err;
-    } finally {
-      client.release();
-    }
+  async function updatePajakById(id, updates) {
+    // ambil row lama
+    const qOld = `
+      SELECT id, bku_id, tanggal, uraian, no_bukti, pemotongan, penyetoran, saldo_after
+      FROM buku_kas_pajak
+      WHERE id = $1
+      LIMIT 1
+    `;
+    const { rows: oldRows } = await db.query(qOld, [id]);
+    const oldRow = oldRows[0];
+    if (!oldRow) return null;
+    
+    // tentukan nilai baru (pakai nilai lama kalau tidak disediakan)
+    const newBkuId = updates.bku_id ?? oldRow.bku_id;
+    const newTanggal = updates.tanggal ?? oldRow.tanggal;
+    const newUraian = updates.uraian ?? oldRow.uraian;
+    const newNoBukti = updates.no_bukti !== undefined ? updates.no_bukti : oldRow.no_bukti;
+    const newPemotongan =
+      updates.pemotongan !== undefined
+        ? Number(updates.pemotongan)
+        : Number(oldRow.pemotongan ?? 0);
+    const newPenyetoran =
+      updates.penyetoran !== undefined
+        ? Number(updates.penyetoran)
+        : Number(oldRow.penyetoran ?? 0);
+    const newSaldoAfter =
+      updates.saldo_after !== undefined
+        ? Number(updates.saldo_after)
+        : newPemotongan - newPenyetoran;
+    
+    const qUpdate = `
+      UPDATE buku_kas_pajak
+      SET bku_id = $1,
+          tanggal = $2,
+          uraian = $3,
+          no_bukti = $4,
+          pemotongan = $5,
+          penyetoran = $6,
+          saldo_after = $7
+      WHERE id = $8
+      RETURNING id, bku_id, tanggal, uraian, no_bukti, pemotongan, penyetoran, saldo_after
+    `;
+    const values = [
+      newBkuId,
+      newTanggal,
+      newUraian,
+      newNoBukti,
+      newPemotongan,
+      newPenyetoran,
+      newSaldoAfter,
+      id,
+    ];
+    const { rows: updatedRows } = await db.query(qUpdate, values);
+    return updatedRows[0] ?? null;
   }
 
   // Fetch kode_fungsi (categories) hierarchically
@@ -653,6 +703,18 @@ export default function createRepo(db) {
     return rows;
   }
 
+  async function getBKUidByKodeFungsi(kode) {
+    const sql = `
+      SELECT id
+      FROM buku_kas_umum
+      WHERE kode_fungsi_id = $1
+      LIMIT 1
+    `;
+    const { rows } = await db.query(sql, [kode]);
+    if (rows.length === 0) return null; // maka BKU yang memiliki kode_fungsi tersebut belum ada
+    return rows[0].id;
+  }
+
   return {
     listKegiatanTransaksi,
     getKegiatanById,
@@ -660,21 +722,23 @@ export default function createRepo(db) {
     getAllData,
     deleteById,
     checkBkuExists,
-    getLastSaldoByBkuId,
     insertKegiatan,
     updateKegiatanById,
+
+    getAllKasPanjar,
     listPanjar,
     deletePanjarById,
     getPanjarById,
     insertPanjar,
     updatePanjarById,
 
+    getAllKasPajak,
     listPajak,
     getPajakById,
     deletePajakById,
-    getLastSaldoPajak,
     insertPajak,
     updatePajakById,
     getKodeFungsi,
+    getBKUidByKodeFungsi
   };
 }

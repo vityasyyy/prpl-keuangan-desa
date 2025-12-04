@@ -35,7 +35,6 @@ export default function FormEditKasUmum() {
     kodeRAB: "",
   });
 
-  const [loading, setLoading] = useState(true);
 
   const [rabList, setRabList] = useState([]);
 
@@ -117,20 +116,20 @@ export default function FormEditKasUmum() {
     return "";
   };
 
-  const formatKodeRek = (kode) => {
-    const cleanKode = kode.replace(/\./g, " ");
-    const parts = cleanKode.split(/\s+/);
-
-    const formattedParts = parts.map((part, index) => {
-      if (index === 2) {
-        return part.padStart(2, "0");
-      }
-      return parseInt(part); // hilangkan leading zero
-    });
-
-    return formattedParts.join(" ");
-  };
-
+  // const formatKodeRek = (kode) => {
+  //   const cleanKode = kode.replace(/\./g, " ");
+  //   const parts = cleanKode.split(/\s+/);
+  //
+  //   const formattedParts = parts.map((part, index) => {
+  //     if (index === 2) {
+  //       return part.padStart(2, "0");
+  //     }
+  //     return parseInt(part); // hilangkan leading zero
+  //   });
+  //
+  //   return formattedParts.join(" ");
+  // };
+  //
   const formatNumber = (num) => {
     if (num === null || num === undefined) return "";
     try {
@@ -172,10 +171,10 @@ export default function FormEditKasUmum() {
       try {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const res = await fetch(`${API_BASE_URL}/kas-umum/${id}`, {
-            credentials: "include",
-            headers,
-            cache: "no-store",
-          });
+          credentials: "include",
+          headers,
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Gagal mengambil data kas umum");
 
         const data = await res.json();
@@ -489,27 +488,27 @@ export default function FormEditKasUmum() {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      tanggal: "",
-      kodeEko: "",
-      kodeRek: "",
-      bidang: "",
-      subBidang: "",
-      kegiatan: "",
-      akun: "",
-      kelompok: "",
-      jenis: "",
-      objek: "",
-      uraian: "",
-      pemasukan: "",
-      pengeluaran: "",
-      nomorBukti: "",
-      nettoTransaksi: "",
-      buatLagi: true,
-      kodeRAB: "",
-    });
-  };
+  // const resetForm = () => {
+  //   setFormData({
+  //     tanggal: "",
+  //     kodeEko: "",
+  //     kodeRek: "",
+  //     bidang: "",
+  //     subBidang: "",
+  //     kegiatan: "",
+  //     akun: "",
+  //     kelompok: "",
+  //     jenis: "",
+  //     objek: "",
+  //     uraian: "",
+  //     pemasukan: "",
+  //     pengeluaran: "",
+  //     nomorBukti: "",
+  //     nettoTransaksi: "",
+  //     buatLagi: true,
+  //     kodeRAB: "",
+  //   });
+  // };
 
   const handleDelete = async () => {
     if (!confirm("Apakah yakin ingin menghapus data ini?")) return;
@@ -623,7 +622,7 @@ export default function FormEditKasUmum() {
   useEffect(() => {
     if (!formData.akun) return;
     async function fetchJenis() {
-        try {
+      try {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const res = await fetch(`${API_BASE_URL}/kas-umum/jenis?akunId=${formData.akun}`, {
           credentials: "include",
@@ -873,9 +872,8 @@ export default function FormEditKasUmum() {
                       value={formData.kodeEko}
                       onChange={handleInputChange}
                       placeholder="Kode Rek"
-                      className={`w-[159px] rounded-lg border ${
-                        kodeRekError ? "border-red-500" : "border-[#d4d4d8]"
-                      } bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]`}
+                      className={`w-[159px] rounded-lg border ${kodeRekError ? "border-red-500" : "border-[#d4d4d8]"
+                        } bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]`}
                     />
                     {kodeRekError && <span className="text-xs text-red-500">{kodeRekError}</span>}
                   </div>
@@ -984,9 +982,8 @@ export default function FormEditKasUmum() {
                       value={formData.kodeRek}
                       onChange={handleInputChange}
                       placeholder="Kode Rek"
-                      className={`w-[159px] rounded-lg border ${
-                        kodeRekError ? "border-red-500" : "border-[#d4d4d8]"
-                      } bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]`}
+                      className={`w-[159px] rounded-lg border ${kodeRekError ? "border-red-500" : "border-[#d4d4d8]"
+                        } bg-white px-[14px] py-2.5 font-['Inter'] text-base leading-6 font-normal text-[#a1a1aa] shadow-[0_1px_2px_0_rgba(16,24,40,0.05)] outline-none placeholder:text-[#a1a1aa]`}
                     />
                     {kodeRekError && <span className="text-xs text-red-500">{kodeRekError}</span>}
                   </div>
@@ -1221,7 +1218,7 @@ export default function FormEditKasUmum() {
               Hapus
             </Button>
 
-              <div className="flex w-1/2 items-center justify-between">
+            <div className="flex w-1/2 items-center justify-between">
               <div className="flex items-center gap-2.5">
                 {persetujuan === "approved" ? (
                   <span className="text-green-600">✅ Disetujui</span>

@@ -1,6 +1,7 @@
-import { Geist, Geist_Mono } from "next/font/google";
+﻿import { Geist, Geist_Mono, Inter, Poppins, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../lib/auth";
+import { ToastProvider } from "@/features/bank-desa/components/Toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -10,6 +11,22 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
+
+const poppins = Poppins({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--font-poppins",
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-plus-jakarta-sans",
 });
 
 export const metadata = {
@@ -22,9 +39,13 @@ export default function RootLayout({ children }) {
   return (
     <html lang="id" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${poppins.variable} ${plusJakartaSans.variable} antialiased flex h-screen overflow-hidden font-sans`}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

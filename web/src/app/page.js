@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -71,6 +72,7 @@ export default function Home() {
   const { user } = useAuth() || {};
 
   return (
+
     <div className="min-h-screen bg-white">
       <Navbar />
 
