@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Button from "./button";
+import Button from "./Button";
 import { Chevron, Logout } from "./icons";
 
 export default function Sidebar() {
@@ -95,11 +95,10 @@ export default function Sidebar() {
                       <li key={subItem}>
                         <Link
                           href={route}
-                          className={`block w-full py-1 px-3 rounded-md ${
-                            active
+                          className={`block w-full py-1 px-3 rounded-md ${active
                               ? "text-white font-light"
                               : "text-gray-300 hover:text-white"
-                          }`}
+                            }`}
                         >
                           {subItem}
                         </Link>
