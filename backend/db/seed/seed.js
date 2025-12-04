@@ -198,35 +198,34 @@ async function seedDatabase() {
     // Seed rab (KEYS CORRECTED)
     console.log("Seeding rab...");
     await client.query(`
-      INSERT INTO rab (id, rkk_id, rincian_id, kode_fungsi_id, kode_ekonomi_id, total_amount) VALUES
-      ('rab001', 'rkk001', 'rin004', '2.3.10', '5.3.5', 75000000.00),
-      ('rab002', 'rkk002', 'rin005', '2.4.11', '5.3.7', 25000000.00),
-      ('rab003', 'rkk003', 'rin006', '4.7.04', '5.2', 15000000.00),
-      ('rab004', 'rkk004', 'rin007', '1.2.03', '5.3.4', 50000000.00)
+    INSERT INTO rab (id, mulai, selesai, kode_fungsi_id, kode_ekonomi_id, total_amount, status_rab) VALUES
+    ('rab001', '2024-01-15', '2024-03-15', '2.3.10','5.3.5', 75000000.00, 'disetujui'),
+    ('rab002', '2024-02-01', '2024-02-28', '2.4.11','5.3.7', 25000000.00, 'diajukan'),
+    ('rab003', '2024-03-01', '2024-03-20', '4.7.04','5.2', 15000000.00, 'disetujui'),
+    ('rab004', '2024-04-01', '2024-05-31', '1.2.03','5.3.4', 50000000.00, 'belum diajukan')
     `);
-
     // Seed rab_line (KEYS CORRECTED)
     console.log("Seeding rab_line...");
     await client.query(`
-      INSERT INTO rab_line (id, rab_id, uraian, volume, harga_satuan, jumlah, kode_ekonomi_id) VALUES
-      ('rabl001', 'rab001', 'Semen 40kg', 100, 75000.00, 7500000.00, '5.3.5.03'),
-      ('rabl002', 'rab001', 'Pasir per kubik', 50, 150000.00, 7500000.00, '5.3.5.03'),
-      ('rabl003', 'rab001', 'Kerikil per kubik', 50, 200000.00, 10000000.00, '5.3.5.03'),
-      ('rabl004', 'rab001', 'Upah tukang per hari', 300, 100000.00, 30000000.00, '5.3.5.02'),
-      ('rabl005', 'rab001', 'Upah buruh per hari', 400, 50000.00, 20000000.00, '5.3.5.02'),
-      ('rabl006', 'rab002', 'Pipa PVC 4 inch', 20, 150000.00, 3000000.00, '5.3.7.03'),
-      ('rabl007', 'rab002', 'Pompa air submersible', 1, 8000000.00, 8000000.00, '5.3.2.10'),
-      ('rabl008', 'rab002', 'Bor sumur per meter', 30, 300000.00, 9000000.00, '5.3.7.02'),
-      ('rabl009', 'rab002', 'Instalasi listrik', 1, 5000000.00, 5000000.00, '5.3.8.03'),
-      ('rabl010', 'rab003', 'Konsumsi pelatihan', 48, 25000.00, 1200000.00, '5.2.1.06'),
-      ('rabl011', 'rab003', 'Honorarium instruktur', 12, 500000.00, 6000000.00, '5.2.2.04'),
-      ('rabl012', 'rab003', 'Bahan pelatihan', 1, 7800000.00, 7800000.00, '5.2.1.07'),
-      ('rabl013', 'rab004', 'Genteng per buah', 500, 15000.00, 7500000.00, '5.3.4.03'),
-      ('rabl014', 'rab004', 'Keramik lantai per m2', 100, 150000.00, 15000000.00, '5.3.4.03'),
-      ('rabl015', 'rab004', 'Cat tembok', 20, 85000.00, 1700000.00, '5.3.4.03'),
-      ('rabl016', 'rab004', 'Upah tukang renovasi', 120, 120000.00, 14400000.00, '5.3.4.02'),
-      ('rabl017', 'rab004', 'Material lain-lain', 1, 11400000.00, 11400000.00, '5.3.4.03')
-    `);
+  INSERT INTO rab_line (id, rab_id, uraian, volume, harga_satuan, jumlah, satuan) VALUES
+  ('rabl001', 'rab001', 'Semen 40kg', 100.00, 75000.00, 7500000.00, 'sak'),
+  ('rabl002', 'rab001', 'Pasir', 50.00, 150000.00, 7500000.00, 'm3'),
+  ('rabl003', 'rab001', 'Kerikil', 50.00, 200000.00, 10000000.00, 'm3'),
+  ('rabl004', 'rab001', 'Upah tukang', 300.00, 100000.00, 30000000.00, 'HOK'),
+  ('rabl005', 'rab001', 'Upah buruh', 400.00, 50000.00, 20000000.00, 'HOK'),
+  ('rabl006', 'rab002', 'Pipa PVC 4 inch', 20.00, 150000.00, 3000000.00, 'batang'),
+  ('rabl007', 'rab002', 'Pompa air submersible', 1.00, 8000000.00, 8000000.00, 'unit'),
+  ('rabl008', 'rab002', 'Bor sumur', 30.00, 300000.00, 9000000.00, 'meter'),
+  ('rabl009', 'rab002', 'Instalasi listrik', 1.00, 5000000.00, 5000000.00, 'paket'),
+  ('rabl010', 'rab003', 'Konsumsi pelatihan', 48.00, 25000.00, 1200000.00, 'orang'),
+  ('rabl011', 'rab003', 'Honorarium instruktur', 12.00, 500000.00, 6000000.00, 'jam'),
+  ('rabl012', 'rab003', 'Bahan pelatihan', 1.00, 7800000.00, 7800000.00, 'paket'),
+  ('rabl013', 'rab004', 'Genteng', 500.00, 15000.00, 7500000.00, 'buah'),
+  ('rabl014', 'rab004', 'Keramik lantai', 100.00, 150000.00, 15000000.00, 'm2'),
+  ('rabl015', 'rab004', 'Cat tembok', 20.00, 85000.00, 1700000.00, 'kaleng'),
+  ('rabl016', 'rab004', 'Upah tukang renovasi', 120.00, 120000.00, 14400000.00, 'HOK'),
+  ('rabl017', 'rab004', 'Material lain-lain', 1.00, 11400000.00, 11400000.00, 'paket')
+`);
 
     // ========================
     // SEED EXECUTION DATA (Buku Kas)
@@ -247,7 +246,7 @@ async function seedDatabase() {
     `);
 
     // Seed buku_kas_pembantu
-    console.log('Seeding buku_kas_pembantu...');
+    console.log("Seeding buku_kas_pembantu...");
     await client.query(`
       INSERT INTO buku_kas_pembantu (
         id, bku_id, type_enum, tanggal, uraian, no_bukti,
@@ -263,7 +262,6 @@ async function seedDatabase() {
       ('bkp007', 'bku010', '2.3.10', '2024-06-01', 'Upah pembangunan jalan','NB7', 0.00, 0.00, 123.00, 25000000.00, 72000000.00)
     `);
 
-    
     // Seed buku_kas_pajak (KEYS CORRECTED)
     console.log("Seeding buku_kas_pajak...");
     await client.query(`
