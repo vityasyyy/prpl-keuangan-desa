@@ -151,7 +151,7 @@ export default function KasPembantuKegiatan() {
     }
 
     fetchData();
-  }, [token]); // Dependency array dengan token agar re-fetch saat token berubah
+  }, []); // Dependency array dengan token agar re-fetch saat token berubah
 
   return (
     <div className="flex h-screen bg-gray-100">
