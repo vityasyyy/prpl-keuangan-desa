@@ -31,7 +31,7 @@ services:
     environment:
       NODE_ENV: production
     restart: unless-stopped
-    command: sh -c "pnpm run seed && node src/index.js"
+    command: sh -c "pnpm run seed && node index.js"
 
 networks:
   prpl-network:
