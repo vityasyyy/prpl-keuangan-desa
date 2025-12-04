@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
       }
     }
     tryFetchMe();
-  }, []);
+  }, [user]);
 
   const login = ({ token, user }) => {
     setToken(token);

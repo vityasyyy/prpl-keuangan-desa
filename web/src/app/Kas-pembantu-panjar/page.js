@@ -22,6 +22,79 @@ function formatCurrency(value) {
   }).format(num);
 }
 
+// Format bulan + tahun langsung
+function formatMonthYearDisplay(month, year) {
+  const namaBulan = [
+    "", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ];
+  return `${namaBulan[month]} ${year}`;
+}
+
+// Transform API response to month cards format (PREFIX SUM BENAR)
+function transformToMonthCards(apiResponse) {
+  if (!apiResponse?.data?.length) return [];
+
+  // 1) Urutkan semua transaksi berdasarkan tanggal agar prefix sum benar
+  const all = [...apiResponse.data].sort((a, b) => {
+    const ta = new Date(a.tanggal).getTime();
+    const tb = new Date(b.tanggal).getTime();
+    return ta - tb;
+  });
+
+  // 2) Hitung prefix sum global
+  let runningSaldo = 0;
+  const allWithSaldo = all.map((trx) => {
+    const delta = (parseFloat(trx.pemberian) || 0) - (parseFloat(trx.pertanggungjawaban) || 0);
+    runningSaldo += delta;
+
+    return {
+      ...trx,
+      delta, // selisih bulan yg sebenarnya
+      saldo_hitung: runningSaldo, // PREFIX SUM SALDO
+      delta_formatted: formatCurrency(delta),
+      saldo_hitung_formatted: formatCurrency(runningSaldo),
+    };
+  });
+
+  // 3) Kelompokkan per bulan (YYYY-MM)
+  const monthGroups = {};
+  allWithSaldo.forEach((trx) => {
+    const date = new Date(trx.tanggal);
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    const monthKey = `${year}-${month}`;
+
+    if (!monthGroups[monthKey]) {
+      monthGroups[monthKey] = {
+        month,
+        year,
+        transactions: [],
+        total: 0,
+      };
+    }
+
+    monthGroups[monthKey].transactions.push(trx);
+    // total bulan = saldo setelah transaksi TERAKHIR bulan tsb
+    monthGroups[monthKey].total = trx.saldo_hitung;
+  });
+
+  // 4) Sort bulan dari yang terbaru
+  const sorted = Object.values(monthGroups).sort((a, b) => {
+    if (b.year !== a.year) return b.year - a.year;
+    return b.month - a.month;
+  });
+
+  // 5) Return format MonthCard
+  return sorted.map((group, index) => ({
+    bulan: formatMonthYearDisplay(group.month, group.year),
+    total: formatCurrency(group.total),
+    isCurrentMonth: index === 0, // bulan terbaru
+    month: group.month,
+    year: group.year,
+    transactions: group.transactions,
+  }));
+}
 export default function KasPembantuPanjar() {
   const [open, setOpen] = useState(null);
   const [data, setData] = useState([]);
@@ -83,79 +156,6 @@ export default function KasPembantuPanjar() {
     fetchData();
   }, [token]);
 
-  // Format bulan + tahun langsung
-  function formatMonthYearDisplay(month, year) {
-    const namaBulan = [
-      "", "Januari","Februari","Maret","April","Mei","Juni",
-      "Juli","Agustus","September","Oktober","November","Desember"
-    ];
-    return `${namaBulan[month]} ${year}`;
-  }
-
-  // Transform API response to month cards format (PREFIX SUM BENAR)
-  function transformToMonthCards(apiResponse) {
-    if (!apiResponse?.data?.length) return [];
-
-    // 1) Urutkan semua transaksi berdasarkan tanggal agar prefix sum benar
-    const all = [...apiResponse.data].sort((a, b) => {
-      const ta = new Date(a.tanggal).getTime();
-      const tb = new Date(b.tanggal).getTime();
-      return ta - tb;
-    });
-
-    // 2) Hitung prefix sum global
-    let runningSaldo = 0;
-    const allWithSaldo = all.map((trx) => {
-      const delta = (parseFloat(trx.pemberian) || 0) - (parseFloat(trx.pertanggungjawaban) || 0); 
-      runningSaldo += delta;
-
-      return {
-        ...trx,
-        delta, // selisih bulan yg sebenarnya
-        saldo_hitung: runningSaldo, // PREFIX SUM SALDO
-        delta_formatted: formatCurrency(delta),
-        saldo_hitung_formatted: formatCurrency(runningSaldo),
-      };
-    });
-
-    // 3) Kelompokkan per bulan (YYYY-MM)
-    const monthGroups = {};
-    allWithSaldo.forEach((trx) => {
-      const date = new Date(trx.tanggal);
-      const month = date.getMonth() + 1;
-      const year = date.getFullYear();
-      const monthKey = `${year}-${month}`;
-
-      if (!monthGroups[monthKey]) {
-        monthGroups[monthKey] = {
-          month,
-          year,
-          transactions: [],
-          total: 0,
-        };
-      }
-
-      monthGroups[monthKey].transactions.push(trx);
-      // total bulan = saldo setelah transaksi TERAKHIR bulan tsb
-      monthGroups[monthKey].total = trx.saldo_hitung;
-    });
-
-    // 4) Sort bulan dari yang terbaru
-    const sorted = Object.values(monthGroups).sort((a, b) => {
-      if (b.year !== a.year) return b.year - a.year;
-      return b.month - a.month;
-    });
-
-    // 5) Return format MonthCard
-    return sorted.map((group, index) => ({
-      bulan: formatMonthYearDisplay(group.month, group.year),
-      total: formatCurrency(group.total),
-      isCurrentMonth: index === 0, // bulan terbaru
-      month: group.month,
-      year: group.year,
-      transactions: group.transactions,
-    }));
-  }
 
   return (
     <div className="flex h-screen bg-gray-100">
